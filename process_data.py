@@ -1,8 +1,11 @@
 import pandas
+from os.path import dirname, join
 from indra.databases import uniprot_client
 from indra.databases import hgnc_client
 
 
+
+build_dir = join(dirname(__file__), 'build')
 data_file = 'data/Korkut et al. Data 05122017.xlsx'
 ras227_file = 'data/ras_pathway_proteins.csv'
 drug_grounding_file = 'data/drug_grounding.csv'
@@ -51,7 +54,7 @@ def get_drug_targets(fname=None):
     return targets
 
 
-def get_all_gene_names(data, out_file='prior_genes.txt'):
+def get_all_gene_names(data, out_file):
     """Return all gene names corresponding to all ABs."""
     filt = pandas.notnull(data['antibody']['Protein Data ID'])
     data_filt = data['antibody'][filt]
@@ -94,5 +97,6 @@ def get_all_gene_names(data, out_file='prior_genes.txt'):
 
 if __name__ == '__main__':
     data = read_data(data_file)
-    gene_names = get_all_gene_names(data)
+    prior_genes_file = join(build_dir, 'prior_genes.txt')
+    gene_names = get_all_gene_names(data, prior_genes_file)
 
