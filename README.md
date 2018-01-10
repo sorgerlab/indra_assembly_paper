@@ -14,6 +14,14 @@
     http://www.pathwaycommons.org/archives/PC2/v9/PathwayCommons.All.hgnc.txt.gz,
     on 1/8/2018.
 
+## Reading
+
+* reading/pmids.txt
+  * Run indra/models/hgnc_all/get_pmids.py (commit 771f50) to get
+     pmids_for_gene.pkl based on 41150 genes 
+  * Collect all PMIDs into a set to get 567507 PMIDs
+  * Shuffle the PMIDs in a list and save the entries into pmids.txt
+
 ## Derived Data Files
 
 * prior_genes.txt. Produced by running process_data.py
