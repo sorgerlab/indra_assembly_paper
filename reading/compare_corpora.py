@@ -1,4 +1,4 @@
-from util import pklload
+from util import pklload, listify_dict
 import pickle
 import indra.tools.assemble_corpus as ac
 
@@ -11,16 +11,27 @@ with open('pmids_for_gene.pkl', 'rb') as fh:
 korkut_pmids = {gene: pmid_dict[gene] for gene in korkut_genes}
 korkut_pmids_list = listify_dict(korkut_pmids)
 
-stmts = {}
-stmts_list = {}
+full_stmtsd = {}
+full_stmts = {}
+korkut_stmtsd = {}
 korkut_stmts = {}
-relevant_stmts_list = {}
+relevant_korkut_stmts = {}
+relevant_full_stmts = {}
 for reader in ['sparser', 'reach']:
     print('Running for %s' % reader)
-    stmts[reader] = pklload(reader)
-    korkut_stmts[reader] = {pmid: stmts[reader].get(pmid, [])
+    full_stmtsd[reader] = pklload(reader)
+    korkut_stmtsd[reader] = {pmid: full_stmtsd[reader].get(pmid, [])
                              for pmid in korkut_pmids_list}
-    stmts_list[reader] = listify_dict(stmts[reader])
-    stmts_list[reader] = ac.map_grounding(stmts_list[reader])
-    relevant_stmts_list[reader] = ac.filter_gene_list(
-        stmts_list[reader], korkut_genes, 'one')
+    
+    full_stmts[reader] = listify_dict(full_stmtsd[reader]) 
+    korkut_stmts[reader] = listify_dict(korkut_stmtsd[reader]) 
+    
+    full_stmts[reader] = ac.map_grounding(full_stmts[reader])
+    korkut_stmts[reader] = ac.map_grounding(korkut_stmts[reader])
+    
+    relevant_korkut_stmts[reader] = \
+        ac.filter_gene_list(korkut_stmts[reader],
+                            korkut_genes, 'one')
+    
+    relevant_full_stmts[reader] = ac.filter_gene_list(
+    	full_stmts[reader], korkut_genes, 'one')
