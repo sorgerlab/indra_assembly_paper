@@ -1,3 +1,4 @@
+from util import pklload
 import pickle
 import indra.tools.assemble_corpus as ac
 
@@ -15,12 +16,11 @@ stmts_list = {}
 korkut_stmts = {}
 relevant_stmts_list = {}
 for reader in ['sparser', 'reach']:
-    with open('/home/bmg16/data/%s.pkl' % reader, 'rb') as fh:
-        print('Running for %s' % reader)
-        stmts[reader] = pickle.load(fh)
-        korkut_stmts[reader] = {pmid: stmts[reader].get(pmid, [])
-                                 for pmid in korkut_pmids_list}
-        stmts_list[reader] = listify_dict(stmts[reader])
-        stmts_list[reader] = ac.map_grounding(stmts_list[reader])
-        relevant_stmts_list[reader] = ac.filter_gene_list(
-            stmts_list[reader], korkut_genes, 'one')
+    print('Running for %s' % reader)
+    stmts[reader] = pklload(reader)
+    korkut_stmts[reader] = {pmid: stmts[reader].get(pmid, [])
+                             for pmid in korkut_pmids_list}
+    stmts_list[reader] = listify_dict(stmts[reader])
+    stmts_list[reader] = ac.map_grounding(stmts_list[reader])
+    relevant_stmts_list[reader] = ac.filter_gene_list(
+        stmts_list[reader], korkut_genes, 'one')
