@@ -1,18 +1,15 @@
 OUTPUT := output
-DATA := ../data
-NET := ../networks
-FIG1 := ../bioexp/figures/figure1
-FIG2 := ../bioexp/figures/figure2
+DATA := data
 
 clean:
 	cd $(BUILD); rm -rf *
 
-all: $(OUTPUT)/bioexp_bel.pkl
+all: $(OUTPUT)/bioexp_all_raw.pkl
 
 # DATA -----------------------------------------------------------------------
 
 $(DATA)/%:
-	python -m bioexp.transfer_s3 get $@
+	python -m bioexp.transfer_s3 get $@ $(DATA)
 
 # OUTPUT --------------------------------------------------------------
 
@@ -23,4 +20,9 @@ $(OUTPUT)/bioexp_bel.pkl: \
         process_bel.py
 	python process_bel.py
 
-
+$(OUTPUT)/bioexp_all_raw.pkl: \
+        $(OUTPUT)/bioexp_bel.pkl \
+        $(DATA)/bioexp_sparser.pkl \
+        $(DATA)/bioexp_biopax.pkl \
+        assemble_sources.py
+	python assemble_sources.py
