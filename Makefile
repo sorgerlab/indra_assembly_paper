@@ -1,8 +1,8 @@
 BUILD := build
 DATA := data
 NET := networks
-FIG1 := figures/figure1
-FIG2 := figures/figure2
+FIG1 := bioexp/figures/figure1
+FIG2 := bioexp/figures/figure2
 
 clean:
 	cd $(BUILD); rm -rf *
@@ -15,8 +15,8 @@ fig2: $(BUILD)/fig2_num_statements.txt
 
 # DATA -----------------------------------------------------------------------
 
-$(DATA)/bioexp_bel.pkl:
-	python get_s3_obj.py bioexp_bel.pkl
+$(DATA)/%:
+	python -m bioexp.transfer_s3 get $@
 
 # PREPROCESSING --------------------------------------------------------------
 
@@ -44,6 +44,7 @@ $(BUILD)/fig1_pc_egfr_mapk1_paths.txt: $(BUILD)/pc_multidigraph.pkl \
 # FIGURE 2 -------------------------------------------------------------------
 
 $(BUILD)/fig2_num_statements.txt: \
-        $(DATA)/bioexp_bel.pkl \
+        $(DATA)/bioexp_preassembled.pkl \
         $(FIG2)/preassembly_stats.py
-	python $(FIG2)/preassembly_stats.py
+	python -m bioexp.figures.figure2.preassembly_stats
+

@@ -22,16 +22,16 @@ for reader in ['sparser', 'reach']:
     full_stmtsd[reader] = pklload(reader)
     korkut_stmtsd[reader] = {pmid: full_stmtsd[reader].get(pmid, [])
                              for pmid in korkut_pmids_list}
-    
+
     full_stmts[reader] = listify_dict(full_stmtsd[reader]) 
     korkut_stmts[reader] = listify_dict(korkut_stmtsd[reader]) 
-    
+
     full_stmts[reader] = ac.map_grounding(full_stmts[reader])
     korkut_stmts[reader] = ac.map_grounding(korkut_stmts[reader])
-    
+
     relevant_korkut_stmts[reader] = \
         ac.filter_gene_list(korkut_stmts[reader],
                             korkut_genes, 'one')
-    
+
     relevant_full_stmts[reader] = ac.filter_gene_list(
-    	full_stmts[reader], korkut_genes, 'one')
+        full_stmts[reader], korkut_genes, 'one')
