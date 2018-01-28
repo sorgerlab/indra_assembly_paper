@@ -14,7 +14,8 @@ def merge(list_of_lists):
         ll += l
     return ll
 
-stmts = pklload('biopax')
+# Load the pickle from the data directory
+stmts = ac.load_statements('data/bioexp_biopax.pkl')
 new_stmts = []
 for stmt in stmts:
     if isinstance(stmt, Conversion):
@@ -24,4 +25,4 @@ for stmt in stmts:
         if any([isinstance(l, list) for l in stmt.obj_from]):
             print(stmt)
         stmt.obj_to = merge(_list_listify(stmt.obj_to))
-stmts = pkldump('biopax', stmts)
+stmts = pkldump(stmts, 'biopax_fixed')

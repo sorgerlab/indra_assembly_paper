@@ -1,4 +1,7 @@
 build
 networks
-data/Korkut et al. Data 05122017.xlsx
+data
 *.pkl
+__pycache__
+config.json
+

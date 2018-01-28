@@ -21,7 +21,7 @@ def prefixed_pkl(suffix):
     return os.path.join(based, basen + '_' + suffix + '.pkl')
 
 
-def pkldump(suffix, content):
+def pkldump(content, suffix):
     """Dump content into a pickle file based on a name suffix"""
     fname = prefixed_pkl(suffix)
     with open(fname, 'wb') as fh:
