@@ -4,14 +4,18 @@ NET := networks
 FIG1 := bioexp/figures/figure1
 FIG2 := bioexp/figures/figure2
 
+all: preprocessing fig2
+
+preprocessing: \
+        $(BUILD)/prior_genes.txt \
+        $(BUILD)/pc_multidigraph.pkl
+
 clean:
 	cd $(BUILD); rm -rf *
 
-all: fig1 fig2
-
 fig1: $(BUILD)/fig1_pc_egfr_mapk1_paths.txt
 
-fig2: $(BUILD)/fig2_num_statements.txt
+fig2: $(BUILD)/fig2_evidence_distribution.txt
 
 # DATA -----------------------------------------------------------------------
 
@@ -43,7 +47,7 @@ $(BUILD)/fig1_pc_egfr_mapk1_paths.txt: $(BUILD)/pc_multidigraph.pkl \
 
 # FIGURE 2 -------------------------------------------------------------------
 
-$(BUILD)/fig2_num_statements.txt: \
+$(BUILD)/fig2_evidence_distribution.pdf: \
         $(DATA)/bioexp_preassembled.pkl \
         $(FIG2)/preassembly_stats.py
 	python -m bioexp.figures.figure2.preassembly_stats

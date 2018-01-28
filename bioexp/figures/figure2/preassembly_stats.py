@@ -3,43 +3,79 @@ import pickle
 from collections import Counter
 from os.path import dirname, join
 from matplotlib import pyplot as plt
+from indra.preassembler import render_stmt_graph
 
 
-data_dir = join(dirname(__file__), '..', '..', '..', 'data')
-build_dir = join(dirname(__file__), '..', '..', '..', 'build')
+def plot_frequencies(counts, x_label, y_label, fig_filename, log_x=False,
+                     log_y=False):
+    ctr = Counter(counts)
+    ctr = sorted([(k, v) for k, v in ctr.items()],
+                 key=lambda x: x[1], reverse=True)
+    counts, stmts_per_count = zip(*ctr)
+    fig_path = join(build_dir, fig_filename)
+    fig = plt.figure(figsize=(2, 2), dpi=150)
+    plt.plot(counts, stmts_per_count, linestyle='', marker='.', markersize='1')
+    ax = fig.gca()
+    if log_x:
+        ax.set_xscale('log')
+    if log_y:
+        ax.set_yscale('log')
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    format_axis(ax, tick_padding=2)
+    plt.subplots_adjust(left=0.17, bottom=0.14, right=0.94, top=0.95)
+    plt.savefig(fig_path)
 
-stmts_file = join(data_dir, 'bioexp_preassembled.pkl')
 
-# Load the pickle
-print("Loading statements from %s" % stmts_file)
-with open(stmts_file, 'rb') as f:
-    stmts = pickle.load(f)
+def depth_of_support(stmt, depth):
+    if not stmt.supported_by:
+        return 0
+    else:
+        depths = [depth_of_support(supp_stmt, depth)
+                  for supp_stmt in stmt.supported_by]
+        return max(depths) + 1
 
-print("%d stmts" % len(stmts))
-# Get/plot evidence distribution
-ev_counts = [len(s.evidence) for s in stmts]
-ev_ctr = Counter(ev_counts)
-ev_ctr = sorted([(k, v) for k, v in ev_ctr.items()],
-                  key=lambda x: x[1], reverse=True)
-"""
-with open('ev_ctr.pkl', 'wb') as f:
-    pickle.dump(ev_ctr, f)
-with open('ev_ctr.pkl', 'rb') as f:
-    ev_ctr = pickle.load(f)
-"""
 
-counts, stmts_per_count = zip(*ev_ctr)
+def render_stmt_support(stmts):
+    for ix, stmt in enumerate(stmts):
+        g = render_stmt_graph([stmt], english=True, reduce=True)
+        fig_filename = 'fig2_stmt_graph_%d.pdf' % (ix+1)
+        fig_path = join(build_dir, fig_filename)
+        g.draw(fig_path, prog='dot')
 
-ev_dist_fig = join(build_dir, 'fig2_evidence_distribution.pdf')
 
-set_fig_params()
-fig = plt.figure(figsize=(2, 2), dpi=150)
-plt.plot(counts, stmts_per_count, linestyle='', marker='.', markersize='1')
-ax = fig.gca()
-ax.set_yscale('log')
-ax.set_xscale('log')
-ax.set_xlabel('Mentions per statement')
-ax.set_ylabel('Number of statements')
-format_axis(ax, tick_padding=2)
-plt.subplots_adjust(left=0.17, bottom=0.14, right=0.94, top=0.95)
-plt.savefig(ev_dist_fig)
+if __name__ == '__main__':
+    data_dir = join(dirname(__file__), '..', '..', '..', 'data')
+    build_dir = join(dirname(__file__), '..', '..', '..', 'build')
+
+    stmts_file = join(data_dir, 'bioexp_preassembled.pkl')
+    #stmts_file = join(data_dir, 'bioexp_run_preassembly.pkl')
+
+    # Load the pickle
+    print("Loading statements from %s" % stmts_file)
+    with open(stmts_file, 'rb') as f:
+        stmts = pickle.load(f)
+    print("%d stmts" % len(stmts))
+
+    set_fig_params()
+
+    # Get/plot evidence distribution
+    ev_counts = [len(s.evidence) for s in stmts]
+    plot_frequencies(ev_counts, 'Mentions',
+                     'Number of statements', 'fig2_evidence_distribution.pdf',
+                     log_x=True, log_y=True)
+
+    # Supported-by distribution
+    supp_by_counts = [len(s.supported_by) for s in stmts]
+    plot_frequencies(supp_by_counts, 'Supporting statements',
+                     'Number of statements',
+                     'fig2_supported_by_distribution.pdf', log_y=True)
+
+    # Get depths of support for each statement
+    supp_depths_stmts = [(s, depth_of_support(s, 0)) for s in stmts]
+    supp_depths_stmts = sorted(supp_depths_stmts, key=lambda x: x[1],
+                               reverse=True)
+    supp_depths = [t[1] for t in supp_depths_stmts]
+    plot_frequencies(supp_depths, 'Depth of support', 'Number of statements',
+                     'fig2_depths_of_support.pdf', log_y=True)
+    render_stmt_support([t[0] for t in supp_depths_stmts[0:10]])
