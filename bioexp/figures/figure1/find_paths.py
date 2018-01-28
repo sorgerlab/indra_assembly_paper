@@ -4,11 +4,12 @@ import pickle
 from os.path import dirname, abspath, join
 import networkx as nx
 from indra.util import read_unicode_csv
+from indra.explanation import paths_graph as pg
 
 csv.field_size_limit(150000) # Accommodate a particularly long line
 
-network_dir = join(dirname(abspath(__file__)), '..', '..', 'networks')
-build_dir = join(dirname(__file__), '..', '..', 'build')
+network_dir = join(dirname(abspath(__file__)), '..', '..', '..', 'networks')
+build_dir = join(dirname(__file__), '..', '..', '..', 'build')
 
 
 def filter_direct(mdg):
@@ -31,6 +32,15 @@ def filter_direct(mdg):
     pc_graph_indir.add_edges_from([(u, v, {'direct': False})
                                    for u, v in indirect_edges])
     return (pc_graph_dir, pc_graph_indir)
+
+
+def flatten_network(mdg):
+    """Combined edges to convert MultiDiGraph to DiGraph."""
+    all_edges = set((u, v) for u, v in pc_graph.edges_iter())
+    dg = nx.DiGraph()
+    dg.add_edges_from(all_edges)
+    return dg
+
 
 def load_pc_network(filter_genes=None):
     """Get Pathway Common network as a networkx MultiDiGraph.
@@ -88,11 +98,57 @@ if __name__ == '__main__':
             pickle.dump(pc_graph, f)
     # Script to work off of the cached pickle file and generate paths
     elif sys.argv[1] == 'find_paths':
+        source = 'RAF1'
+        target = 'MAPK1'
+        print("Loading pickle")
         with open(pc_pickle, 'rb') as f:
             pc_graph = pickle.load(f)
-        pc_graph_dir, pc_graph_indir = filter_direct(pc_graph)
-        source = 'EGFR'
-        target = 'RAF1'
+        pc_graph = flatten_network(pc_graph)
+        max_depth = 6
+        print("Counting paths...")
+        import time
+        start = time.time()
+        f_reach, b_reach = pg.get_reachable_sets(pc_graph, source, target,
+                                                 max_depth)
+        for length in range(1, max_depth+1):
+            print("Getting path of length %d between %s and %s" %
+                  (length, source, target))
+            pg_start = time.time()
+            paths_graph = pg.PathsGraph.from_graph(pc_graph, source, target,
+                                                   length, f_reach, b_reach)
+            print("PathsGraph has %d nodes" % len(paths_graph.graph))
+            pg_elapsed = time.time() - pg_start
+            print("PG took time", pg_elapsed)
+            cfpg_start = time.time()
+            cfpg = pg.CFPG.from_pg(paths_graph)
+            print("CFPG has %d nodes" % len(cfpg.graph))
+            cfpg_elapsed = time.time() - cfpg_start
+            print("CFPG took time", cfpg_elapsed)
+            path_count = cfpg.count_paths()
+            print("%d paths of length %d" % (path_count, length))
+        elapsed = time.time() - start
+        print("PG", elapsed)
+        # Calculating time for NX
+        start = time.time()
+        paths = list(nx.all_simple_paths(pc_graph, source, target, max_depth))
+        elapsed = time.time() - start
+        print("NX", elapsed)
+"""
+
+        from collections import defaultdict
+        path_counts = defaultdict(lambda: 0)
+        last_length = 0
+        for ix, path in enumerate(nx.shortest_simple_paths(pc_graph,
+                                                           source, target)):
+            path_len = len(path) - 1
+            if (ix+1) % 1000 == 0:
+                print("Path # %d, len %d" % ((ix+1), path_len))
+                print(path_counts)
+            if path_len > max_depth:
+                break
+            path_counts[path_len] += 1
+
+        #pc_graph_dir, pc_graph_indir = filter_direct(pc_graph)
         paths = []
         for g in (pc_graph_dir,):
             for path in nx.shortest_simple_paths(g, source, target):
@@ -104,12 +160,11 @@ if __name__ == '__main__':
             for path in paths:
                 f.write('%s\n' % str(path))
 
-    """
     canonical_path = ['EGFR', 'GRB2', 'SOS1', 'KRAS', 'BRAF', 'MAP2K1', 'MAPK1']
     for i in range(len(canonical_path)):
         head = canonical_path[i]
         for node in canonical_path[i+1:]:
             if pc_graph.has_edge(head, node):
                 print("%s, %s" % (head, node))
-    """
+"""
 

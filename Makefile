@@ -1,15 +1,24 @@
 BUILD := build
 DATA := data
 NET := networks
-FIG1 := figures/figure1
+FIG1 := bioexp/figures/figure1
+FIG2 := bioexp/figures/figure2
 
 clean:
 	cd $(BUILD); rm -rf *
 
-all: fig1
+all: fig1 fig2
 
 fig1: $(BUILD)/fig1_pc_egfr_mapk1_paths.txt
 
+fig2: $(BUILD)/fig2_num_statements.txt
+
+# DATA -----------------------------------------------------------------------
+
+$(DATA)/%:
+	python -m bioexp.transfer_s3 get $@
+
+# PREPROCESSING --------------------------------------------------------------
 
 # The list of prior genes from the data and related sources
 $(BUILD)/prior_genes.txt: process_data.py \
@@ -25,9 +34,17 @@ $(BUILD)/pc_multidigraph.pkl: $(NET)/PathwayCommons9.All.hgnc.txt \
                               $(BUILD)/prior_genes.txt
 	python $(FIG1)/find_paths.py parse_pc
 
+# FIGURE 1 -------------------------------------------------------------------
 
 # Example pathfinding output over Pathway Commons
 $(BUILD)/fig1_pc_egfr_mapk1_paths.txt: $(BUILD)/pc_multidigraph.pkl \
                                        $(FIG1)/find_paths.py
 	python $(FIG1)/find_paths.py find_paths
+
+# FIGURE 2 -------------------------------------------------------------------
+
+$(BUILD)/fig2_num_statements.txt: \
+        $(DATA)/bioexp_preassembled.pkl \
+        $(FIG2)/preassembly_stats.py
+	python -m bioexp.figures.figure2.preassembly_stats
 
