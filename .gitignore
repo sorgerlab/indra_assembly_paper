@@ -3,3 +3,5 @@ networks
 data
 *.pkl
 __pycache__
+config.json
+
