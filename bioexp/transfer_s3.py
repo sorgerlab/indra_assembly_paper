@@ -1,9 +1,9 @@
 import sys
 import shutil
-from os.path import dirname, join
+from os.path import dirname, join, basename
 import boto3
 
-data_dir = join(dirname(__file__), 'data')
+data_dir = join(dirname(__file__), '..', 'data')
 
 action = sys.argv[1]
 if action not in ('get', 'put'):
@@ -15,9 +15,10 @@ bucket_name = 'bioexp-paper'
 s3_client = boto3.client('s3')
 
 if action == 'get':
-    s3_key = sys.argv[2]
+    s3_key = basename(sys.argv[2])
     filename = join(data_dir, s3_key)
     # Get data from S3
+    print("Getting %s..." % s3_key)
     obj_response = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
     data = obj_response['Body']
     # Write data to a file
