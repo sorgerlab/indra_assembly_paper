@@ -4,7 +4,6 @@ from indra.databases import uniprot_client
 from indra.databases import hgnc_client
 
 
-
 build_dir = join(dirname(__file__), 'build')
 data_file = 'data/Korkut et al. Data 05122017.xlsx'
 ras227_file = 'data/ras_pathway_proteins.csv'
