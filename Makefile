@@ -22,6 +22,10 @@ fig2: $(BUILD)/fig2_evidence_distribution.pdf
 $(DATA)/%:
 	python -m bioexp.transfer_s3 get "$@" $(DATA)
 
+$(DATA)/PathwayCommons9.All.hgnc.txt:
+	wget -P $(DATA) http://www.pathwaycommons.org/archives/PC2/v9/PathwayCommons9.All.hgnc.txt.gz
+	gunzip $@
+
 # PREPROCESSING --------------------------------------------------------------
 
 # The list of prior genes from the data and related sources
@@ -33,7 +37,7 @@ $(BUILD)/prior_genes.txt: process_data.py \
 
 # Pathway Commons network parsed from the extended SIF and pickled as
 # an instance of a networkx MultiDiGraph
-$(BUILD)/pc_multidigraph.pkl: $(NET)/PathwayCommons9.All.hgnc.txt \
+$(BUILD)/pc_multidigraph.pkl: $(DATA)/PathwayCommons9.All.hgnc.txt \
                               $(FIG1)/find_paths.py \
                               $(BUILD)/prior_genes.txt
 	python $(FIG1)/find_paths.py parse_pc

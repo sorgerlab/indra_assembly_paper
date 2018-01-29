@@ -8,7 +8,7 @@ from indra.explanation import paths_graph as pg
 
 csv.field_size_limit(150000) # Accommodate a particularly long line
 
-network_dir = join(dirname(abspath(__file__)), '..', '..', '..', 'networks')
+data_dir = join(dirname(abspath(__file__)), '..', '..', '..', 'data')
 build_dir = join(dirname(__file__), '..', '..', '..', 'build')
 
 
@@ -89,7 +89,7 @@ if __name__ == '__main__':
     pc_pickle = join(build_dir, 'pc_multidigraph.pkl')
     # Script to parse the PC data and cache the network
     if sys.argv[1] == 'parse_pc':
-        pc_filename = join(network_dir, 'PathwayCommons9.All.hgnc.txt')
+        pc_filename = join(data_dir, 'PathwayCommons9.All.hgnc.txt')
         prior_genes_file = join(build_dir, 'prior_genes.txt')
         with open(prior_genes_file, 'rt') as f:
             prior_genes = [line.strip() for line in f.readlines()]
