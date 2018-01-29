@@ -1,10 +1,10 @@
 OUTPUT := output
 DATA := data
 
-clean:
-	cd $(BUILD); rm -rf *
-
 all: $(OUTPUT)/bioexp_run_preassembly.pkl
+
+clean:
+	cd $(OUTPUT); rm -rf *
 
 # DATA -----------------------------------------------------------------------
 
