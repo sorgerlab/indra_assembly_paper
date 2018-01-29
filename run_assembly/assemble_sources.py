@@ -56,7 +56,8 @@ if __name__ == '__main__':
         stmts = pklload('map_sequence')
         # TODO: Set poolsize for full assembly run
         stmts = ac.run_preassembly(stmts, return_toplevel=False,
-                                   save=prefixed_pkl(cmd))
+                                   save=prefixed_pkl(cmd),
+                                   poolsize=16)
     """
     stmts = ac.filter_no_hypothesis(stmts)
     stmts = ac.map_grounding(stmts, save=prefixed_pkl('grounded'))

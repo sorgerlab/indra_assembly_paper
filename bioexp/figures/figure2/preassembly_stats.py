@@ -78,4 +78,5 @@ if __name__ == '__main__':
     supp_depths = [t[1] for t in supp_depths_stmts]
     plot_frequencies(supp_depths, 'Depth of support', 'Number of statements',
                      'fig2_depths_of_support.pdf', log_y=True)
-    render_stmt_support([t[0] for t in supp_depths_stmts[0:10]])
+    num_graphs = 30
+    render_stmt_support([t[0] for t in supp_depths_stmts[0:num_graphs]])

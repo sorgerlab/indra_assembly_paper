@@ -19,7 +19,7 @@ s3_client = boto3.client('s3')
 
 if action == 'get':
     s3_key = basename(sys.argv[2])
-    target_dir = basename(sys.argv[3])
+    target_dir = sys.argv[3]
     filename = join(target_dir, s3_key)
     # Get data from S3
     print("Getting %s..." % s3_key)

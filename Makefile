@@ -15,12 +15,12 @@ clean:
 
 fig1: $(BUILD)/fig1_pc_egfr_mapk1_paths.txt
 
-fig2: $(BUILD)/fig2_evidence_distribution.txt
+fig2: $(BUILD)/fig2_evidence_distribution.pdf
 
 # DATA -----------------------------------------------------------------------
 
 $(DATA)/%:
-	python -m bioexp.transfer_s3 get $@
+	python -m bioexp.transfer_s3 get "$@" $(DATA)
 
 # PREPROCESSING --------------------------------------------------------------
 

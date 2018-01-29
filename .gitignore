@@ -2,6 +2,7 @@ build
 networks
 data
 *.pkl
+*.pyc
 __pycache__
 config.json
 
