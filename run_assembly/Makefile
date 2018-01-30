@@ -1,7 +1,7 @@
 OUTPUT := output
 DATA := data
 
-all: $(OUTPUT)/bioexp_run_preassembly.pkl
+all: $(OUTPUT)/bioexp_preassembled.pkl
 
 clean:
 	cd $(OUTPUT); rm -rf *
@@ -29,15 +29,16 @@ $(OUTPUT)/bioexp_biopax_fixed.pkl: $(DATA)/bioexp_biopax.pkl
 $(OUTPUT)/bioexp_all_raw.pkl: \
         $(OUTPUT)/bioexp_bel.pkl \
         $(OUTPUT)/bioexp_biopax_fixed.pkl \
+        $(DATA)/bioexp_reach.pkl \
         $(DATA)/bioexp_sparser.pkl
 	python assemble_sources.py load_stmts
 
 # Sample subset (for testing--FIXME)
-$(OUTPUT)/bioexp_all_raw_sample.pkl: $(OUTPUT)/bioexp_all_raw.pkl
-	python assemble_sources.py sample
+#$(OUTPUT)/bioexp_all_raw_sample.pkl: $(OUTPUT)/bioexp_all_raw.pkl
+#	python assemble_sources.py sample
 
-# Filter no hypotheses (FIXME change back to all_raw)
-$(OUTPUT)/bioexp_filter_no_hypothesis.pkl: $(OUTPUT)/bioexp_all_raw_sample.pkl
+# Filter no hypotheses
+$(OUTPUT)/bioexp_filter_no_hypothesis.pkl: $(OUTPUT)/bioexp_all_raw.pkl
 	python assemble_sources.py filter_no_hypothesis
 
 # Map grounding
@@ -77,7 +78,7 @@ $(OUTPUT)/bioexp_map_sequence.pkl: \
 	python assemble_sources.py map_sequence
 
 # Run preassembly
-$(OUTPUT)/bioexp_run_preassembly.pkl: \
+$(OUTPUT)/bioexp_preassembled.pkl: \
         $(OUTPUT)/bioexp_map_sequence.pkl
 	python assemble_sources.py run_preassembly
 

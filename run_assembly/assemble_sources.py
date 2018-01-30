@@ -12,19 +12,20 @@ if __name__ == '__main__':
         sources = [
             'output/bioexp_bel.pkl',
             'output/bioexp_biopax_fixed.pkl',
+            'data/bioexp_reach.pkl',
             'data/bioexp_sparser.pkl']
         stmts = []
         for source in sources:
             stmts += ac.load_statements(source)
         pkldump(stmts, 'all_raw') # FIXME
     # FIXME: Remove
-    elif cmd == 'sample':
-        stmts = pklload('all_raw')
-        random.shuffle(stmts)
-        stmts = stmts[0:10000]
-        pkldump(stmts, 'all_raw_sample')
+    #elif cmd == 'sample':
+    #    stmts = pklload('all_raw')
+    #    random.shuffle(stmts)
+    #    stmts = stmts[0:10000]
+    #    pkldump(stmts, 'all_raw_sample')
     elif cmd == 'filter_no_hypothesis':
-        stmts = pklload('all_raw_sample') # FIXME
+        stmts = pklload('all_raw') # FIXME
         stmts = ac.filter_no_hypothesis(stmts, save=prefixed_pkl(cmd))
     elif cmd == 'map_grounding':
         stmts = pklload('filter_no_hypothesis')
@@ -56,7 +57,7 @@ if __name__ == '__main__':
         stmts = pklload('map_sequence')
         # TODO: Set poolsize for full assembly run
         stmts = ac.run_preassembly(stmts, return_toplevel=False,
-                                   save=prefixed_pkl(cmd),
+                                   save=prefixed_pkl('preassembled'),
                                    poolsize=16)
     """
     stmts = ac.filter_no_hypothesis(stmts)
