@@ -1,5 +1,5 @@
-import pickle
 from util import pklload
+from indra.tools import assemble_corpus as ac
 
 filenames = ['reach', 'sparser', 'bel', 'biopax_fixed', 'all_raw',
              'filter_no_hypothesis', 'map_grounding', 'filter_grounded_only',
@@ -10,8 +10,7 @@ stmt_counts = []
 for filename in filenames:
     print("Loading %s" % filename)
     if filename in ('reach', 'sparser'):
-        with open('data/bioexp_%s.pkl' % filename, 'rb') as f:
-            stmts = pickle.load(f)
+        stmts = ac.load_statements('data/bioexp_%s.pkl' % filename)
     else:
         stmts = pklload(filename)
     print("%s stmts in %s" % (len(stmts), filename))
