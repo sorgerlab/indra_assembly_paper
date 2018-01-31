@@ -8,7 +8,11 @@ filenames = ['reach', 'sparser', 'bel', 'biopax_fixed', 'all_raw',
 stmt_counts = []
 for filename in filenames:
     print("Loading %s" % filename)
-    stmts = pklload(filename)
+    if filename in ('reach', 'sparser'):
+        with open('data/bioexp_%s.pkl' % filename, 'rb') as f:
+            stmts = pickle.load(f)
+    else:
+        stmts = pklload(filename)
     print("%s stmts in %s" % (len(stmts), filename))
     stmt_counts.append((filename, len(stmts)))
 

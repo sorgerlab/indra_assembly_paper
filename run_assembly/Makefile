@@ -85,8 +85,8 @@ $(OUTPUT)/bioexp_preassembled.pkl: \
 # -- ANALYSIS/STATISTICS -----------------------------------------------------
 
 $(OUTPUT)/fig2_stmt_counts.txt: \
-        $(OUTPUT)/bioexp_reach.pkl \
-        $(OUTPUT)/bioexp_sparser.pkl \
+        $(DATA)/bioexp_reach.pkl \
+        $(DATA)/bioexp_sparser.pkl \
         $(OUTPUT)/bioexp_bel.pkl \
         $(OUTPUT)/bioexp_fixed.pkl \
         $(OUTPUT)/bioexp_all_raw.pkl \
