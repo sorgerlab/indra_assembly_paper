@@ -1,3 +1,4 @@
+import pickle
 from util import pklload
 
 filenames = ['reach', 'sparser', 'bel', 'biopax_fixed', 'all_raw',
