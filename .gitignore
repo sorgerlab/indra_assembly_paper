@@ -3,6 +3,7 @@ networks
 data
 *.pkl
 *.pyc
+*.pdf
 __pycache__
 config.json
 
