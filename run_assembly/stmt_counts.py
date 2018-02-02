@@ -16,7 +16,7 @@ for filename in filenames:
     print("%s stmts in %s" % (len(stmts), filename))
     stmt_counts.append((filename, len(stmts)))
 
-with open('fig2_stmt_counts.txt', 'wt') as f:
+with open('output/fig2_stmt_counts.txt', 'wt') as f:
     for filename, count in stmt_counts:
         f.write('%s\t%s\n' % (filename, count))
 
