@@ -88,7 +88,7 @@ $(OUTPUT)/fig2_stmt_counts.txt: \
         $(DATA)/bioexp_reach.pkl \
         $(DATA)/bioexp_sparser.pkl \
         $(OUTPUT)/bioexp_bel.pkl \
-        $(OUTPUT)/bioexp_fixed.pkl \
+        $(OUTPUT)/bioexp_biopax_fixed.pkl \
         $(OUTPUT)/bioexp_all_raw.pkl \
         $(OUTPUT)/bioexp_filter_no_hypothesis.pkl \
         $(OUTPUT)/bioexp_map_grounding.pkl \
