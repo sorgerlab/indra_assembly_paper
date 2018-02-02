@@ -1,5 +1,6 @@
 from util import pklload
 from indra.tools import assemble_corpus as ac
+from collections import Counter
 
 filenames = ['reach', 'sparser', 'bel', 'biopax_fixed', 'all_raw',
              'filter_no_hypothesis', 'map_grounding', 'filter_grounded_only',
@@ -8,15 +9,29 @@ filenames = ['reach', 'sparser', 'bel', 'biopax_fixed', 'all_raw',
 
 stmt_counts = []
 for filename in filenames:
+    # Load the pickle file
     print("Loading %s" % filename)
     if filename in ('reach', 'sparser'):
         stmts = ac.load_statements('data/bioexp_%s.pkl' % filename)
     else:
         stmts = pklload(filename)
+    # Tabulate evidence source combinations
+    ev_types = []
+    for s in stmts:
+        source_apis = []
+        for e in s.evidence:
+            source_apis.append(e.source_api)
+        source_apis = frozenset(source_apis)
+        ev_types.append(source_apis)
+    ev_ctr = Counter(ev_types)
     print("%s stmts in %s" % (len(stmts), filename))
-    stmt_counts.append((filename, len(stmts)))
+    stmt_counts.append((filename, len(stmts), ev_ctr))
 
+# Write to TSV file with comma-separated sources in each row
 with open('output/fig2_stmt_counts.txt', 'wt') as f:
-    for filename, count in stmt_counts:
-        f.write('%s\t%s\n' % (filename, count))
+    for filename, count, ev_ctr in stmt_counts:
+        f.write('%s\ttotal\t%s\n' % (filename, count))
+        for ev_set, ev_count in ev_ctr.items():
+            ev_key = ','.join(ev_set)
+            f.write('%s\t%s\t%s\n' % (filename, ev_key, ev_count))
 
