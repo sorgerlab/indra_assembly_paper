@@ -1,7 +1,11 @@
 OUTPUT := output
 DATA := data
 
-all: $(OUTPUT)/bioexp_preassembled.pkl $(OUTPUT)/fig2_stmt_counts.txt
+all: assembly
+
+assembly: $(OUTPUT)/bioexp_reduce_activities.pkl
+
+stats: $(OUTPUT)/fig2_stmt_counts.txt
 
 clean:
 	cd $(OUTPUT); rm -rf *
