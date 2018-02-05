@@ -1,7 +1,7 @@
 import matplotlib
 
 
-fontsize=7
+fontsize=6
 red = '#e41a1c'
 blue = '#377eb8'
 green = '#4daf4a'
