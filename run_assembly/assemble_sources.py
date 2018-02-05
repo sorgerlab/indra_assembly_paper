@@ -67,7 +67,7 @@ if __name__ == '__main__':
     elif cmd == 'reduce_activities':
         stmts = pklload('filter_mod_nokinase')
         ml = MechLinker(stmts)
-        ml.gather_explicit_activites()
+        ml.gather_explicit_activities()
         ml.reduce_activities()
         pkldump(cmd)
     elif cmd == 'reduce_mods':
