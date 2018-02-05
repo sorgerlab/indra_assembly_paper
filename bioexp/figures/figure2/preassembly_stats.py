@@ -1,4 +1,4 @@
-from bioexp.util import set_fig_params, fontsize, format_axis
+from bioexp.util import set_fig_params, fontsize, format_axis, red
 import pickle
 from collections import Counter
 from os.path import dirname, join
@@ -15,12 +15,12 @@ def plot_frequencies(counts, x_label, y_label, fig_filename, plot_type='dot',
                  key=lambda x: x[1], reverse=True)
     counts, stmts_per_count = zip(*ctr)
     fig_path = join(build_dir, fig_filename)
-    fig = plt.figure(figsize=(2, 2), dpi=150)
+    fig = plt.figure(figsize=(1.5, 1.5), dpi=150)
     if plot_type == 'dot':
         plt.plot(counts, stmts_per_count, linestyle='', marker='.',
-                 markersize='1')
+                 markersize='1', color=red)
     elif plot_type == 'bar':
-        plt.bar(counts, stmts_per_count)
+        plt.bar(counts, stmts_per_count, color=red)
     ax = fig.gca()
     if log_x:
         ax.set_xscale('log')
@@ -29,7 +29,7 @@ def plot_frequencies(counts, x_label, y_label, fig_filename, plot_type='dot',
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
     format_axis(ax, tick_padding=2)
-    plt.subplots_adjust(left=0.17, bottom=0.14, right=0.94, top=0.95)
+    plt.subplots_adjust(left=0.22, bottom=0.18, right=0.94, top=0.97)
     plt.savefig(fig_path)
 
 
