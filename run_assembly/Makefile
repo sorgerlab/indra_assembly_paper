@@ -80,7 +80,38 @@ $(OUTPUT)/bioexp_map_sequence.pkl: \
 # Run preassembly
 $(OUTPUT)/bioexp_preassembled.pkl: \
         $(OUTPUT)/bioexp_map_sequence.pkl
-	python -u assemble_sources.py run_preassembly
+	python -u assemble_sources.py preassembled
+
+# Filter out high belief statements
+$(OUTPUT)/bioexp_filter_belief.pkl: \
+        $(OUTPUT)/bioexp_preassembled.pkl
+	python -u assemble_sources.py filter_belief
+
+# Filter out all stmts except top-level
+$(OUTPUT)/bioexp_filter_top_level.pkl: \
+        $(OUTPUT)/bioexp_filter_belief.pkl
+	python -u assemble_sources.py filter_top_level
+
+# Filter phosphorylations to stmts with known kinases as enzymes
+$(OUTPUT)/bioexp_filter_enzyme_kinase.pkl: \
+        $(OUTPUT)/bioexp_filter_top_level.pkl
+	python -u assemble_sources.py filter_enzyme_kinase
+
+# Filter out non-phos mods with kinases as enzymes
+$(OUTPUT)/bioexp_filter_mod_nokinase.pkl: \
+        $(OUTPUT)/bioexp_filter_enzyme_kinase.pkl
+	python -u assemble_sources.py filter_mod_nokinase
+
+# Infer out redundant activities
+$(OUTPUT)/bioexp_reduce_activities.pkl: \
+        $(OUTPUT)/bioexp_filter_mod_nokinase.pkl
+	python -u assemble_sources.py reduce_activities
+
+# Infer out redundant mods
+$(OUTPUT)/bioexp_reduce_mods.pkl: \
+        $(OUTPUT)/bioexp_reduce_activities.pkl
+	python -u assemble_sources.py reduce_mods
+
 
 # -- ANALYSIS/STATISTICS -----------------------------------------------------
 

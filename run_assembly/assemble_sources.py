@@ -2,12 +2,12 @@ import sys
 import random
 from util import *
 import indra.tools.assemble_corpus as ac
+from indra.mechlinker import MechLinker
 
 if __name__ == '__main__':
     #sources = ['bel', 'biopax', 'reach', 'sparser']
     cmd = sys.argv[1]
     # Break each assembly cmd down into intermediate steps
-    # Step 1: Load the statement files and combine into a single pickle
     if cmd == 'load_stmts':
         sources = [
             'output/bioexp_bel.pkl',
@@ -17,15 +17,9 @@ if __name__ == '__main__':
         stmts = []
         for source in sources:
             stmts += ac.load_statements(source)
-        pkldump(stmts, 'all_raw') # FIXME
-    # FIXME: Remove
-    #elif cmd == 'sample':
-    #    stmts = pklload('all_raw')
-    #    random.shuffle(stmts)
-    #    stmts = stmts[0:10000]
-    #    pkldump(stmts, 'all_raw_sample')
+        pkldump(stmts, 'all_raw')
     elif cmd == 'filter_no_hypothesis':
-        stmts = pklload('all_raw') # FIXME
+        stmts = pklload('all_raw')
         stmts = ac.filter_no_hypothesis(stmts, save=prefixed_pkl(cmd))
     elif cmd == 'map_grounding':
         stmts = pklload('filter_no_hypothesis')
@@ -53,22 +47,33 @@ if __name__ == '__main__':
     elif cmd == 'map_sequence':
         stmts = pklload('filter_gene_list')
         stmts = ac.map_sequence(stmts, save=prefixed_pkl(cmd))
-    elif cmd == 'run_preassembly':
+    elif cmd == 'preassembled':
         stmts = pklload('map_sequence')
-        # TODO: Set poolsize for full assembly run
         stmts = ac.run_preassembly(stmts, return_toplevel=False,
-                                   save=prefixed_pkl('preassembled'),
+                                   save=prefixed_pkl(cmd),
                                    poolsize=16)
-    """
-    stmts = ac.filter_no_hypothesis(stmts)
-    stmts = ac.map_grounding(stmts, save=prefixed_pkl('grounded'))
-    stmts = ac.filter_grounded_only(stmts)
-    stmts = ac.filter_genes_only(stmts, specific_only=False)    
-    stmts = ac.filter_human_only(stmts)
-    stmts = ac.expand_families(stmts)
-    stmts = ac.filter_gene_list(stmts, data_genes, 'one')
-    stmts = ac.map_sequence(stmts, save=pjoin(outf, 'smapped.pkl'))
-    stmts = ac.run_preassembly(stmts, return_toplevel=False,
-                               save=pjoin(outf, 'preassembled.pkl'),
-                               poolsize=12)
-    """
+    elif cmd == 'filter_belief':
+        stmts = pklload('preassembled')
+        stmts = ac.filter_belief(stmts, 0.95, save=prefixed_pkl(cmd))
+    elif cmd == 'filter_top_level':
+        stmts = pklload('filter_belief')
+        stmts = ac.filter_top_level(stmts, save=prefixed_pkl(cmd))
+    elif cmd == 'filter_enzyme_kinase':
+        stmts = pklload('filter_top_level')
+        stmts = ac.filter_enzyme_kinase(stmts, save=prefixed_pkl(cmd))
+    elif cmd == 'filter_mod_nokinase':
+        stmts = pklload('filter_enzyme_kinase')
+        stmts = ac.filter_mod_nokinase(stmts, save=prefixed_pkl(cmd))
+    elif cmd == 'reduce_activities':
+        stmts = pklload('filter_mod_nokinase')
+        ml = MechLinker(stmts)
+        ml.gather_explicit_activites()
+        ml.reduce_activities()
+        pkldump(cmd)
+    elif cmd == 'reduce_mods':
+        stmts = pklload('reduce_activities')
+        ml = MechLinker(stmts)
+        ml.gather_modifications()
+        ml.reduce_modifications()
+        pkldump(cmd)
+
