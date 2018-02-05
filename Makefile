@@ -20,7 +20,7 @@ clean:
 fig1: $(BUILD)/fig1_pc_egfr_mapk1_paths.txt
 
 fig2: $(BUILD)/fig2_evidence_distribution.pdf \
-      $(BUILD)/fig2_stmt_source_plot.pdf
+      $(BUILD)/fig2_stmt_counts_before_pa.pdf
 
 # DATA -----------------------------------------------------------------------
 
@@ -61,7 +61,7 @@ $(BUILD)/fig2_evidence_distribution.pdf: \
         $(FIG2)/preassembly_stats.py
 	python -m bioexp.figures.figure2.preassembly_stats
 
-$(BUILD)/fig2_stmt_source_plot.pdf: \
+$(BUILD)/fig2_stmt_counts_before_pa.pdf: \
         $(DATA)/bioexp_preassembled.pkl \
         $(DATA)/fig2_stmt_counts.txt \
         $(FIG2)/plot_stmt_counts.py
