@@ -3,6 +3,7 @@ DATA := data
 NET := networks
 FIG1 := bioexp/figures/figure1
 FIG2 := bioexp/figures/figure2
+DEPLOY := ~/Dropbox/DARPA\ projects/papers/INDRA\ paper\ 2/figure_panels/
 
 all: preprocessing fig2
 
@@ -10,12 +11,16 @@ preprocessing: \
         $(BUILD)/prior_genes.txt \
         $(BUILD)/pc_multidigraph.pkl
 
+deploy:
+	rsync -av $(BUILD)/*.pdf $(DEPLOY)
+
 clean:
 	cd $(BUILD); rm -rf *
 
 fig1: $(BUILD)/fig1_pc_egfr_mapk1_paths.txt
 
-fig2: $(BUILD)/fig2_evidence_distribution.pdf
+fig2: $(BUILD)/fig2_evidence_distribution.pdf \
+      $(BUILD)/fig2_stmt_source_plot.pdf
 
 # DATA -----------------------------------------------------------------------
 
@@ -55,4 +60,10 @@ $(BUILD)/fig2_evidence_distribution.pdf: \
         $(DATA)/bioexp_preassembled.pkl \
         $(FIG2)/preassembly_stats.py
 	python -m bioexp.figures.figure2.preassembly_stats
+
+$(BUILD)/fig2_stmt_source_plot.pdf: \
+        $(DATA)/bioexp_preassembled.pkl \
+        $(DATA)/fig2_stmt_counts.txt \
+        $(FIG2)/plot_stmt_counts.py
+	python -m bioexp.figures.figure2.plot_stmt_counts
 
