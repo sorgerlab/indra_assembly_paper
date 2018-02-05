@@ -69,11 +69,11 @@ if __name__ == '__main__':
         ml = MechLinker(stmts)
         ml.gather_explicit_activities()
         ml.reduce_activities()
-        pkldump(cmd)
+        pkldump(stmts, cmd)
     elif cmd == 'reduce_mods':
         stmts = pklload('reduce_activities')
         ml = MechLinker(stmts)
         ml.gather_modifications()
         ml.reduce_modifications()
-        pkldump(cmd)
+        pkldump(stmts, cmd)
 
