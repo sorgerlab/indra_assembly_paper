@@ -2,7 +2,10 @@ import matplotlib
 
 
 fontsize=7
-
+red = '#e41a1c'
+blue = '#377eb8'
+green = '#4daf4a'
+purple = '#984ea3'
 
 def set_fig_params():
     matplotlib.rcParams['font.sans-serif'] = 'Arial'
