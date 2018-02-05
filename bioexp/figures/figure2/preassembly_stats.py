@@ -6,15 +6,21 @@ from matplotlib import pyplot as plt
 from indra.preassembler import render_stmt_graph
 
 
-def plot_frequencies(counts, x_label, y_label, fig_filename, log_x=False,
-                     log_y=False):
+def plot_frequencies(counts, x_label, y_label, fig_filename, plot_type='dot',
+                     log_x=False, log_y=False):
+    if plot_type not in ('dot', 'bar'):
+        raise ValueError("plot_type must be one of ('bar', 'dot')")
     ctr = Counter(counts)
     ctr = sorted([(k, v) for k, v in ctr.items()],
                  key=lambda x: x[1], reverse=True)
     counts, stmts_per_count = zip(*ctr)
     fig_path = join(build_dir, fig_filename)
     fig = plt.figure(figsize=(2, 2), dpi=150)
-    plt.plot(counts, stmts_per_count, linestyle='', marker='.', markersize='1')
+    if plot_type == 'dot':
+        plt.plot(counts, stmts_per_count, linestyle='', marker='.',
+                 markersize='1')
+    elif plot_type == 'bar':
+        plt.bar(counts, stmts_per_count)
     ax = fig.gca()
     if log_x:
         ax.set_xscale('log')
@@ -49,7 +55,6 @@ if __name__ == '__main__':
     build_dir = join(dirname(__file__), '..', '..', '..', 'build')
 
     stmts_file = join(data_dir, 'bioexp_preassembled.pkl')
-    #stmts_file = join(data_dir, 'bioexp_run_preassembly.pkl')
 
     # Load the pickle
     print("Loading statements from %s" % stmts_file)
@@ -63,13 +68,14 @@ if __name__ == '__main__':
     ev_counts = [len(s.evidence) for s in stmts]
     plot_frequencies(ev_counts, 'Mentions',
                      'Number of statements', 'fig2_evidence_distribution.pdf',
-                     log_x=True, log_y=True)
+                     plot_type='dot', log_x=True, log_y=True)
 
     # Supported-by distribution
     supp_by_counts = [len(s.supported_by) for s in stmts]
     plot_frequencies(supp_by_counts, 'Supporting statements',
                      'Number of statements',
-                     'fig2_supported_by_distribution.pdf', log_y=True)
+                     'fig2_supported_by_distribution.pdf',
+                     plot_type='bar', log_y=True)
 
     # Get depths of support for each statement
     supp_depths_stmts = [(s, depth_of_support(s, 0)) for s in stmts]
@@ -77,6 +83,7 @@ if __name__ == '__main__':
                                reverse=True)
     supp_depths = [t[1] for t in supp_depths_stmts]
     plot_frequencies(supp_depths, 'Depth of support', 'Number of statements',
-                     'fig2_depths_of_support.pdf', log_y=True)
+                     'fig2_depths_of_support.pdf',
+                     plot_type='bar', log_y=True)
     num_graphs = 30
     render_stmt_support([t[0] for t in supp_depths_stmts[0:num_graphs]])
