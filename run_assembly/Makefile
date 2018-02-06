@@ -131,6 +131,7 @@ $(OUTPUT)/fig2_stmt_counts.txt: \
         $(DATA)/bioexp_reach.pkl \
         $(DATA)/bioexp_sparser.pkl \
         $(OUTPUT)/bioexp_bel.pkl \
+        $(OUTPUT)/bioexp_signor.pkl \
         $(OUTPUT)/bioexp_biopax_fixed.pkl \
         $(OUTPUT)/bioexp_all_raw.pkl \
         $(OUTPUT)/bioexp_filter_no_hypothesis.pkl \
@@ -141,7 +142,13 @@ $(OUTPUT)/fig2_stmt_counts.txt: \
         $(OUTPUT)/bioexp_expand_families.pkl \
         $(OUTPUT)/bioexp_filter_gene_list.pkl \
         $(OUTPUT)/bioexp_map_sequence.pkl \
-        $(OUTPUT)/bioexp_preassembled.pkl
+        $(OUTPUT)/bioexp_preassembled.pkl \
+        $(OUTPUT)/bioexp_filter_belief.pkl \
+        $(OUTPUT)/bioexp_top_level.pkl \
+        $(OUTPUT)/bioexp_enzyme_kinase.pkl \
+        $(OUTPUT)/bioexp_mod_nokinase.pkl \
+        $(OUTPUT)/bioexp_reduce_activities.pkl \
+        $(OUTPUT)/bioexp_reduce_mods.pkl
 	python -u stmt_counts.py
 
 

@@ -2,10 +2,12 @@ from util import pklload
 from indra.tools import assemble_corpus as ac
 from collections import Counter
 
-filenames = ['reach', 'sparser', 'bel', 'biopax_fixed', 'all_raw',
+filenames = ['reach', 'sparser', 'bel', 'signor', 'biopax_fixed', 'all_raw',
              'filter_no_hypothesis', 'map_grounding', 'filter_grounded_only',
              'filter_genes_only', 'filter_human_only', 'expand_families',
-             'filter_gene_list', 'map_sequence', 'preassembled']
+             'filter_gene_list', 'map_sequence', 'preassembled',
+             'filter_belief', 'top_level', 'enzyme_kinase', 'mod_nokinase',
+             'reduce_activities', 'reduce_mods']
 
 stmt_counts = []
 for filename in filenames:
