@@ -10,6 +10,9 @@ stats: $(OUTPUT)/fig2_stmt_counts.txt
 clean:
 	cd $(OUTPUT); rm -rf *
 
+s3:
+	aws s3 cp --recursive output s3://bioexp-paper
+
 # DATA -----------------------------------------------------------------------
 
 $(DATA)/%:
