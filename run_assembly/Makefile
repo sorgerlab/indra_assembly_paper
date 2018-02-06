@@ -1,7 +1,7 @@
 OUTPUT := output
 DATA := data
 
-all: assembly
+all: assembly stats
 
 assembly: $(OUTPUT)/bioexp_reduce_activities.pkl
 
