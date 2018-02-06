@@ -27,8 +27,8 @@ $(OUTPUT)/bioexp_bel.pkl: \
 	python -u process_bel.py
 
 # Fix the biopax pickle
-$(OUTPUT)/bioexp_biopax_fixed.pkl: $(DATA)/bioexp_biopax.pkl
-	python -u fix_biopax.py
+#$(OUTPUT)/bioexp_biopax_fixed.pkl: $(DATA)/bioexp_biopax.pkl
+#	python -u fix_biopax.py
 
 # Download Signor statements
 $(OUTPUT)/bioexp_signor.pkl:
@@ -40,7 +40,7 @@ $(OUTPUT)/bioexp_signor.pkl:
 $(OUTPUT)/bioexp_all_raw.pkl: \
         $(OUTPUT)/bioexp_signor.pkl \
         $(OUTPUT)/bioexp_bel.pkl \
-        $(OUTPUT)/bioexp_biopax_fixed.pkl \
+        $(DATA)/bioexp_biopax_fixed.pkl \
         $(DATA)/bioexp_reach.pkl \
         $(DATA)/bioexp_sparser.pkl
 	python -u assemble_sources.py load_stmts
@@ -132,7 +132,7 @@ $(OUTPUT)/fig2_stmt_counts.txt: \
         $(DATA)/bioexp_sparser.pkl \
         $(OUTPUT)/bioexp_bel.pkl \
         $(OUTPUT)/bioexp_signor.pkl \
-        $(OUTPUT)/bioexp_biopax_fixed.pkl \
+        $(DATA)/bioexp_biopax_fixed.pkl \
         $(OUTPUT)/bioexp_all_raw.pkl \
         $(OUTPUT)/bioexp_filter_no_hypothesis.pkl \
         $(OUTPUT)/bioexp_map_grounding.pkl \

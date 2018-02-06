@@ -16,7 +16,7 @@ if __name__ == '__main__':
         sources = [
             'output/bioexp_signor.pkl',
             'output/bioexp_bel.pkl',
-            'output/bioexp_biopax_fixed.pkl',
+            'data/bioexp_biopax_fixed.pkl',
             'data/bioexp_reach.pkl',
             'data/bioexp_sparser.pkl']
         stmts = []
