@@ -27,10 +27,15 @@ $(OUTPUT)/bioexp_bel.pkl: \
 $(OUTPUT)/bioexp_biopax_fixed.pkl: $(DATA)/bioexp_biopax.pkl
 	python -u fix_biopax.py
 
+# Download Signor statements
+$(OUTPUT)/bioexp_signor.pkl:
+	python -u assemble_sources.py signor
+
 # ASSEMBLY ------------------------------------------------------------------
 
 # Load the statements
 $(OUTPUT)/bioexp_all_raw.pkl: \
+        $(OUTPUT)/bioexp_signor.pkl \
         $(OUTPUT)/bioexp_bel.pkl \
         $(OUTPUT)/bioexp_biopax_fixed.pkl \
         $(DATA)/bioexp_reach.pkl \

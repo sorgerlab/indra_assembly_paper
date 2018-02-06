@@ -2,14 +2,19 @@ import sys
 import random
 from util import *
 import indra.tools.assemble_corpus as ac
+from indra.sources import signor
 from indra.mechlinker import MechLinker
 
 if __name__ == '__main__':
     #sources = ['bel', 'biopax', 'reach', 'sparser']
     cmd = sys.argv[1]
     # Break each assembly cmd down into intermediate steps
-    if cmd == 'load_stmts':
+    if cmd == 'signor':
+        sp = signor.SignorProcessor()
+        pkldump(sp.statements, 'signor')
+    elif cmd == 'load_stmts':
         sources = [
+            'output/bioexp_signor.pkl',
             'output/bioexp_bel.pkl',
             'output/bioexp_biopax_fixed.pkl',
             'data/bioexp_reach.pkl',
