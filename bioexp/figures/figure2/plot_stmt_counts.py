@@ -3,7 +3,7 @@ from collections import Counter, defaultdict
 from matplotlib import pyplot as plt
 from bioexp.util import set_fig_params, fontsize, format_axis, red, blue, \
                         green, purple
-
+from indra.util import write_unicode_csv
 
 def plot_steps_before_preassembly(data):
     # The sequential order of the assembly steps, with plot labels
@@ -18,12 +18,13 @@ def plot_steps_before_preassembly(data):
         ('map_sequence', 'Map sites of PTMs'),
         )
     # Put source of greatest numbers of statements at the bottom of the stack
-    source_order = ['reach', 'sparser', 'biopax', 'bel']
+    source_order = ['reach', 'sparser', 'biopax', 'signor', 'bel']
     # Colors for each source type
     source_colors = {'reach': red,
                      'sparser': blue,
                      'biopax': green,
-                     'bel': purple}
+                     'signor': purple,
+                     'bel': 'black'}
     # Make the plot
     fig = plt.figure(figsize=(1.5, 2), dpi=150)
     for ix, (step, step_label) in enumerate(step_order):
@@ -37,7 +38,6 @@ def plot_steps_before_preassembly(data):
     _, step_labels = zip(*step_order)
     plt.xticks(range(len(step_labels)), step_labels, rotation='vertical')
     plt.ylabel(r'Statements ($\times10^{-6}$)')
-    plt.ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
     ax = fig.gca()
     format_axis(ax, tick_padding=2)
     plt.subplots_adjust(left=0.18, bottom=0.53, right=0.96, top=0.97)
@@ -52,17 +52,18 @@ def plot_steps_after_preassembly(data):
     # The sequential order of the assembly steps, with plot labels
     step_order = (
         ('preassembled', 'Combine duplicates'),
-        ('preassembled', 'Combine duplicates'),
-        ('preassembled', 'Combine duplicates'),
-        ('preassembled', 'Combine duplicates'),
-        ('preassembled', 'Combine duplicates'),
+        ('filter_belief', r'Filter belief $>$ 0.95'),
+        ('filter_top_level', 'Filter to top-level'),
+        ('filter_mod_nokinase', 'Filter phos. to kinases'),
+        ('reduce_activities', 'Reduce activities'),
+        ('reduce_mods', 'Reduce modifications'),
         )
-    db_sources = set(['biopax', 'bel'])
+    db_sources = set(['biopax', 'bel', 'signor'])
     reading_sources = set(['reach', 'sparser'])
     # Put source of greatest numbers of statements at the bottom of the stack
-    source_colors = {'reading': '#e41a1c', 'db': '#377eb8', 'both': '#4daf4a', }
     # Make the plot
-    fig = plt.figure(figsize=(1.5, 2), dpi=150)
+    fig = plt.figure(figsize=(1, 2), dpi=150)
+    rows = []
     for ix, (step, step_label) in enumerate(step_order):
         last_val = 0
         # Source list is a list of tuples, with each tuple representing a
@@ -91,21 +92,26 @@ def plot_steps_after_preassembly(data):
                 reading_only += count
         plt.bar(ix, reading_only, bottom=0, color=red)
         plt.bar(ix, db_only, bottom=reading_only, color=blue)
-        plt.bar(ix, both, bottom=db_only+reading_only, color=green)
+        plt.bar(ix, both, bottom=db_only+reading_only, color=purple)
+        print(step_label)
         print("Reading", reading_only)
         print("DB", db_only)
         print("Both", both)
+        rows.append((step, reading_only, db_only, both))
 
     _, step_labels = zip(*step_order)
     plt.xticks(range(len(step_labels)), step_labels, rotation='vertical')
-    plt.ylabel('Statements')
+    plt.ylabel(r'Statements ($\times10^{-5}$)')
     ax = fig.gca()
+    plt.yticks([0, 200000, 400000, 600000],
+               [0, 2, 4, 6])
     format_axis(ax, tick_padding=2)
-    plt.subplots_adjust(bottom=0.43)
+    plt.subplots_adjust(left=0.18, bottom=0.53, right=0.76, top=0.97)
     plt.show()
-    filename = join(build_dir, 'fig2_stmt_counts_after_pa.pdf')
-    plt.savefig(filename)
-
+    fig_filename = join(build_dir, 'fig2_stmt_counts_after_pa.pdf')
+    plt.savefig(fig_filename)
+    csv_filename = join(build_dir, 'fig2_stmt_sources_after_pa.csv')
+    write_unicode_csv(csv_filename, rows)
 
 if __name__ == '__main__':
     data_dir = join(dirname(__file__), '..', '..', '..', 'data')
