@@ -144,7 +144,7 @@ $(OUTPUT)/fig2_stmt_counts.txt: \
         $(OUTPUT)/bioexp_map_sequence.pkl \
         $(OUTPUT)/bioexp_preassembled.pkl \
         $(OUTPUT)/bioexp_filter_belief.pkl \
-        $(OUTPUT)/bioexp_top_level.pkl \
+        $(OUTPUT)/bioexp_filter_top_level.pkl \
         $(OUTPUT)/bioexp_enzyme_kinase.pkl \
         $(OUTPUT)/bioexp_mod_nokinase.pkl \
         $(OUTPUT)/bioexp_reduce_activities.pkl \
