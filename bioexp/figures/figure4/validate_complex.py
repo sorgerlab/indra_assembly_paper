@@ -3,49 +3,32 @@ from builtins import dict, str
 import sys
 import pickle
 import logging
+from random import shuffle
 from indra.statements import Complex
 from indra.preassembler import Preassembler
-from indra.preassembler import grounding_mapper as gm
 from indra.preassembler.hierarchy_manager import hierarchies
 from indra.databases import biogrid_client as bg
 from indra.databases import hgnc_client, uniprot_client
 from indra.util import write_unicode_csv
-
+from indra.tools import assemble_corpus as ac
 
 logger = logging.getLogger('complexes')
 
 
-def load_file(stmts_file):
-    logger.info("Loading results...")
-    with open(stmts_file, 'rb') as f:
-        results = pickle.load(f)
-    return results
+def analyze(filename, sample_size=None):
+    all_stmts = ac.load_statements(filename)
 
+    complexes = ac.filter_by_type(all_stmts, Complex)
+    protein_complexes = ac.filter_genes_only(complexes)
+    protein_complexes = ac.filter_human_only(protein_complexes)
 
-def analyze(filename):
-    results = load_file(filename)
+    # Optionally take a random sample
+    if sample_size:
+        shuffle(protein_complexes)
+        protein_complexes = protein_complexes[0:sample_size]
 
-    all_stmts = [stmt for paper_stmts in results.values()
-                      for stmt in paper_stmts]
-
-    # Map grounding
-    logger.info('Mapping grounding...')
-    gmap = gm.GroundingMapper(gm.default_grounding_map)
-    map_stmts = gmap.map_agents(all_stmts)
-    map_stmts = gmap.rename_agents(map_stmts)
-
-    # Combine duplicates
-    logger.info('Removing duplicates...')
-    pa = Preassembler(hierarchies, map_stmts)
-    pa.combine_duplicates()
-
-    # Get complexes
-    complexes = [s for s in pa.unique_stmts if isinstance(s, Complex)]
-    # Get HGNC grounding
-    protein_complexes = [s for s in complexes
-                           if all([True if 'HGNC' in ag.db_refs.keys()
-                                        else False
-                                        for ag in s.agent_list()])]
+    rows = [('Raw complexes', len(complexes)),
+            ('Complexes between genes', len(protein_complexes))]
 
     logger.info('Mapping gene IDs to gene symbols')
     gene_ids = list(set([ag.db_refs['HGNC'] for stmt in protein_complexes
@@ -86,21 +69,46 @@ def analyze(filename):
         evidence_source_list = set([])
         for e in stmt.evidence:
             evidence_source_list.add(e.source_api)
-        if 'reach' in evidence_source_list and \
-           'biogrid' in evidence_source_list:
-            indra_and_bg.append(stmt)
-        elif 'reach' in evidence_source_list and \
-             'biogrid' not in evidence_source_list:
-            indra_only.append(stmt)
-        elif 'reach' not in evidence_source_list and \
-             'biogrid' in evidence_source_list:
+        if evidence_source_list == set(['biogrid']):
             bg_only.append(stmt)
+        elif not 'biogrid' in evidence_source_list:
+            indra_only.append(stmt)
+        else:
+            indra_and_bg.append(stmt)
 
-    rows = []
-    for stmt in indra_only:
-        rows.append([stmt.members[0].name, stmt.members[1].name,
-                     str(len(stmt.evidence))])
-    write_unicode_csv('unmatched_complexes.tsv', rows, delimiter='\t')
+    stmt_header = ['STATEMENT_INDEX', 'AGENT_A', 'AGENT_B', 'NUM_MENTIONS',
+                   'IN_BIOGRID']
+    stmt_rows = [stmt_header]
+    mention_header = ['STATEMENT_INDEX', 'AGENT_A', 'AGENT_B', 'READER',
+                      'PMID', 'TEXT']
+    mention_rows = [mention_header]
+    index = 1
+    for stmt in pa.unique_stmts:
+        if stmt in bg_only:
+            continue
+        non_bg_ev_counts = len([e for e in stmt.evidence
+                                if e.source_api != 'biogrid'])
+        stmt_row = [index, stmt.members[0].name, stmt.members[1].name,
+                    non_bg_ev_counts]
+        mention_row = [index, stmt.members[0].name, stmt.members[1].name]
+        if stmt in indra_and_bg:
+            stmt_row.append(1)
+            stmt_rows.append(stmt_row)
+        elif stmt in indra_only:
+            stmt_row.append(0)
+            stmt_rows.append(stmt_row)
+            for e in stmt.evidence:
+                mention_rows.append(
+                        mention_row + [e.source_api, e.pmid, e.text])
+        else:
+            assert False
+        index += 1
+    #for stmt in indra_only:
+    #    rows.append([stmt.members[0].name, stmt.members[1].name,
+    #                 str(len(stmt.evidence))])
+    write_unicode_csv('complex_stmts.tsv', stmt_rows, delimiter='\t')
+    write_unicode_csv('complex_stmt_mentions.tsv', mention_rows,
+                      delimiter='\t')
 
     return {'indra_only': indra_only,
             'bg_only': bg_only,
@@ -112,6 +120,6 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
         print("Usage: %s stmts_file" % sys.argv[0])
         sys.exit()
-    results = analyze(sys.argv[1])
-
+    results = analyze(sys.argv[1], sample_size=1000)
+    print(results)
 
