@@ -13,7 +13,7 @@ stmt_counts = []
 for filename in filenames:
     # Load the pickle file
     print("Loading %s" % filename)
-    if filename in ('reach', 'sparser'):
+    if filename in ('reach', 'sparser', 'biopax_fixed'):
         stmts = ac.load_statements('data/bioexp_%s.pkl' % filename)
     else:
         stmts = pklload(filename)
