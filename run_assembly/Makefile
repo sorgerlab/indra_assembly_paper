@@ -3,7 +3,7 @@ DATA := data
 
 all: assembly stats
 
-assembly: $(OUTPUT)/bioexp_reduce_activities.pkl
+assembly: $(OUTPUT)/bioexp_reduce_mods.pkl
 
 stats: $(OUTPUT)/fig2_stmt_counts.txt
 
@@ -145,8 +145,8 @@ $(OUTPUT)/fig2_stmt_counts.txt: \
         $(OUTPUT)/bioexp_preassembled.pkl \
         $(OUTPUT)/bioexp_filter_belief.pkl \
         $(OUTPUT)/bioexp_filter_top_level.pkl \
-        $(OUTPUT)/bioexp_enzyme_kinase.pkl \
-        $(OUTPUT)/bioexp_mod_nokinase.pkl \
+        $(OUTPUT)/bioexp_filter_enzyme_kinase.pkl \
+        $(OUTPUT)/bioexp_filter_mod_nokinase.pkl \
         $(OUTPUT)/bioexp_reduce_activities.pkl \
         $(OUTPUT)/bioexp_reduce_mods.pkl
 	python -u stmt_counts.py
