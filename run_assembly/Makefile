@@ -5,6 +5,8 @@ all: assembly stats
 
 assembly: $(OUTPUT)/bioexp_reduce_mods.pkl
 
+reading_only: $(OUTPUT)/bioexp_reading_only_all_raw.pkl
+
 stats: $(OUTPUT)/fig2_stmt_counts.txt
 
 clean:
@@ -43,17 +45,17 @@ $(OUTPUT)/bioexp_all_raw.pkl: \
         $(DATA)/bioexp_biopax_fixed.pkl \
         $(DATA)/bioexp_reach.pkl \
         $(DATA)/bioexp_sparser.pkl
-	python -u assemble_sources.py load_stmts
+	python -u assemble_sources.py load_stmts all_raw \
+        $(OUTPUT)/bioexp_signor.pkl \
+        $(OUTPUT)/bioexp_bel.pkl \
+        $(DATA)/bioexp_biopax_fixed.pkl \
+        $(DATA)/bioexp_reach.pkl \
+        $(DATA)/bioexp_sparser.pkl
 
 # Filter no hypotheses
-#$(OUTPUT)/bioexp_filter_no_hypothesis.pkl: $(OUTPUT)/bioexp_all_raw.pkl
-#	python -u assemble_sources.py filter_no_hypothesis \
-#        all_raw filter_no_hypothesis
-
-# Filter no hypotheses
-$(OUTPUT)/bioexp_filter_no_hypothesis.pkl: $(OUTPUT)/bioexp_sample.pkl
+$(OUTPUT)/bioexp_filter_no_hypothesis.pkl: $(OUTPUT)/bioexp_all_raw.pkl
 	python -u assemble_sources.py filter_no_hypothesis \
-        sample filter_no_hypothesis
+        all_raw filter_no_hypothesis
 
 # Map grounding
 $(OUTPUT)/bioexp_map_grounding.pkl: $(OUTPUT)/bioexp_filter_no_hypothesis.pkl
@@ -156,4 +158,9 @@ $(OUTPUT)/fig2_stmt_counts.txt: \
 
 # READING-ONLY ASSEMBLY PIPELINE (for evaluation) ----------------------------
 
-
+$(OUTPUT)/bioexp_reading_only all_raw.pkl: \
+        $(DATA)/bioexp_reach.pkl \
+        $(DATA)/bioexp_sparser.pkl
+	python -u assemble_sources.py load_stmts reading_only_all_raw \
+        $(DATA)/bioexp_reach.pkl \
+        $(DATA)/bioexp_sparser.pkl

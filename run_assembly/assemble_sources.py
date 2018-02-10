@@ -22,16 +22,12 @@ if __name__ == '__main__':
         sp = signor.SignorProcessor()
         pkldump(sp.statements, 'signor')
     elif cmd == 'load_stmts':
-        sources = [
-            'output/bioexp_signor.pkl',
-            'output/bioexp_bel.pkl',
-            'data/bioexp_biopax_fixed.pkl',
-            'data/bioexp_reach.pkl',
-            'data/bioexp_sparser.pkl']
+        output = sys.argv[2]
+        sources = sys.argv[3:]
         stmts = []
         for source in sources:
             stmts += ac.load_statements(source)
-        pkldump(stmts, 'all_raw')
+        pkldump(stmts, output)
     elif cmd == 'filter_no_hypothesis':
         stmts = pklload(input_file)
         stmts = ac.filter_no_hypothesis(stmts, save=prefixed_pkl(output_file))
