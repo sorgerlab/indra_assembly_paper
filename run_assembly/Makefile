@@ -158,9 +158,97 @@ $(OUTPUT)/fig2_stmt_counts.txt: \
 
 # READING-ONLY ASSEMBLY PIPELINE (for evaluation) ----------------------------
 
-$(OUTPUT)/bioexp_reading_only all_raw.pkl: \
+$(OUTPUT)/bioexp_reading_only_all_raw.pkl: \
         $(DATA)/bioexp_reach.pkl \
         $(DATA)/bioexp_sparser.pkl
 	python -u assemble_sources.py load_stmts reading_only_all_raw \
         $(DATA)/bioexp_reach.pkl \
         $(DATA)/bioexp_sparser.pkl
+
+# Filter no hypotheses
+$(OUTPUT)/bioexp_reading_only_filter_no_hypothesis.pkl: \
+        $(OUTPUT)/bioexp_reading_only_all_raw.pkl
+	python -u assemble_sources.py filter_no_hypothesis \
+        reading_only_all_raw reading_only_filter_no_hypothesis
+
+# Map grounding
+$(OUTPUT)/bioexp_reading_only_map_grounding.pkl: \
+        $(OUTPUT)/bioexp_reading_only_filter_no_hypothesis.pkl
+	python -u assemble_sources.py map_grounding \
+        reading_only_filter_no_hypothesis reading_only_map_grounding
+
+# Filter grounded only
+$(OUTPUT)/bioexp_reading_only_filter_grounded_only.pkl: \
+        $(OUTPUT)/bioexp_reading_only_map_grounding.pkl
+	python -u assemble_sources.py filter_grounded_only \
+        reading_only_map_grounding reading_only_filter_grounded_only
+
+# Filter genes only
+$(OUTPUT)/bioexp_reading_only_filter_genes_only.pkl: \
+        $(OUTPUT)/bioexp_reading_only_filter_grounded_only.pkl
+	python -u assemble_sources.py filter_genes_only \
+        reading_only_filter_grounded_only reading_only_filter_genes_only
+
+# Filter human only
+$(OUTPUT)/bioexp_reading_only_filter_human_only.pkl: \
+        $(OUTPUT)/bioexp_reading_only_filter_genes_only.pkl
+	python -u assemble_sources.py filter_human_only \
+        reading_only_filter_genes_only reading_only_filter_human_only
+
+# Expand families
+$(OUTPUT)/bioexp_reading_only_expand_families.pkl: \
+        $(OUTPUT)/bioexp_reading_only_filter_human_only.pkl
+	python -u assemble_sources.py expand_families \
+        reading_only_filter_human_only reading_only_expand_families
+
+# Map sequences
+$(OUTPUT)/bioexp_reading_only_map_sequence.pkl: \
+        $(OUTPUT)/bioexp_reading_only_expand_families.pkl
+	python -u assemble_sources.py map_sequence \
+        reading_only_expand_families reading_only_map_sequence
+
+# Run preassembly
+$(OUTPUT)/bioexp_reading_only_preassembled.pkl: \
+        $(OUTPUT)/bioexp_reading_only_map_sequence.pkl
+	python -u assemble_sources.py preassembled \
+        reading_only_map_sequence reading_only_preassembled
+
+# Filter out high belief statements
+$(OUTPUT)/bioexp_reading_only_filter_belief.pkl: \
+        $(OUTPUT)/bioexp_reading_only_preassembled.pkl
+	python -u assemble_sources.py filter_belief \
+        reading_only_preassembled reading_only_filter_belief
+
+# Filter out all stmts except top-level
+$(OUTPUT)/bioexp_reading_only_filter_top_level.pkl: \
+        $(OUTPUT)/bioexp_reading_only_filter_belief.pkl
+	python -u assemble_sources.py filter_top_level \
+        reading_only_filter_belief reading_only_filter_top_level
+
+# Filter phosphorylations to stmts with known kinases as enzymes
+$(OUTPUT)/bioexp_reading_only_filter_enzyme_kinase.pkl: \
+        $(OUTPUT)/bioexp_reading_only_filter_top_level.pkl
+	python -u assemble_sources.py filter_enzyme_kinase \
+        reading_only_filter_top_level reading_only_filter_enzyme_kinase
+
+# Filter out non-phos mods with kinases as enzymes
+$(OUTPUT)/bioexp_reading_only_filter_mod_nokinase.pkl: \
+        $(OUTPUT)/bioexp_reading_only_filter_enzyme_kinase.pkl
+	python -u assemble_sources.py filter_mod_nokinase \
+        reading_only_filter_enzyme_kinase reading_only_filter_mod_nokinase
+
+# Infer out redundant activities
+$(OUTPUT)/bioexp_reading_only_reduce_activities.pkl: \
+        $(OUTPUT)/bioexp_reading_only_filter_mod_nokinase.pkl
+	python -u assemble_sources.py reduce_activities \
+        reading_only_filter_mod_nokinase filter_only_reduce_activities
+
+# Infer out redundant mods
+$(OUTPUT)/bioexp_reading_only_reduce_mods.pkl: \
+        $(OUTPUT)/bioexp_reading_only_reduce_activities.pkl
+	python -u assemble_sources.py reduce_mods \
+        reading_only_reduce_activities reading_only_reduce_mods
+
+
+
+
