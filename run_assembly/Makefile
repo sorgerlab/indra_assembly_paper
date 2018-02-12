@@ -5,7 +5,7 @@ all: assembly stats
 
 assembly: $(OUTPUT)/bioexp_reduce_mods.pkl
 
-reading_only: $(OUTPUT)/bioexp_reading_only_all_raw.pkl
+reading_only: $(OUTPUT)/bioexp_reading_only_reduce_mods.pkl
 
 stats: $(OUTPUT)/fig2_stmt_counts.txt
 
