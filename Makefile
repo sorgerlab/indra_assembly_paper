@@ -22,7 +22,8 @@ fig1: $(BUILD)/fig1_pc_egfr_mapk1_paths.txt
 fig2: $(BUILD)/fig2_evidence_distribution.pdf \
       $(BUILD)/fig2_stmt_counts_before_pa.pdf
 
-fig4: $(BUILD)/complex_validation.csv
+fig4: $(BUILD)/reach_complexes_raw.csv
+
 
 # DATA -----------------------------------------------------------------------
 
@@ -71,8 +72,9 @@ $(BUILD)/fig2_stmt_counts_before_pa.pdf: \
 
 # FIGURE 4 -------------------------------------------------------------------
 
-fig4: $(BUILD)/complex_validation.csv
-	python -m bioexp.figures.figure4.validate_complex.py \
-                             $(DATA)/bioexp_reach.pkl
+$(BUILD)/reach_complexes_raw.csv: $(DATA)/bioexp_reach.pkl
+	python -m bioexp.figures.figure4.validate_complex \
+                             $(DATA)/bioexp_reach.pkl \
+                             $(BUILD)/reach_complexes_raw.tsv
 
 

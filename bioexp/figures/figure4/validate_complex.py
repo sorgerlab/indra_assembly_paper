@@ -3,7 +3,7 @@ from builtins import dict, str
 import sys
 import pickle
 import logging
-from random import shuffle
+import random
 from indra.statements import Complex
 from indra.preassembler import Preassembler
 from indra.preassembler.hierarchy_manager import hierarchies
@@ -14,28 +14,29 @@ from indra.tools import assemble_corpus as ac
 
 logger = logging.getLogger('complexes')
 
-
-def analyze(filename, sample_size=None):
+def preprocess_stmts(filename, sample_size=None):
     all_stmts = ac.load_statements(filename)
 
     complexes = ac.filter_by_type(all_stmts, Complex)
-    protein_complexes = ac.filter_genes_only(complexes)
-    protein_complexes = ac.filter_human_only(protein_complexes)
-
+    # Require HGNC grounding
+    hgnc_stmts = []
+    for stmt in complexes:
+        if all([('HGNC' in ag.db_refs) for ag in stmt.agent_list()]):
+            hgnc_stmts.append(stmt)
     # Optionally take a random sample
     if sample_size:
-        shuffle(protein_complexes)
-        protein_complexes = protein_complexes[0:sample_size]
+        random.shuffle(hgnc_stmts)
+        hgnc_stmts = hgnc_stmts[0:sample_size]
+    return hgnc_stmts
 
-    rows = [('Raw complexes', len(complexes)),
-            ('Complexes between genes', len(protein_complexes))]
 
+def get_biogrid_stmts(stmts):
     logger.info('Mapping gene IDs to gene symbols')
-    gene_ids = list(set([ag.db_refs['HGNC'] for stmt in protein_complexes
+    gene_ids = list(set([ag.db_refs['HGNC'] for stmt in stmts
                                             for ag in stmt.members]))
     genes = [hgnc_client.get_hgnc_name(id) for id in gene_ids]
 
-    # Get complexes from BioGrid and combine duplicates
+    # Get complexes from BioGrid
     num_genes_per_query = 50
     start_indices = range(0, len(genes), num_genes_per_query)
     end_indices = [i + num_genes_per_query
@@ -56,7 +57,46 @@ def analyze(filename, sample_size=None):
            stmt.members[1].name in genes:
             bg_filt.append(stmt)
     # Might as well free up some memory
-    del bg_complexes
+    return bg_filt
+
+
+def analyze_raw(filename, output_file, sample_size=None):
+    protein_complexes = preprocess_stmts(filename, sample_size)
+    bg_filt = get_biogrid_stmts(protein_complexes)
+    # Build set of matches keys for Biogrid statements
+    bg_keys = set([s.matches_key() for s in bg_filt])
+    # Check each statement to see if there is a corresponding matches key
+    # in the Biogrid set
+    stmt_header = ['STATEMENT_INDEX',
+                   'AGENT_A_NAME', 'AGENT_A_TEXT', 'AGENT_A_GROUNDING',
+                   'AGENT_B_NAME', 'AGENT_B_TEXT', 'AGENT_B_GROUNDING',
+                   'IN_BIOGRID', 'PMID', 'TEXT']
+    rows = [stmt_header]
+
+    def format_agent_entries(agent):
+        db_refs_str = ','.join(['%s|%s' % (k, v)
+                                for k, v in agent.db_refs.items()])
+        ag_text = agent.db_refs.get('TEXT')
+        text_str = ag_text if ag_text else ''
+        return [agent.name, text_str, db_refs_str]
+
+    for ix, stmt in enumerate(protein_complexes):
+        ix += 1
+        in_biogrid = 1 if stmt.matches_key() in bg_keys else 0
+        if len(stmt.agent_list()) > 2:
+            logger.info("Skipping statement with more than two members: %s"
+                        % stmt)
+            continue
+        (ag_a, ag_b) = stmt.agent_list()
+        row = [ix] + format_agent_entries(ag_a) + format_agent_entries(ag_b) +\
+              [in_biogrid, stmt.evidence[0].pmid, stmt.evidence[0].text]
+        rows.append(row)
+    write_unicode_csv(output_file, rows, delimiter='\t')
+
+
+def analyze_preassembled(filename, sample_size=None):
+    protein_complexes = preprocess_stmts(filename, sample_size)
+    bg_filt = get_biogrid_stmts(protein_complexes)
 
     logger.info("Combining duplicates with biogrid...")
     pa = Preassembler(hierarchies, bg_filt + protein_complexes)
@@ -103,9 +143,6 @@ def analyze(filename, sample_size=None):
         else:
             assert False
         index += 1
-    #for stmt in indra_only:
-    #    rows.append([stmt.members[0].name, stmt.members[1].name,
-    #                 str(len(stmt.evidence))])
     write_unicode_csv('complex_stmts.tsv', stmt_rows, delimiter='\t')
     write_unicode_csv('complex_stmt_mentions.tsv', mention_rows,
                       delimiter='\t')
@@ -117,9 +154,8 @@ def analyze(filename, sample_size=None):
 
 if __name__ == '__main__':
     # Load the statements
-    if len(sys.argv) < 2:
-        print("Usage: %s stmts_file" % sys.argv[0])
+    if len(sys.argv) < 3:
+        print("Usage: %s stmts_file output_file" % sys.argv[0])
         sys.exit()
-    results = analyze(sys.argv[1], sample_size=1000)
-    print(results)
-
+    random.seed(1)
+    results = analyze_raw(sys.argv[1], sys.argv[2], sample_size=1000)
