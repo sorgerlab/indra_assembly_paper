@@ -118,10 +118,17 @@ $(OUTPUT)/bioexp_filter_mod_nokinase.pkl: \
 	python -u assemble_sources.py filter_mod_nokinase \
         filter_enzyme_kinase filter_mod_nokinase
 
+# Filter out non-transcription factors transcribing proteins
+$(OUTPUT)/bioexp_filter_transcription_factor.pkl: \
+        $(OUTPUT)/bioexp_filter_mod_nokinase.pkl
+	python -u assemble_sources.py filter_transcription_factor \
+        filter_mod_nokinase filter_transcription_factor
+
 # Infer out redundant activities
-$(OUTPUT)/bioexp_reduce_activities.pkl: $(OUTPUT)/bioexp_filter_mod_nokinase.pkl
+$(OUTPUT)/bioexp_reduce_activities.pkl: \
+        $(OUTPUT)/bioexp_filter_transcription_factor.pkl
 	python -u assemble_sources.py reduce_activities \
-        filter_mod_nokinase reduce_activities
+        filter_transcription_factor reduce_activities
 
 # Infer out redundant mods
 $(OUTPUT)/bioexp_reduce_mods.pkl: $(OUTPUT)/bioexp_reduce_activities.pkl
@@ -151,6 +158,7 @@ $(OUTPUT)/fig2_stmt_counts.txt: \
         $(OUTPUT)/bioexp_filter_top_level.pkl \
         $(OUTPUT)/bioexp_filter_enzyme_kinase.pkl \
         $(OUTPUT)/bioexp_filter_mod_nokinase.pkl \
+        $(OUTPUT)/bioexp_filter_transcription_factor.pkl \
         $(OUTPUT)/bioexp_reduce_activities.pkl \
         $(OUTPUT)/bioexp_reduce_mods.pkl
 	python -u stmt_counts.py
@@ -237,18 +245,20 @@ $(OUTPUT)/bioexp_reading_only_filter_mod_nokinase.pkl: \
 	python -u assemble_sources.py filter_mod_nokinase \
         reading_only_filter_enzyme_kinase reading_only_filter_mod_nokinase
 
+# Filter out non-transcription factors transcribing proteins
+$(OUTPUT)/bioexp_reading_only_filter_transcription_factor.pkl: \
+        $(OUTPUT)/bioexp_reading_only_filter_mod_nokinase.pkl
+	python -u assemble_sources.py filter_transcription_factor \
+        reading_only_filter_mod_nokinase reading_only_filter_transcription_factor
+
 # Infer out redundant activities
 $(OUTPUT)/bioexp_reading_only_reduce_activities.pkl: \
-        $(OUTPUT)/bioexp_reading_only_filter_mod_nokinase.pkl
+        $(OUTPUT)/bioexp_reading_only_filter_transcription_factor.pkl
 	python -u assemble_sources.py reduce_activities \
-        reading_only_filter_mod_nokinase filter_only_reduce_activities
+        reading_only_filter_transcription_factor filter_only_reduce_activities
 
 # Infer out redundant mods
 $(OUTPUT)/bioexp_reading_only_reduce_mods.pkl: \
         $(OUTPUT)/bioexp_reading_only_reduce_activities.pkl
 	python -u assemble_sources.py reduce_mods \
         reading_only_reduce_activities reading_only_reduce_mods
-
-
-
-

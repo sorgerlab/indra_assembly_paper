@@ -13,7 +13,8 @@ if __name__ == '__main__':
             'filter_genes_only', 'filter_human_only', 'expand_families',
             'filter_gene_list', 'map_sequence', 'preassembled',
             'filter_belief', 'filter_top_level', 'filter_enzyme_kinase',
-            'filter_mod_nokinase', 'reduce_activities', 'reduce_mods')
+            'filter_mod_nokinase', 'filter_transcription_factor',
+            'reduce_activities', 'reduce_mods')
     if cmd in assembly_cmds:
         input_file = sys.argv[2]
         output_file = sys.argv[3]
@@ -74,6 +75,10 @@ if __name__ == '__main__':
     elif cmd == 'filter_mod_nokinase':
         stmts = pklload(input_file)
         stmts = ac.filter_mod_nokinase(stmts, save=prefixed_pkl(output_file))
+    elif cmd == 'filter_transcription_factor':
+        stmts = pklload(input_file)
+        stmts = ac.filter_transcription_factor(stmts,
+                                               save=prefixed_pkl(output_file))
     elif cmd == 'reduce_activities':
         stmts = pklload(input_file)
         ml = MechLinker(stmts)
