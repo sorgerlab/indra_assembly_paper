@@ -6,7 +6,8 @@ import pickle
 
 # CREATE A JSON FILE WITH THIS INFORMATION, E.G., a file consisting of:
 # {"basename": "fallahi_eval", "basedir": "output"}
-with open('config.json', 'rt') as f:
+this_folder = os.path.dirname(os.path.abspath(__file__))
+with open(this_folder + '/config.json', 'rt') as f:
     config = json.load(f)
 # This is the base name used for all files created/saved
 basen = config['basename']

@@ -6,9 +6,12 @@ from util import pklload
 
 def fix_text(txt):
     """Eliminate some symbols to have cleaner text to read."""
-    txt = re.sub('[ ]?\( xref \)', '', txt)
+    # Eliminate any case where xref is in parentheses
+    txt = re.sub('\([^\)]xref[^\)]*\)', '[]', txt)
+    txt = re.sub('\[[^\]]xref[^\]]*\]', '[]', txt)
+    txt = re.sub(' xref ', ' ', txt)
     # This is to make [ xref ] become [] to match the two readers
-    txt = re.sub('\[ xref \]', '[]', txt)
+    #txt = re.sub('\[ xref \]', '[]', txt)
     txt = re.sub('[\(]?XREF_BIBR[\)]?[,]?', '', txt)
     txt = re.sub('[\(]?XREF_FIG[\)]?[,]?', '', txt)
     txt = re.sub('[\(]?XREF_SUPPLEMENT[\)]?[,]?', '', txt)
