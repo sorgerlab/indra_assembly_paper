@@ -5,9 +5,10 @@ from indra.databases import hgnc_client
 
 
 build_dir = join(dirname(__file__), 'build')
-data_file = 'data/Korkut et al. Data 05122017.xlsx'
-ras227_file = 'data/ras_pathway_proteins.csv'
-drug_grounding_file = 'data/drug_grounding.csv'
+data_dir = join(dirname(__file__), 'data')
+data_file = join(data_dir, 'Korkut et al. Data 05122017.xlsx')
+ras227_file = join(data_dir, 'ras_pathway_proteins.csv')
+drug_grounding_file = join(data_dir, 'drug_grounding.csv')
 
 
 def read_data(fname=data_file):
@@ -53,7 +54,7 @@ def get_drug_targets(fname=None):
     return targets
 
 
-def get_all_gene_names(data, out_file):
+def get_all_gene_names(data, out_file=None):
     """Return all gene names corresponding to all ABs."""
     filt = pandas.notnull(data['antibody']['Protein Data ID'])
     data_filt = data['antibody'][filt]
@@ -89,9 +90,10 @@ def get_all_gene_names(data, out_file):
     all_genes += get_ras227_genes()
     all_genes = sorted(list(set(all_genes)))
     print('%d genes in total' % len(all_genes))
-    with open(out_file, 'wb') as fh:
-        for gene in all_genes:
-            fh.write(('%s\n' % gene).encode('utf-8'))
+    if out_file:
+        with open(out_file, 'wb') as fh:
+            for gene in all_genes:
+                fh.write(('%s\n' % gene).encode('utf-8'))
     return all_genes
 
 if __name__ == '__main__':
