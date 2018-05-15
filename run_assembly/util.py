@@ -19,7 +19,13 @@ based = config['basedir']
 # This makes it easier to make standardized pickle file paths
 def prefixed_pkl(suffix):
     """Return full path to a pickle file based on name suffix."""
-    return os.path.join(based, basen + '_' + suffix + '.pkl')
+    return prefixed_file(suffix, 'pkl')
+
+
+def prefixed_file(suffix, extension):
+    """Return full path to a file based on name suffix and extension."""
+    return os.path.join(based, basen + '_' + suffix + '.' + extension)
+
 
 
 def pkldump(content, suffix):
