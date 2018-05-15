@@ -7,6 +7,8 @@ assembly: $(OUTPUT)/bioexp_reduce_mods.pkl
 
 reading_only: $(OUTPUT)/bioexp_reading_only_reduce_mods.pkl
 
+db_only: $(OUTPUT)/bioexp_db_only_reduce_mods.pkl
+
 stats: $(OUTPUT)/fig2_stmt_counts.txt
 
 clean:
@@ -255,10 +257,112 @@ $(OUTPUT)/bioexp_reading_only_filter_transcription_factor.pkl: \
 $(OUTPUT)/bioexp_reading_only_reduce_activities.pkl: \
         $(OUTPUT)/bioexp_reading_only_filter_transcription_factor.pkl
 	python -u assemble_sources.py reduce_activities \
-        reading_only_filter_transcription_factor filter_only_reduce_activities
+        reading_only_filter_transcription_factor reading_only_reduce_activities
 
 # Infer out redundant mods
 $(OUTPUT)/bioexp_reading_only_reduce_mods.pkl: \
         $(OUTPUT)/bioexp_reading_only_reduce_activities.pkl
 	python -u assemble_sources.py reduce_mods \
         reading_only_reduce_activities reading_only_reduce_mods
+
+
+# DATABASE-ONLY ASSEMBLY PIPELINE (for evaluation) ----------------------------
+
+$(OUTPUT)/bioexp_db_only_all_raw.pkl: \
+        $(DATA)/bioexp_biopax_fixed.pkl \
+        $(OUTPUT)/bioexp_bel.pkl \
+        $(OUTPUT)/bioexp_signor.pkl
+	python -u assemble_sources.py load_stmts db_only_all_raw \
+        $(DATA)/bioexp_biopax_fixed.pkl \
+        $(OUTPUT)/bioexp_bel.pkl \
+        $(OUTPUT)/bioexp_signor.pkl
+
+# Filter no hypotheses
+$(OUTPUT)/bioexp_db_only_filter_no_hypothesis.pkl: \
+        $(OUTPUT)/bioexp_db_only_all_raw.pkl
+	python -u assemble_sources.py filter_no_hypothesis \
+        db_only_all_raw db_only_filter_no_hypothesis
+
+# Map grounding
+$(OUTPUT)/bioexp_db_only_map_grounding.pkl: \
+        $(OUTPUT)/bioexp_db_only_filter_no_hypothesis.pkl
+	python -u assemble_sources.py map_grounding \
+        db_only_filter_no_hypothesis db_only_map_grounding
+
+# Filter grounded only
+$(OUTPUT)/bioexp_db_only_filter_grounded_only.pkl: \
+        $(OUTPUT)/bioexp_db_only_map_grounding.pkl
+	python -u assemble_sources.py filter_grounded_only \
+        db_only_map_grounding db_only_filter_grounded_only
+
+# Filter genes only
+$(OUTPUT)/bioexp_db_only_filter_genes_only.pkl: \
+        $(OUTPUT)/bioexp_db_only_filter_grounded_only.pkl
+	python -u assemble_sources.py filter_genes_only \
+        db_only_filter_grounded_only db_only_filter_genes_only
+
+# Filter human only
+$(OUTPUT)/bioexp_db_only_filter_human_only.pkl: \
+        $(OUTPUT)/bioexp_db_only_filter_genes_only.pkl
+	python -u assemble_sources.py filter_human_only \
+        db_only_filter_genes_only db_only_filter_human_only
+
+# Expand families
+$(OUTPUT)/bioexp_db_only_expand_families.pkl: \
+        $(OUTPUT)/bioexp_db_only_filter_human_only.pkl
+	python -u assemble_sources.py expand_families \
+        db_only_filter_human_only db_only_expand_families
+
+# Map sequences
+$(OUTPUT)/bioexp_db_only_map_sequence.pkl: \
+        $(OUTPUT)/bioexp_db_only_expand_families.pkl
+	python -u assemble_sources.py map_sequence \
+        db_only_expand_families db_only_map_sequence
+
+# Run preassembly
+$(OUTPUT)/bioexp_db_only_preassembled.pkl: \
+        $(OUTPUT)/bioexp_db_only_map_sequence.pkl
+	python -u assemble_sources.py preassembled \
+        db_only_map_sequence db_only_preassembled
+
+# Filter out high belief statements
+$(OUTPUT)/bioexp_db_only_filter_belief.pkl: \
+        $(OUTPUT)/bioexp_db_only_preassembled.pkl
+	python -u assemble_sources.py filter_belief \
+        db_only_preassembled db_only_filter_belief
+
+# Filter out all stmts except top-level
+$(OUTPUT)/bioexp_db_only_filter_top_level.pkl: \
+        $(OUTPUT)/bioexp_db_only_filter_belief.pkl
+	python -u assemble_sources.py filter_top_level \
+        db_only_filter_belief db_only_filter_top_level
+
+# Filter phosphorylations to stmts with known kinases as enzymes
+$(OUTPUT)/bioexp_db_only_filter_enzyme_kinase.pkl: \
+        $(OUTPUT)/bioexp_db_only_filter_top_level.pkl
+	python -u assemble_sources.py filter_enzyme_kinase \
+        db_only_filter_top_level db_only_filter_enzyme_kinase
+
+# Filter out non-phos mods with kinases as enzymes
+$(OUTPUT)/bioexp_db_only_filter_mod_nokinase.pkl: \
+        $(OUTPUT)/bioexp_db_only_filter_enzyme_kinase.pkl
+	python -u assemble_sources.py filter_mod_nokinase \
+        db_only_filter_enzyme_kinase db_only_filter_mod_nokinase
+
+# Filter out non-transcription factors transcribing proteins
+$(OUTPUT)/bioexp_db_only_filter_transcription_factor.pkl: \
+        $(OUTPUT)/bioexp_db_only_filter_mod_nokinase.pkl
+	python -u assemble_sources.py filter_transcription_factor \
+        db_only_filter_mod_nokinase db_only_filter_transcription_factor
+
+# Infer out redundant activities
+$(OUTPUT)/bioexp_db_only_reduce_activities.pkl: \
+        $(OUTPUT)/bioexp_db_only_filter_transcription_factor.pkl
+	python -u assemble_sources.py reduce_activities \
+        db_only_filter_transcription_factor db_only_reduce_activities
+
+# Infer out redundant mods
+$(OUTPUT)/bioexp_db_only_reduce_mods.pkl: \
+        $(OUTPUT)/bioexp_db_only_reduce_activities.pkl
+	python -u assemble_sources.py reduce_mods \
+        db_only_reduce_activities db_only_reduce_mods
