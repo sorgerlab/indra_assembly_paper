@@ -2,11 +2,13 @@ import pandas
 from os.path import dirname, join
 from indra.databases import uniprot_client
 from indra.databases import hgnc_client
+from indra.statements import Agent, ModCondition
 
 
 build_dir = join(dirname(__file__), 'build')
 data_dir = join(dirname(__file__), 'data')
 data_file = join(data_dir, 'Korkut et al. Data 05122017.xlsx')
+antibody_map_file = join(data_dir, 'antibody_site_map.csv')
 ras227_file = join(data_dir, 'ras_pathway_proteins.csv')
 drug_grounding_file = join(data_dir, 'drug_grounding.csv')
 
@@ -95,6 +97,70 @@ def get_all_gene_names(data, out_file=None):
             for gene in all_genes:
                 fh.write(('%s\n' % gene).encode('utf-8'))
     return all_genes
+
+
+def get_phospho_antibody_map(fname=antibody_map_file):
+    # First gather the annotations for the phosphosites
+    df = pandas.read_csv(fname, index_col=None, sep=',', encoding='utf8')
+    antibody_map = {}
+
+    for _, row in df.iterrows():
+        ps = row['phosphosite']
+        sub_upid = row['SUB_ID']
+        if not pandas.isnull(sub_upid):
+            if sub_upid.find('-') != -1:
+                sub_upid = sub_upid.split('-')[0]
+            sub_hgnc_symbol = uniprot_client.get_gene_name(sub_upid)
+            sub_hgnc = hgnc_client.get_hgnc_id(sub_hgnc_symbol)
+        else:
+            sub_hgnc_symbol = row['SUB_GENE']
+            sub_hgnc_id = hgnc_client.get_hgnc_id(sub_hgnc_symbol)
+            sub_upid = hgnc_client.get_uniprot_id(sub_hgnc_id)
+            if sub_upid is None:
+                continue
+        sub = Agent(sub_hgnc_symbol,
+                    db_refs={'UP': sub_upid,'HGNC': sub_hgnc})
+        residue = row['Actual_site'][0]
+        if len(row['Actual_site']) > 1:
+            position = row['Actual_site'][1:]
+        else:
+            position = None
+        mc = ModCondition('phosphorylation', residue, position)
+        sub.mods = [mc]
+        if ps in antibody_map:
+            found = False
+            for p in antibody_map[ps]:
+                if p.name == sub.name and p.mods[0].residue == residue and \
+                    p.mods[0].position == position:
+                    found = True
+                    break
+            if not found:
+                antibody_map[ps].append(sub)
+        else:
+            antibody_map[ps] = [sub]
+    return antibody_map
+
+
+def get_antibody_map(data):
+    phos_ab_map = get_phospho_antibody_map()
+    ab_map = {}
+    for _, row in data['antibody'].iterrows():
+        ab_name = row['Protein Data ID']
+        if ab_name in phos_ab_map:
+            continue
+        upids = row['UniProt ID'].split(',')
+        for upid in upids:
+            hgnc_symbol = uniprot_client.get_gene_name(upid)
+            hgnc_id = hgnc_client.get_hgnc_id(hgnc_symbol)
+            target = Agent(hgnc_symbol,
+                           db_refs={'UP': upid,'HGNC': hgnc_id})
+            try:
+                ab_map[ab_name].append(target)
+            except KeyError:
+                ab_map[ab_name] = [target]
+    ab_map.update(phos_ab_map)
+    return ab_map
+
 
 if __name__ == '__main__':
     data = read_data(data_file)
