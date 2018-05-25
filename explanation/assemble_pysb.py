@@ -51,6 +51,7 @@ def assemble_pysb(stmts, data_genes):
     return pa.model
 
 def preprocess_stmts(stmts, data_genes):
+    """Preprocess Statements specifically for PySB assembly."""
     # Filter the INDRA Statements to be put into the model
     stmts = ac.filter_mutation_status(stmts,
                                       {'BRAF': [('V', '600', 'E')]}, ['PTEN'])
@@ -88,6 +89,8 @@ def preprocess_stmts(stmts, data_genes):
 
 
 def set_context(pa):
+    """Set expression amounts for the cell line and make sure BRAF is
+    in a mutated form."""
     pa.set_context('SKMEL28_SKIN')
     # Set BRAF V600E
     for ic in pa.model.initial_conditions:
@@ -95,13 +98,8 @@ def set_context(pa):
             ic[0].monomer_patterns[0].site_conditions['V600'] = 'E'
 
 
-def generate_equations(model, pkl_cache):
-    bng.generate_equations(model, verbose=True)
-    with open(pkl_cache, 'w') as fh:
-        pickle.dump(model, fh)
-
-
 def add_observables(model):
+    """Get the antibody targets and add observables for them to the model."""
     data = process_data.read_data()
     ab_map = process_data.get_antibody_map(data)
     for ab_name, agents in ab_map.items():
@@ -184,7 +182,14 @@ def add_observables(model):
 
 
 def get_mod_whitelist():
+    """Return a list of modifications that should not be filtered out
+
+    These sites should be preserved in the model so that they can be
+    observed, even if they are otherwise considered inconsequential.
+    """
     mod_whitelist = {}
+    # Here we take the targets of each antybody to make sure we
+    # don't remove these observables from the model
     ab_map = process_data.get_phospho_antibody_map()
     for k, v in ab_map.items():
         for agent in v:

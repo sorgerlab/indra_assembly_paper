@@ -10,7 +10,7 @@ import sys
 sys.path.append('..')
 import process_data
 import make_stmts_for_checking as make_stmts
-from run_assembly.util import pklload
+from run_assembly.util import pklload, pkldump, prefixed_file
 
 def get_path_stmts(results, model, stmts):
     all_path_stmts = []
@@ -65,11 +65,11 @@ def make_cyjs_network(results, model, stmts):
         all_path_uuids += p
     #filtered_stmts = ac.filter_gene_list(stmts, path_genes, 'one')
     filtered_stmts = ac.filter_uuid_list(stmts, all_path_uuids)
-    ac.dump_statements(filtered_stmts, 'output/korkut_cyjs_model.pkl')
+    pkldump(filtered_stmts, 'cyjs_model')
     ca = CyJSAssembler(filtered_stmts)
     cm = ca.make_model()
     ca.set_CCLE_context(['SKMEL28_SKIN'])
-    ca.save_json('output/korkut_model')
+    ca.save_json(prefixed_file('model', 'json'))
 
 
 def make_english_output(results, model, stmts):
@@ -231,13 +231,11 @@ if __name__ == '__main__':
                     print('===========================')
                 results.append((drug_name, ab, relation, value, path_found,
                                 paths, result.result_code))
-        with open('pathfinding_results.pkl', 'wb') as fh:
-            pickle.dump(results, fh)
+        pkldump(results, 'pathfinding_results')
     else:
-        with open('pathfinding_results.pkl', 'rb') as fh:
-            results = pickle.load(fh)
+        results = pklload('pathfinding_results')
 
-    write_unicode_csv('model_check_results.csv', results)
+    write_unicode_csv(results, prefixed_file('model_check_results', 'csv'))
     path_stmts = get_path_stmts(results, model, base_stmts)
     path_genes = get_path_genes(path_stmts)
     make_english_output(results, model, base_stmts)
