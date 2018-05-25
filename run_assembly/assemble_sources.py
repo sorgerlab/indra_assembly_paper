@@ -20,7 +20,7 @@ if __name__ == '__main__':
         output_file = sys.argv[3]
     # Break each assembly cmd down into intermediate steps
     if cmd == 'signor':
-        sp = signor.SignorProcessor()
+        sp = signor.process_from_web()
         pkldump(sp.statements, 'signor')
     elif cmd == 'load_stmts':
         output = sys.argv[2]
