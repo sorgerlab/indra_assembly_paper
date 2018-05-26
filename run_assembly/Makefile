@@ -46,13 +46,15 @@ $(OUTPUT)/bioexp_all_raw.pkl: \
         $(OUTPUT)/bioexp_bel.pkl \
         $(DATA)/bioexp_biopax_fixed.pkl \
         $(DATA)/bioexp_reach.pkl \
-        $(DATA)/bioexp_sparser.pkl
+        $(DATA)/bioexp_sparser.pkl \
+		$(DATA)/bioexp_medscan_merged_statements.pkl
 	python -u assemble_sources.py load_stmts all_raw \
         $(OUTPUT)/bioexp_signor.pkl \
         $(OUTPUT)/bioexp_bel.pkl \
         $(DATA)/bioexp_biopax_fixed.pkl \
         $(DATA)/bioexp_reach.pkl \
-        $(DATA)/bioexp_sparser.pkl
+        $(DATA)/bioexp_sparser.pkl \
+        $(DATA)/bioexp_medscan_merged_statements.pkl
 
 # Filter no hypotheses
 $(OUTPUT)/bioexp_filter_no_hypothesis.pkl: $(OUTPUT)/bioexp_all_raw.pkl
@@ -170,10 +172,12 @@ $(OUTPUT)/fig2_stmt_counts.txt: \
 
 $(OUTPUT)/bioexp_reading_only_all_raw.pkl: \
         $(DATA)/bioexp_reach.pkl \
-        $(DATA)/bioexp_sparser.pkl
+        $(DATA)/bioexp_sparser.pkl \
+        $(DATA)/bioexp_medscan_merged_statements.pkl
 	python -u assemble_sources.py load_stmts reading_only_all_raw \
         $(DATA)/bioexp_reach.pkl \
-        $(DATA)/bioexp_sparser.pkl
+        $(DATA)/bioexp_sparser.pkl \
+        $(DATA)/bioexp_medscan_merged_statements.pkl
 
 # Filter no hypotheses
 $(OUTPUT)/bioexp_reading_only_filter_no_hypothesis.pkl: \
