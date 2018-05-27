@@ -4,6 +4,7 @@ from util import *
 import indra.tools.assemble_corpus as ac
 from indra.sources import signor
 from indra.mechlinker import MechLinker
+from scorer import CuratedScorer
 
 if __name__ == '__main__':
     #sources = ['bel', 'biopax', 'reach', 'sparser']
@@ -60,7 +61,9 @@ if __name__ == '__main__':
         stmts = ac.map_sequence(stmts, save=prefixed_pkl(output_file))
     elif cmd == 'preassembled':
         stmts = pklload(input_file)
+        cur_scorer = CuratedScorer()
         stmts = ac.run_preassembly(stmts, return_toplevel=False,
+                                   belief_scorer=cur_scorer,
                                    save=prefixed_pkl(output_file),
                                    poolsize=16)
     elif cmd == 'filter_belief':
