@@ -209,17 +209,26 @@ $(OUTPUT)/bioexp_reading_only_filter_human_only.pkl: \
 	python -u assemble_sources.py filter_human_only \
         reading_only_filter_genes_only reading_only_filter_human_only
 
+# --- If expanding families, use these ---
 # Expand families
-$(OUTPUT)/bioexp_reading_only_expand_families.pkl: \
-        $(OUTPUT)/bioexp_reading_only_filter_human_only.pkl
-	python -u assemble_sources.py expand_families \
-        reading_only_filter_human_only reading_only_expand_families
+#$(OUTPUT)/bioexp_reading_only_expand_families.pkl: \
+#        $(OUTPUT)/bioexp_reading_only_filter_human_only.pkl
+#	python -u assemble_sources.py expand_families \
+#        reading_only_filter_human_only reading_only_expand_families
 
 # Map sequences
+#$(OUTPUT)/bioexp_reading_only_map_sequence.pkl: \
+#        $(OUTPUT)/bioexp_reading_only_expand_families.pkl
+#	python -u assemble_sources.py map_sequence \
+#        reading_only_expand_families reading_only_map_sequence
+
+# -- If not expanding families, use this target ---
+# Map sequences
 $(OUTPUT)/bioexp_reading_only_map_sequence.pkl: \
-        $(OUTPUT)/bioexp_reading_only_expand_families.pkl
+        $(OUTPUT)/bioexp_reading_only_filter_human_only.pkl
 	python -u assemble_sources.py map_sequence \
-        reading_only_expand_families reading_only_map_sequence
+        reading_only_filter_human_only reading_only_map_sequence
+# ---------------------------
 
 # Run preassembly
 $(OUTPUT)/bioexp_reading_only_preassembled.pkl: \
