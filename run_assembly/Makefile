@@ -5,10 +5,13 @@ all: assembly stats
 
 assembly: $(OUTPUT)/bioexp_reduce_mods.pkl
 
-reading_only: $(OUTPUT)/bioexp_reading_only_reduce_mods.pkl \
+reading_only_assembly: \
+    $(OUTPUT)/bioexp_reading_only_preassembled.pkl \
     $(OUTPUT)/bioexp_reach_only_preassembled.pkl \
     $(OUTPUT)/bioexp_medscan_only_preassembled.pkl \
     $(OUTPUT)/bioexp_sparser_only_preassembled.pkl
+
+reading_only_explanation: $(OUTPUT)/bioexp_reading_only_reduce_mods.pkl
 
 db_only: $(OUTPUT)/bioexp_db_only_reduce_mods.pkl
 
