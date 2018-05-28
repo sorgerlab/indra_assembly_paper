@@ -46,6 +46,14 @@ if __name__ == '__main__':
     elif cmd == 'filter_human_only':
         stmts = pklload(input_file)
         stmts = ac.filter_human_only(stmts, save=prefixed_pkl(output_file))
+    elif cmd == 'filter_source':
+        input_file = sys.argv[2]
+        source_name = sys.argv[3]
+        output_file = sys.argv[4]
+        stmts = pklload(input_file)
+        filt_stmts = [s for s in stmts
+                      if s.evidence[0].source_api == source_name]
+        ac.dump_statements(filt_stmts, prefixed_pkl(output_file))
     elif cmd == 'expand_families':
         stmts = pklload(input_file)
         stmts = ac.expand_families(stmts, save=prefixed_pkl(output_file))

@@ -5,7 +5,10 @@ all: assembly stats
 
 assembly: $(OUTPUT)/bioexp_reduce_mods.pkl
 
-reading_only: $(OUTPUT)/bioexp_reading_only_reduce_mods.pkl
+reading_only: $(OUTPUT)/bioexp_reading_only_reduce_mods.pkl \
+    $(OUTPUT)/bioexp_reach_only_preassembled.pkl \
+    $(OUTPUT)/bioexp_medscan_only_preassembled.pkl \
+    $(OUTPUT)/bioexp_sparser_only_preassembled.pkl
 
 db_only: $(OUTPUT)/bioexp_db_only_reduce_mods.pkl
 
@@ -277,6 +280,38 @@ $(OUTPUT)/bioexp_reading_only_reduce_mods.pkl: \
         $(OUTPUT)/bioexp_reading_only_reduce_activities.pkl
 	python -u assemble_sources.py reduce_mods \
         reading_only_reduce_activities reading_only_reduce_mods
+
+# SOURCE SPECIFIC ASSEMBLY PIPELINES (for comparison to all reading) ----------
+
+# REACH only
+$(OUTPUT)/bioexp_reach_only.pkl: \
+        $(OUTPUT)/bioexp_reading_only_map_sequence.pkl
+	python -u assemble_sources.py filter_source reach reach_only
+
+$(OUTPUT)/bioexp_reach_only_preassembled.pkl: \
+        $(OUTPUT)/bioexp_reach_only.pkl
+	python -u assemble_sources.py preassembled \
+        reach_only reach_only_preassembled
+
+# MEDSCAN only
+$(OUTPUT)/bioexp_medscan_only.pkl: \
+        $(OUTPUT)/bioexp_reading_only_map_sequence.pkl
+	python -u assemble_sources.py filter_source medscan medscan_only
+
+$(OUTPUT)/bioexp_medscan_only_preassembled.pkl: \
+        $(OUTPUT)/bioexp_medscan_only.pkl
+	python -u assemble_sources.py preassembled \
+        medscan_only medscan_only_preassembled
+
+# SPARSER only
+$(OUTPUT)/bioexp_sparser_only.pkl: \
+        $(OUTPUT)/bioexp_reading_only_map_sequence.pkl
+	python -u assemble_sources.py filter_source sparser sparser_only
+
+$(OUTPUT)/bioexp_sparser_only_preassembled.pkl: \
+        $(OUTPUT)/bioexp_sparser_only.pkl
+	python -u assemble_sources.py preassembled \
+        sparser_only sparser_only_preassembled
 
 
 # DATABASE-ONLY ASSEMBLY PIPELINE (for evaluation) ----------------------------
