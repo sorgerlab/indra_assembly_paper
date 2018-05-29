@@ -63,7 +63,7 @@ def plot_belief_distributions(stmts_dict, basename):
     print(totals)
 
     # Now, make a final plot comparing totals vs. assembled
-    def plot_belief_comparison(values1, values2, type):
+    def plot_belief_comparison(values1, values2, label, type):
         if type not in ('percent', 'count'):
             raise ValueError('type must be one of "percent", "count"')
         bins = [0.0, 0.5, 0.8, 0.9, 0.99, 1.0]
@@ -83,14 +83,17 @@ def plot_belief_distributions(stmts_dict, basename):
                             '> 0.99'))
         plt.subplots_adjust(left=0.16)
         plt.show()
-        plt.savefig('%s_comparison_%s.pdf' % (basename, type))
+        plt.savefig('%s_%s_comparison_%s.pdf' % (basename, label, type))
 
     read_pcts = (100 * counts_by_source['reading'] /
                  np.sum(counts_by_source['reading'])
     total_pcts = 100 * totals / np.sum(totals)
 
-    plot_belief_comparison(totals, counts_by_source['reading'], 'count')
-    plot_belief_comparison(total_pcts, read_pcts, 'percent')
+    plot_belief_comparison(totals, counts_by_source['reading'],
+                           'total', 'count')
+    plot_belief_comparison(total_pcts, read_pcts, 'total', 'percent')
+    plot_belief_comparison(counts_by_source['reach'],
+                           counts_by_source['reading'], 'reach', 'counts')
 
 
 if __name__ == '__main__':
