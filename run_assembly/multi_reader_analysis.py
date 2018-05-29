@@ -6,6 +6,7 @@ from matplotlib_venn import venn3
 from indra.tools import assemble_corpus as ac
 from util import pklload
 
+
 def plot_statement_overlap(stmts, plot_filename):
     """Generate a Venn diagram showing reader overlap (for REACH, Medscan, and
     Sparesr) among duplicate statements."""
@@ -40,7 +41,8 @@ def plot_belief_distributions(stmts_dict, basename):
         plt.xlabel('Belief score')
         plt.ylabel('Number of Statements')
         ax = plt.gca()
-        ax.set_xticklabels(('< 0.5', '0.5-0.8', '0.8-0.9', '0.9-0.99', '> 0.99'))
+        ax.set_xticklabels(('< 0.5', '0.5-0.8', '0.8-0.9', '0.9-0.99',
+                            '> 0.99'))
         plt.savefig('%s_%s.pdf' % (basename, source))
         return counts
 
@@ -59,6 +61,37 @@ def plot_belief_distributions(stmts_dict, basename):
     print("Totals for each bin across each source")
     print(totals)
 
+    # Now, make a final plot comparing totals vs. assembled
+    def plot_belief_comparison(values1, values2, type):
+        if type not in ('percent', 'count'):
+            raise ValueError('type must be one of "percent", "count"')
+        bins = [0.0, 0.5, 0.8, 0.9, 0.99, 1.0]
+        plt.figure()
+        index = np.array(range(len(total_counts)))
+        width = 0.35
+        plt.bar(index, values1, width=width)
+        plt.bar(index+width, values2, width=width)
+        plt.xlabel('Belief score')
+        if type == 'percent':
+            plt.ylabel('Pct. of Statements')
+        elif type == 'count':
+            plt.ylabel('Number of Statements')
+        ax = plt.gca()
+        ax.set_xticks(index + width/2)
+        ax.set_xticklabels(('< 0.5', '0.5-0.8', '0.8-0.9', '0.9-0.99',
+                            '> 0.99'))
+        plt.subplots_adjust(left=0.16)
+        plt.show()
+        plt.savefig('%s_comparison_%s.pdf' % (basename, type))
+
+    read_pcts = (100 * counts_by_source['reading'] /
+                 np.sum(counts_by_source['reading'])
+    total_pcts = 100 * totals / np.sum(totals)
+
+    plot_belief_comparison(totals, counts_by_source['reading'], 'count')
+    plot_belief_comparison(total_pcts, read_pcts, 'percent')
+
+
 if __name__ == '__main__':
     # Load statements
     stmts_dict = {}
@@ -70,3 +103,4 @@ if __name__ == '__main__':
     # Make plots
     plot_statement_overlap(stmts_dict['reading'], 'stmt_overlap_reading.pdf')
     plot_belief_distributions(stmts_dict, 'belief_scores')
+
