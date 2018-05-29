@@ -82,7 +82,6 @@ def plot_belief_distributions(stmts_dict, basename):
         ax.set_xticklabels(('< 0.5', '0.5-0.8', '0.8-0.9', '0.9-0.99',
                             '> 0.99'))
         plt.subplots_adjust(left=0.16)
-        plt.show()
         plt.savefig('%s_%s_comparison_%s.pdf' % (basename, label, type))
 
     read_pcts = (100 * counts_by_source['reading'] /
@@ -124,7 +123,6 @@ def plot_belief_top_level(stmts_dict, basename):
                         '> 0.99'))
     plt.xlabel('Belief score')
     plt.ylabel('Pct. of Statements in bin')
-    plt.show()
     plt.savefig('%s_top_level_pct.pdf' % basename)
 
 
@@ -137,6 +135,7 @@ if __name__ == '__main__':
     stmts_dict['reading'] = pklload('reading_only_preassembled')
 
     # Make plots
+    plt.ioff()
     plot_statement_overlap(stmts_dict['reading'],
                            'output/stmt_overlap_reading.pdf')
     plot_belief_distributions(stmts_dict, 'output/belief_scores')
