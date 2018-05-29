@@ -109,7 +109,7 @@ def plot_belief_top_level(stmts_dict, basename):
         ubound = bins[i]
         # Now that we've collected the statements in each bin, get counts
         # before and after filtering top-level
-        stmts_filt = [s for s in stmts['reading']
+        stmts_filt = [s for s in stmts_dict['reading']
                       if s.belief > lbound and s.belief <= ubound]
         counts_all[i] = len(stmts_filt)
         top_level = ac.filter_top_level(stmts_filt)
