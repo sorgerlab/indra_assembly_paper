@@ -68,7 +68,7 @@ def plot_belief_distributions(stmts_dict, basename):
             raise ValueError('type must be one of "percent", "count"')
         bins = [0.0, 0.5, 0.8, 0.9, 0.99, 1.0]
         plt.figure()
-        index = np.array(range(len(total_counts)))
+        index = np.array(range(len(bins)-1))
         width = 0.35
         plt.bar(index, values1, width=width)
         plt.bar(index+width, values2, width=width)
@@ -95,6 +95,9 @@ def plot_belief_distributions(stmts_dict, basename):
     plot_belief_comparison(counts_by_source['reach'],
                            counts_by_source['reading'], 'reach', 'counts')
 
+
+def plot_belief_top_level(stmts_dict, basename):
+    # First, group the statements 
 
 if __name__ == '__main__':
     # Load statements
