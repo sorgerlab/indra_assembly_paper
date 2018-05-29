@@ -468,5 +468,12 @@ $(OUTPUT)/fig2_stmt_counts.txt: \
         $(OUTPUT)/bioexp_reduce_mods.pkl
 	python -u stmt_counts.py
 
+$(OUTPUT)/stmt_overlap_reading.pdf: \
+        $(OUTPUT)/bioexp_reach_only_preassembled.pkl \
+        $(OUTPUT)/bioexp_medscan_only_preassembled.pkl \
+        $(OUTPUT)/bioexp_sparser_only_preassembled.pkl \
+        $(OUTPUT)/bioexp_reading_only_asmb_preassembled.pkl
+	python -u multi_reader_analysis.py
+
 
 

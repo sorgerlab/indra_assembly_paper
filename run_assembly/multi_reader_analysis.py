@@ -102,8 +102,9 @@ if __name__ == '__main__':
     stmts_dict['reading'] = pklload('reading_only_preassembled')
 
     # Make plots
-    plot_statement_overlap(stmts_dict['reading'], 'stmt_overlap_reading.pdf')
-    plot_belief_distributions(stmts_dict, 'belief_scores')
+    plot_statement_overlap(stmts_dict['reading'],
+                           'output/stmt_overlap_reading.pdf')
+    plot_belief_distributions(stmts_dict, 'output/belief_scores')
 
     # Sample statements from each belief bin
     stmt_bins = ((0.5, 0.8, '0.5_0.8'),
