@@ -97,7 +97,31 @@ def plot_belief_distributions(stmts_dict, basename):
 
 
 def plot_belief_top_level(stmts_dict, basename):
-    # First, group the statements 
+    # First, group the statements by bin
+    bins = [0.0, 0.5, 0.8, 0.9, 0.99, 1.0]
+    counts_all = np.zeros(len(bins)-1)
+    counts_top_level = np.zeros(len(bins)-1)
+    pct_top_level = np.zeros(len(bins)-1)
+    for i in range(1, len(bins)):
+        lbound = bins[i-1]
+        ubound = bins[i]
+        # Now that we've collected the statements in each bin, get counts
+        # before and after filtering top-level
+        stmts_filt = [s for s in stmts['reading']
+                      if s.belief > lbound and s.belief <= ubound]
+        counts_all[i] = len(stmts_filt)
+        top_level = ac.filter_top_level(stmts_filt)
+        counts_top_level[i] = len(top_level)
+    pct_top_level = counts_top_level / counts_all
+    plt.figure()
+    index = np.array(range(len(bins)-1))
+    plt.bar(index, pct_top_level)
+    ax = plt.gca()
+    ax.set_xticklabels(('< 0.5', '0.5-0.8', '0.8-0.9', '0.9-0.99',
+                        '> 0.99'))
+    plt.show()
+    plt.savefig('%s_top_level_pct.pdf' % basename)
+
 
 if __name__ == '__main__':
     # Load statements
@@ -124,3 +148,5 @@ if __name__ == '__main__':
         random.shuffle(stmts_by_belief)
         pkldump(stmts_by_belief[0:1000], 'reading_belief_%s_sample' % label)
 
+    # Proportion of top-level statements in each bin
+    plot_belief_top_level(stmts_dict, 'output/reading_belief')
