@@ -1,4 +1,5 @@
 import sys
+import random
 from collections import defaultdict
 import numpy as np
 from matplotlib import pyplot as plt
@@ -103,4 +104,16 @@ if __name__ == '__main__':
     # Make plots
     plot_statement_overlap(stmts_dict['reading'], 'stmt_overlap_reading.pdf')
     plot_belief_distributions(stmts_dict, 'belief_scores')
+
+    # Sample statements from each belief bin
+    stmt_bins = ((0.5, 0.8, '0.5_0.8'),
+                 (0.8, 0.9, '0.8_0.9'),
+                 (0.9, 0.99, '0.9_0.99'),
+                 (0.99, 1.0, '0.9_1.0'),
+                )
+    random.seed(1)
+    for lbound, ubound, label in stmt_bins:
+        stmts_by_belief = [s for s in stmts_dict['reading']]
+        random.shuffle(stmts_by_belief)
+        pkldump(stmts_by_belief[0:1000], 'reading_belief_%s_sample' % label)
 
