@@ -111,16 +111,19 @@ def plot_belief_top_level(stmts_dict, basename):
         # before and after filtering top-level
         stmts_filt = [s for s in stmts_dict['reading']
                       if s.belief > lbound and s.belief <= ubound]
-        counts_all[i] = len(stmts_filt)
+        counts_all[i-1] = len(stmts_filt)
         top_level = ac.filter_top_level(stmts_filt)
-        counts_top_level[i] = len(top_level)
+        counts_top_level[i-1] = len(top_level)
     pct_top_level = counts_top_level / counts_all
     plt.figure()
     index = np.array(range(len(bins)-1))
     plt.bar(index, pct_top_level)
     ax = plt.gca()
+    ax.set_xticks(index)
     ax.set_xticklabels(('< 0.5', '0.5-0.8', '0.8-0.9', '0.9-0.99',
                         '> 0.99'))
+    plt.xlabel('Belief score')
+    plt.ylabel('Pct. of Statements in bin')
     plt.show()
     plt.savefig('%s_top_level_pct.pdf' % basename)
 
