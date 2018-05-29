@@ -86,7 +86,7 @@ def plot_belief_distributions(stmts_dict, basename):
         plt.savefig('%s_%s_comparison_%s.pdf' % (basename, label, type))
 
     read_pcts = (100 * counts_by_source['reading'] /
-                 np.sum(counts_by_source['reading'])
+                 np.sum(counts_by_source['reading']))
     total_pcts = 100 * totals / np.sum(totals)
 
     plot_belief_comparison(totals, counts_by_source['reading'],
