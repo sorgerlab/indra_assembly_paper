@@ -1,5 +1,6 @@
 import numpy
-from indra.belief import BeliefScorer
+from copy import deepcopy
+from indra.belief import BeliefScorer, default_probs
 from indra.statements import *
 
 # Probabilities of correct grounding given a correct statement
@@ -29,25 +30,11 @@ precision_scores = {
                     'other': 0.52 * MEDSCAN_GND} # Weighted avg precision
 }
 
-systematic_errors = {
-    #'biopax': 0.01,
-    #'bel': 0.01,
-    #'trips': 0.05,
-    'reach': 0.0, # 0.05,
-    #'isi': 0.05,
-    #'eidos': 0.05,
-    #'bbn': 0.05,
-    #'cwms': 0.05,
-    #'sofia': 0.05,
-    #'biogrid': 0.01,
-    'sparser': 0.0, # 0.05
-    #'r3': 0.05,
-    #'phosphosite': 0.01,
-    #'ndex': 0.01,
-    #'signor': 0.01,
-    #'assertion': 0.0,
-    'medscan': 0.0, # 0.05
-}
+# Set systematic errors for readers to 0 for now
+local_probs = deepcopy(default_probs)
+local_probs['syst']['reach'] = 0
+local_probs['syst']['sparser'] = 0
+local_probs['syst']['medscan'] = 0
 
 
 class CuratedScorer(BeliefScorer):
@@ -55,7 +42,7 @@ class CuratedScorer(BeliefScorer):
         # This part is the same as in the SimpleScorer of the BeliefEngine
         sources = [ev.source_api for ev in st.evidence]
         uniq_sources = numpy.unique(sources)
-        syst_factors = {s: systematic_errors[s] for s in uniq_sources}
+        syst_factors = {s: local_probs['syst'][s] for s in uniq_sources}
         rand_factors = {k: [] for k in uniq_sources}
         # Get the relevant precision category for this statement
         if isinstance(st, RegulateActivity) or isinstance(st, RegulateAmount):
@@ -71,9 +58,12 @@ class CuratedScorer(BeliefScorer):
             stmt_type = 'complex'
         else:
             stmt_type = 'other'
-        # Collect precision values for each
+        # Collect random errors values for each
         for ev in st.evidence:
-            prob_incorrect = 1 - precision_scores[ev.source_api][stmt_type]
+            if ev.source_api in ('reach', 'sparser', 'medscan'):
+                prob_incorrect = 1 - precision_scores[ev.source_api][stmt_type]
+            else:
+                prob_incorrect = local_probs['rand'][ev.source_api]
             rand_factors[ev.source_api].append(prob_incorrect)
         # Calculate the probability of the statement being incorrect
         neg_prob_prior = 1
@@ -96,11 +86,19 @@ class CuratedScorer(BeliefScorer):
         for stmt in statements:
             sources |= set([ev.source_api for ev in stmt.evidence])
         for source in sources:
-            if source not in precision_scores:
+            # Check random error entries
+            if source in ('reach', 'sparser', 'medscan') and \
+               source not in precision_scores:
+                msg = 'CurationScorer missing precision value' + \
+                    ' for reader: %s' % source
+                raise Exception(msg)
+            elif source not in ('reach', 'sparser', 'medscan') and \
+                 source not in local_probs['rand']:
                 msg = 'CurationScorer missing precision value' + \
                     ' for source: %s' % source
                 raise Exception(msg)
-            if source not in systematic_errors:
+            # Check systematic error entries
+            if source not in local_probs['syst']:
                 msg = 'CurationScorer missing systematic error estimate ' + \
                     ' for source: %s' % source
                 raise Exception(msg)
