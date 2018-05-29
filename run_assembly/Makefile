@@ -239,6 +239,12 @@ $(OUTPUT)/bioexp_reading_only_map_sequence.pkl: \
 	python -u assemble_sources.py map_sequence \
         reading_only_expand_families reading_only_map_sequence
 
+# Run preassembly
+$(OUTPUT)/bioexp_reading_only_preassembled.pkl: \
+        $(OUTPUT)/bioexp_reading_only_map_sequence.pkl
+	python -u assemble_sources.py preassembled \
+        reading_only_map_sequence reading_only_preassembled
+
 # Filter out high belief statements
 $(OUTPUT)/bioexp_reading_only_filter_belief.pkl: \
         $(OUTPUT)/bioexp_reading_only_preassembled.pkl
@@ -285,8 +291,8 @@ $(OUTPUT)/bioexp_reading_only_reduce_mods.pkl: \
 
 # REACH only
 $(OUTPUT)/bioexp_reach_only.pkl: \
-        $(OUTPUT)/bioexp_reading_only_map_sequence.pkl
-	python -u assemble_sources.py filter_source reading_only_map_sequence \
+        $(OUTPUT)/bioexp_reading_only_asmb_map_sequence.pkl
+	python -u assemble_sources.py filter_source reading_only_asmb_map_sequence \
         reach reach_only
 
 $(OUTPUT)/bioexp_reach_only_preassembled.pkl: \
@@ -296,8 +302,8 @@ $(OUTPUT)/bioexp_reach_only_preassembled.pkl: \
 
 # MEDSCAN only
 $(OUTPUT)/bioexp_medscan_only.pkl: \
-        $(OUTPUT)/bioexp_reading_only_map_sequence.pkl
-	python -u assemble_sources.py filter_source reading_only_map_sequence \
+        $(OUTPUT)/bioexp_reading_only_asmb_map_sequence.pkl
+	python -u assemble_sources.py filter_source reading_only_asmb_map_sequence \
         medscan medscan_only
 
 $(OUTPUT)/bioexp_medscan_only_preassembled.pkl: \
@@ -307,8 +313,8 @@ $(OUTPUT)/bioexp_medscan_only_preassembled.pkl: \
 
 # SPARSER only
 $(OUTPUT)/bioexp_sparser_only.pkl: \
-        $(OUTPUT)/bioexp_reading_only_map_sequence.pkl
-	python -u assemble_sources.py filter_source reading_only_map_sequence \
+        $(OUTPUT)/bioexp_reading_only_asmb_map_sequence.pkl
+	python -u assemble_sources.py filter_source reading_only_asmb_map_sequence \
         sparser sparser_only
 
 $(OUTPUT)/bioexp_sparser_only_preassembled.pkl: \
