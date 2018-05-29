@@ -5,7 +5,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib_venn import venn3
 from indra.tools import assemble_corpus as ac
-from util import pklload
+from util import pklload, pkldump
 
 
 def plot_statement_overlap(stmts, plot_filename):
@@ -97,6 +97,8 @@ def plot_belief_distributions(stmts_dict, basename):
 
 
 def plot_belief_top_level(stmts_dict, basename):
+    """Make a bar plot showing the proportion of top-level statements in each
+    belief score bin."""
     # First, group the statements by bin
     bins = [0.0, 0.5, 0.8, 0.9, 0.99, 1.0]
     counts_all = np.zeros(len(bins)-1)
