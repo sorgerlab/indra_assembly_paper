@@ -93,7 +93,7 @@ def plot_belief_distributions(stmts_dict, basename):
                            'total', 'count')
     plot_belief_comparison(total_pcts, read_pcts, 'total', 'percent')
     plot_belief_comparison(counts_by_source['reach'],
-                           counts_by_source['reading'], 'reach', 'counts')
+                           counts_by_source['reading'], 'reach', 'count')
 
 
 def plot_belief_top_level(stmts_dict, basename):
