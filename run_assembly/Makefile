@@ -1,19 +1,27 @@
 OUTPUT := output
 DATA := data
 
-all: assembly stats
+all: assembly explanation stats
 
-assembly: $(OUTPUT)/bioexp_reduce_mods.pkl
+assembly: \
+    $(OUTPUT)/bioexp_asmb_preassembled.pkl \
+    $(OUTPUT)/bioexp_db_only_asmb_preassembled.pkl \
+    reading_only_assembly
 
 reading_only_assembly: \
-    $(OUTPUT)/bioexp_reading_only_preassembled.pkl \
+    $(OUTPUT)/bioexp_reading_only_asmb_preassembled.pkl \
     $(OUTPUT)/bioexp_reach_only_preassembled.pkl \
     $(OUTPUT)/bioexp_medscan_only_preassembled.pkl \
     $(OUTPUT)/bioexp_sparser_only_preassembled.pkl
 
-reading_only_explanation: $(OUTPUT)/bioexp_reading_only_reduce_mods.pkl
+explanation: \
+    $(OUTPUT)/bioexp_reduce_mods.pkl \
+    $(OUTPUT)/bioexp_db_only_reduce_mods.pkl \
+    $(OUTPUT)/bioexp_reading_only_reduce_mods.pkl
 
-db_only: $(OUTPUT)/bioexp_db_only_reduce_mods.pkl
+db_only: \
+    $(OUTPUT)/bioexp_db_only_asmb_preassembled.pkl \
+    $(OUTPUT)/bioexp_db_only_reduce_mods.pkl
 
 stats: $(OUTPUT)/fig2_stmt_counts.txt
 
@@ -44,7 +52,7 @@ $(OUTPUT)/bioexp_bel.pkl: \
 $(OUTPUT)/bioexp_signor.pkl:
 	python -u assemble_sources.py signor
 
-# FULL ASSEMBLY PIPELINE (includes DBs) ---------------------------------------
+# FULL ASSEMBLY PIPELINE (DBs + Reading) -------------------------------------
 
 # Load the statements
 $(OUTPUT)/bioexp_all_raw.pkl: \
@@ -53,7 +61,7 @@ $(OUTPUT)/bioexp_all_raw.pkl: \
         $(DATA)/bioexp_biopax_fixed.pkl \
         $(DATA)/bioexp_reach.pkl \
         $(DATA)/bioexp_sparser.pkl \
-		$(DATA)/bioexp_medscan_merged_statements.pkl
+        $(DATA)/bioexp_medscan_merged_statements.pkl
 	python -u assemble_sources.py load_stmts all_raw \
         $(OUTPUT)/bioexp_signor.pkl \
         $(OUTPUT)/bioexp_bel.pkl \
@@ -88,6 +96,22 @@ $(OUTPUT)/bioexp_filter_human_only.pkl: $(OUTPUT)/bioexp_filter_genes_only.pkl
 	python -u assemble_sources.py filter_human_only \
         filter_genes_only filter_human_only
 
+# ---------------------------
+# Branch -> Assembly only
+# Map sequences
+$(OUTPUT)/bioexp_asmb_map_sequence.pkl: \
+        $(OUTPUT)/bioexp_filter_human_only.pkl
+	python -u assemble_sources.py map_sequence \
+        filter_human_only asmb_map_sequence
+
+# Run preassembly
+$(OUTPUT)/bioexp_asmb_preassembled.pkl: \
+        $(OUTPUT)/bioexp_asmb_map_sequence.pkl
+	python -u assemble_sources.py preassembled \
+        asmb_map_sequence asmb_preassembled
+
+# ---------------------------
+# Branch -> Explanation/modeling (expand families)
 # Expand families
 $(OUTPUT)/bioexp_expand_families.pkl: $(OUTPUT)/bioexp_filter_human_only.pkl
 	python -u assemble_sources.py expand_families \
@@ -146,34 +170,6 @@ $(OUTPUT)/bioexp_reduce_mods.pkl: $(OUTPUT)/bioexp_reduce_activities.pkl
         reduce_activities reduce_mods
 
 
-# -- ANALYSIS/STATISTICS -----------------------------------------------------
-
-$(OUTPUT)/fig2_stmt_counts.txt: \
-        $(DATA)/bioexp_reach.pkl \
-        $(DATA)/bioexp_sparser.pkl \
-        $(OUTPUT)/bioexp_bel.pkl \
-        $(OUTPUT)/bioexp_signor.pkl \
-        $(DATA)/bioexp_biopax_fixed.pkl \
-        $(OUTPUT)/bioexp_all_raw.pkl \
-        $(OUTPUT)/bioexp_filter_no_hypothesis.pkl \
-        $(OUTPUT)/bioexp_map_grounding.pkl \
-        $(OUTPUT)/bioexp_filter_grounded_only.pkl \
-        $(OUTPUT)/bioexp_filter_genes_only.pkl \
-        $(OUTPUT)/bioexp_filter_human_only.pkl \
-        $(OUTPUT)/bioexp_expand_families.pkl \
-        $(OUTPUT)/bioexp_filter_gene_list.pkl \
-        $(OUTPUT)/bioexp_map_sequence.pkl \
-        $(OUTPUT)/bioexp_preassembled.pkl \
-        $(OUTPUT)/bioexp_filter_belief.pkl \
-        $(OUTPUT)/bioexp_filter_top_level.pkl \
-        $(OUTPUT)/bioexp_filter_enzyme_kinase.pkl \
-        $(OUTPUT)/bioexp_filter_mod_nokinase.pkl \
-        $(OUTPUT)/bioexp_filter_transcription_factor.pkl \
-        $(OUTPUT)/bioexp_reduce_activities.pkl \
-        $(OUTPUT)/bioexp_reduce_mods.pkl
-	python -u stmt_counts.py
-
-
 # READING-ONLY ASSEMBLY PIPELINE (for evaluation) ----------------------------
 
 $(OUTPUT)/bioexp_reading_only_all_raw.pkl: \
@@ -215,32 +211,33 @@ $(OUTPUT)/bioexp_reading_only_filter_human_only.pkl: \
 	python -u assemble_sources.py filter_human_only \
         reading_only_filter_genes_only reading_only_filter_human_only
 
-# --- If expanding families, use these ---
-# Expand families
-#$(OUTPUT)/bioexp_reading_only_expand_families.pkl: \
-#        $(OUTPUT)/bioexp_reading_only_filter_human_only.pkl
-#	python -u assemble_sources.py expand_families \
-#        reading_only_filter_human_only reading_only_expand_families
-
+# ---------------------------
+# Branch -> Assembly only
 # Map sequences
-#$(OUTPUT)/bioexp_reading_only_map_sequence.pkl: \
-#        $(OUTPUT)/bioexp_reading_only_expand_families.pkl
-#	python -u assemble_sources.py map_sequence \
-#        reading_only_expand_families reading_only_map_sequence
-
-# -- If not expanding families, use this target ---
-# Map sequences
-$(OUTPUT)/bioexp_reading_only_map_sequence.pkl: \
+$(OUTPUT)/bioexp_reading_only_asmb_map_sequence.pkl: \
         $(OUTPUT)/bioexp_reading_only_filter_human_only.pkl
 	python -u assemble_sources.py map_sequence \
-        reading_only_filter_human_only reading_only_map_sequence
-# ---------------------------
+        reading_only_filter_human_only reading_only_asmb_map_sequence
 
 # Run preassembly
-$(OUTPUT)/bioexp_reading_only_preassembled.pkl: \
-        $(OUTPUT)/bioexp_reading_only_map_sequence.pkl
+$(OUTPUT)/bioexp_reading_only_asmb_preassembled.pkl: \
+        $(OUTPUT)/bioexp_reading_only_asmb_map_sequence.pkl
 	python -u assemble_sources.py preassembled \
-        reading_only_map_sequence reading_only_preassembled
+        reading_only_asmb_map_sequence reading_only_asmb_preassembled
+
+# ---------------------------
+# Branch -> Explanation/modeling (expand families)
+# Expand families
+$(OUTPUT)/bioexp_reading_only_expand_families.pkl: \
+        $(OUTPUT)/bioexp_reading_only_filter_human_only.pkl
+	python -u assemble_sources.py expand_families \
+        reading_only_filter_human_only reading_only_expand_families
+
+# Map sequences
+$(OUTPUT)/bioexp_reading_only_map_sequence.pkl: \
+        $(OUTPUT)/bioexp_reading_only_expand_families.pkl
+	python -u assemble_sources.py map_sequence \
+        reading_only_expand_families reading_only_map_sequence
 
 # Filter out high belief statements
 $(OUTPUT)/bioexp_reading_only_filter_belief.pkl: \
@@ -270,7 +267,7 @@ $(OUTPUT)/bioexp_reading_only_filter_mod_nokinase.pkl: \
 $(OUTPUT)/bioexp_reading_only_filter_transcription_factor.pkl: \
         $(OUTPUT)/bioexp_reading_only_filter_mod_nokinase.pkl
 	python -u assemble_sources.py filter_transcription_factor \
-        reading_only_filter_mod_nokinase reading_only_filter_transcription_factor
+       reading_only_filter_mod_nokinase reading_only_filter_transcription_factor
 
 # Infer out redundant activities
 $(OUTPUT)/bioexp_reading_only_reduce_activities.pkl: \
@@ -361,6 +358,22 @@ $(OUTPUT)/bioexp_db_only_filter_human_only.pkl: \
 	python -u assemble_sources.py filter_human_only \
         db_only_filter_genes_only db_only_filter_human_only
 
+# ---------------------------
+# Branch -> Assembly only
+# Map sequences
+$(OUTPUT)/bioexp_db_only_asmb_map_sequence.pkl: \
+        $(OUTPUT)/bioexp_db_only_filter_human_only.pkl
+	python -u assemble_sources.py map_sequence \
+        db_only_filter_human_only db_only_asmb_map_sequence
+
+# Run preassembly
+$(OUTPUT)/bioexp_db_only_asmb_preassembled.pkl: \
+        $(OUTPUT)/bioexp_db_only_asmb_map_sequence.pkl
+	python -u assemble_sources.py preassembled \
+        db_only_asmb_map_sequence db_only_asmb_preassembled
+
+# ---------------------------
+# Branch -> Explanation/modeling (expand families)
 # Expand families
 $(OUTPUT)/bioexp_db_only_expand_families.pkl: \
         $(OUTPUT)/bioexp_db_only_filter_human_only.pkl
@@ -420,3 +433,34 @@ $(OUTPUT)/bioexp_db_only_reduce_mods.pkl: \
         $(OUTPUT)/bioexp_db_only_reduce_activities.pkl
 	python -u assemble_sources.py reduce_mods \
         db_only_reduce_activities db_only_reduce_mods
+
+
+# -- ANALYSIS/STATISTICS -----------------------------------------------------
+
+$(OUTPUT)/fig2_stmt_counts.txt: \
+        $(DATA)/bioexp_reach.pkl \
+        $(DATA)/bioexp_sparser.pkl \
+        $(OUTPUT)/bioexp_bel.pkl \
+        $(OUTPUT)/bioexp_signor.pkl \
+        $(DATA)/bioexp_biopax_fixed.pkl \
+        $(OUTPUT)/bioexp_all_raw.pkl \
+        $(OUTPUT)/bioexp_filter_no_hypothesis.pkl \
+        $(OUTPUT)/bioexp_map_grounding.pkl \
+        $(OUTPUT)/bioexp_filter_grounded_only.pkl \
+        $(OUTPUT)/bioexp_filter_genes_only.pkl \
+        $(OUTPUT)/bioexp_filter_human_only.pkl \
+        $(OUTPUT)/bioexp_expand_families.pkl \
+        $(OUTPUT)/bioexp_filter_gene_list.pkl \
+        $(OUTPUT)/bioexp_map_sequence.pkl \
+        $(OUTPUT)/bioexp_preassembled.pkl \
+        $(OUTPUT)/bioexp_filter_belief.pkl \
+        $(OUTPUT)/bioexp_filter_top_level.pkl \
+        $(OUTPUT)/bioexp_filter_enzyme_kinase.pkl \
+        $(OUTPUT)/bioexp_filter_mod_nokinase.pkl \
+        $(OUTPUT)/bioexp_filter_transcription_factor.pkl \
+        $(OUTPUT)/bioexp_reduce_activities.pkl \
+        $(OUTPUT)/bioexp_reduce_mods.pkl
+	python -u stmt_counts.py
+
+
+
