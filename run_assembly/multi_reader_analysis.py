@@ -4,6 +4,7 @@ from collections import defaultdict
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib_venn import venn3
+from indra.preassembler import flatten_evidence
 from indra.tools import assemble_corpus as ac
 from util import pklload, pkldump
 
@@ -11,20 +12,26 @@ from util import pklload, pkldump
 def plot_statement_overlap(stmts, plot_filename):
     """Generate a Venn diagram showing reader overlap (for REACH, Medscan, and
     Sparesr) among duplicate statements."""
-    # Iterate over the preassembled statements, collecting lists of UUIDs
-    # with evidence from each source
-    sources = defaultdict(set)
-    for stmt in stmts:
-        for ev in stmt.evidence:
-            sources[ev.source_api].add(stmt.uuid)
-    # Plot the Venn diagram
-    plt.figure()
-    subsets = (sources['reach'], sources['medscan'], sources['sparser'])
-    venn3(subsets=subsets, set_labels=('REACH', 'Medscan', 'Sparser'))
-    plt.title('Exact Statement overlap among readers')
-    plt.savefig(plot_filename)
+    def plot_venn(stmts, title, label):
+        # Iterate over the preassembled statements, collecting lists of UUIDs
+        # with evidence from each source
+        sources = defaultdict(set)
+        for stmt in stmts:
+            for ev in stmt.evidence:
+                sources[ev.source_api].add(stmt.uuid)
+        # Plot the Venn diagram
+        plt.figure()
+        subsets = (sources['reach'], sources['medscan'], sources['sparser'])
+        venn3(subsets=subsets, set_labels=('REACH', 'Medscan', 'Sparser'))
+        plt.title(title)
+        plt.savefig('%s_%s.pdf' % (plot_filename, label))
 
-    
+    # Exact overlap
+    plot_venn(stmts, 'Exact Statement overlap among readers', 'exact')
+    # Hierarchical overlap
+    flat_stmts = flatten_evidence(stmts, collect_from='supports')
+    plot_venn(flat_stmts, 'Hierarchical Statement overlap among readers',
+              'hierarchical')
 
 
 def plot_belief_distributions(stmts_dict, basename):
@@ -138,8 +145,8 @@ if __name__ == '__main__':
 
     # Make plots
     plt.ioff()
-    plot_statement_overlap(stmts_dict['reading'],
-                           'output/stmt_overlap_reading.pdf')
+    plot_statement_overlap(stmts_dict['reading'], 'output/stmt_overlap')
+    """
     plot_belief_distributions(stmts_dict, 'output/belief_scores')
 
     # Proportion of top-level statements in each bin
@@ -157,3 +164,5 @@ if __name__ == '__main__':
                            if s.belief >= lbound and s.belief < ubound]
         random.shuffle(stmts_by_belief)
         pkldump(stmts_by_belief[0:1000], 'reading_belief_%s_sample' % label)
+
+    """
