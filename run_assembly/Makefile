@@ -52,6 +52,10 @@ $(OUTPUT)/bioexp_bel.pkl: \
 $(OUTPUT)/bioexp_signor.pkl:
 	python -u assemble_sources.py signor
 
+# Download Biogrid statements
+$(OUTPUT)/bioexp_biogrid.pkl:
+	python -u get_biogrid_data.py
+
 # FULL ASSEMBLY PIPELINE (DBs + Reading) -------------------------------------
 
 # Load the statements
@@ -476,4 +480,6 @@ $(OUTPUT)/stmt_overlap_reading.pdf: \
 	python -u multi_reader_analysis.py
 
 
+#asdfasdf: \
+#        $(OUTPUT)/bioexp_biogrid.pkl
 
