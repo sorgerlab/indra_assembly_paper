@@ -21,8 +21,10 @@ def plot_statement_overlap(stmts, plot_filename):
     plt.figure()
     subsets = (sources['reach'], sources['medscan'], sources['sparser'])
     venn3(subsets=subsets, set_labels=('REACH', 'Medscan', 'Sparser'))
-    plt.title('Statement overlap among readers')
+    plt.title('Exact Statement overlap among readers')
     plt.savefig(plot_filename)
+
+    
 
 
 def plot_belief_distributions(stmts_dict, basename):
@@ -140,17 +142,18 @@ if __name__ == '__main__':
                            'output/stmt_overlap_reading.pdf')
     plot_belief_distributions(stmts_dict, 'output/belief_scores')
 
+    # Proportion of top-level statements in each bin
+    plot_belief_top_level(stmts_dict, 'output/reading_belief')
+
     # Sample statements from each belief bin
     stmt_bins = ((0.5, 0.8, '0.5_0.8'),
                  (0.8, 0.9, '0.8_0.9'),
                  (0.9, 0.99, '0.9_0.99'),
-                 (0.99, 1.0, '0.9_1.0'),
-                )
+                 (0.99, 1.0, '0.99_1.0'))
+
     random.seed(1)
     for lbound, ubound, label in stmt_bins:
-        stmts_by_belief = [s for s in stmts_dict['reading']]
+        stmts_by_belief = [s for s in stmts_dict['reading']
+                           if s.belief >= lbound and s.belief < ubound]
         random.shuffle(stmts_by_belief)
         pkldump(stmts_by_belief[0:1000], 'reading_belief_%s_sample' % label)
-
-    # Proportion of top-level statements in each bin
-    plot_belief_top_level(stmts_dict, 'output/reading_belief')
