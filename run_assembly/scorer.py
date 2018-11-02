@@ -1,6 +1,6 @@
 import numpy
 from copy import deepcopy
-from indra.belief import BeliefScorer, default_probs
+from indra.belief import BeliefScorer, load_default_probs
 from indra.statements import *
 
 # Probabilities of correct grounding given a correct statement
@@ -29,6 +29,10 @@ precision_scores = {
                     'mod_one': 0.52 * MEDSCAN_GND, # Weighted avg precision
                     'other': 0.52 * MEDSCAN_GND} # Weighted avg precision
 }
+
+
+default_probs = load_default_probs()
+
 
 # Set systematic errors for readers to 0 for now
 local_probs = deepcopy(default_probs)
