@@ -1,5 +1,4 @@
 import sys
-import random
 from util import *
 import indra.tools.assemble_corpus as ac
 from indra.sources import signor

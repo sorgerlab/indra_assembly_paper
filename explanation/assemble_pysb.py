@@ -3,41 +3,26 @@ and then assembles and contextualizes a PySB model from the Statements."""
 
 from indra.util import _require_python3
 import re
-from pysb import Observable, ReactionPattern, ComplexPattern, bng
+from pysb import Observable, ReactionPattern, ComplexPattern
 from indra.statements import *
 from indra.mechlinker import MechLinker
 import indra.tools.assemble_corpus as ac
 from indra.assemblers.pysb import PysbAssembler
-from indra.assemblers.sif import SifAssembler
 import sys
 sys.path.append('..')
 import process_data
+from util import *
 from run_assembly.util import pklload, pkldump, prefixed_file
 
 
 def assemble_pysb(stmts, data_genes):
     """Return an assembled PySB model."""
-    stmts = preprocess_stmts(stmts, data_genes)
-
-    # Make a SIF model equivalent to the PySB model
-    # Useful for making direct comparisons in pathfinding
-    sa = SifAssembler(stmts)
-    sa.make_model(use_name_as_key=True, include_mods=True,
-                  include_complexes=True)
-    sif_str = sa.print_model(include_unsigned_edges=True)
-    with open(prefixed_file('pysb', 'sif'), 'wt') as f:
-        f.write(sif_str)
-
-    # This is the "final" set of statements going into the assembler so it
-    # makes sense to cache these.
-    pkldump(stmts, 'before_pa')
-
     # Save a version of statements with no evidence for faster loading
-    for s in stmts:
-        s.evidence = []
-        for ss in s.supports + s.supported_by:
-            ss.evidence = []
-    pkldump(stmts, 'no_evidence')
+    #for s in stmts:
+    #    s.evidence = []
+    #    for ss in s.supports + s.supported_by:
+    #        ss.evidence = []
+    #pkldump(stmts, 'no_evidence')
 
     # Assemble model
     pa = PysbAssembler()
@@ -212,5 +197,18 @@ def get_mod_whitelist():
 if __name__ == '__main__':
     data = process_data.read_data()
     data_genes = process_data.get_all_gene_names(data)
-    statements = pklload('db_only_reduce_mods')
-    model = assemble_pysb(statements, data_genes)
+
+    cmd = sys.argv[1]
+    cmds = ('preprocess_stmts', 'assemble_pysb')
+    if cmd in cmds:
+        input_file = sys.argv[2]
+        output_file = sys.argv[3]
+    # Break each assembly cmd down into intermediate steps
+    if cmd == 'preprocess_stmts':
+        stmts_in = pklload(input_file)
+        stmts_out = preprocess_stmts(stmts_in, data_genes)
+        pkldump(stmts_out, output_file)
+    elif cmd == 'assemble_pysb':
+        stmts_in = pklload(input_file)
+        model = assemble_pysb(stmts_in, data_genes)
+        pkldump(model, output_file)
