@@ -1,18 +1,19 @@
+"""This script does additional Statement assembly specific to PySB models,
+and then assembles and contextualizes a PySB model from the Statements."""
+
 from indra.util import _require_python3
 import re
-import pickle
-import os.path
-from os.path import join as pjoin
 from pysb import Observable, ReactionPattern, ComplexPattern, bng
-from pysb.export.kappa import KappaExporter
 from indra.statements import *
 from indra.mechlinker import MechLinker
 import indra.tools.assemble_corpus as ac
-from indra.assemblers import PysbAssembler, SifAssembler
+from indra.assemblers.pysb import PysbAssembler
+from indra.assemblers.sif import SifAssembler
 import sys
 sys.path.append('..')
 import process_data
 from run_assembly.util import pklload, pkldump, prefixed_file
+
 
 def assemble_pysb(stmts, data_genes):
     """Return an assembled PySB model."""
@@ -49,6 +50,7 @@ def assemble_pysb(stmts, data_genes):
     pa.save_model(prefixed_file('pysb', 'py'))
     pkldump(pa.model, 'pysb')
     return pa.model
+
 
 def preprocess_stmts(stmts, data_genes):
     """Preprocess Statements specifically for PySB assembly."""
