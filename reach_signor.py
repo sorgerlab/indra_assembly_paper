@@ -3,14 +3,16 @@ Compare statements extracted by REACH to Activation/Inhibition statements
 in SIGNOR. Collect REACH extractions that match SIGNOR except for incorrect
 polarity.
 """
+import csv
+import pickle
 import random
 from indra.sources import signor
 from indra.tools import assemble_corpus as ac
 from indra.statements import *
 from indra.preassembler import *
 from indra.preassembler.hierarchy_manager import hierarchies
-#from indra.sources.indra_db_rest import get_statements
-from indra.db import get_primary_db, client
+from indra_db import get_primary_db, client
+from indra.util import batch_iter
 
 def _opposite_polarity(s1, s2):
     if type(s1) == type(s2):
@@ -29,66 +31,101 @@ def signor_ref_set(filename):
 
     # Filter to specific human genes only
     stmts = ac.filter_human_only(sp.statements)
+    stmts = ac.filter_genes_only(stmts)
     act = ac.filter_by_type(stmts, Activation)
     inh = ac.filter_by_type(stmts, Inhibition)
+    phos = ac.filter_by_type(stmts, Phosphorylation)
+    dephos = ac.filter_by_type(stmts, Dephosphorylation)
 
     # Combine any duplicates in SIGNOR
-    pa = Preassembler(hierarchies, act + inh)
-    uniq = pa.combine_duplicates()
+    reg_stmts = act + inh
+    phos_stmts = phos + dephos
+    non_opposing = []
+    for stmt_grp in (reg_stmts, phos_stmts):
+        pa = Preassembler(hierarchies, stmt_grp)
+        uniq = pa.combine_duplicates()
 
-    # Compare all pairs of statements in the combined pool of Act/Inh
-    opposing = []
-    combos = list(itertools.combinations(uniq, 2))
-    for ix, (s1, s2) in enumerate(combos):
-        # Progress msg
-        if (ix + 1) % 1000000 == 0:
-            print("%d of %d" % (ix+1, len(combos)))
-        # If the statements are of opposing polarity, save them as a pair
-        if _opposite_polarity(s1, s2):
-            opposing.append((s1, s2))
-            print(str((s1, s2)))
-    # Flatten pairs of opposing statements into a single list of statements
-    opposing_flat = list(set([s for op_tuple in opposing for s in op_tuple]))
-    # Now get the statements that are *NOT* opposing--these are the reference
-    # set, because they suggest that there is no controversy about the correct
-    # polarity
-    non_opposing = [s for s in uniq if s not in opposing_flat]
-    # Now dump the non-opposing statements to a file
+        # Compare all pairs of statements in the combined pool
+        opposing = []
+        combos = list(itertools.combinations(uniq, 2))
+        for ix, (s1, s2) in enumerate(combos):
+            # Progress msg
+            if (ix + 1) % 1000000 == 0:
+                print("%d of %d" % (ix+1, len(combos)))
+            # If the statements are of opposing polarity, save them as a pair
+            if _opposite_polarity(s1, s2):
+                opposing.append((s1, s2))
+                print(str((s1, s2)))
+        # Flatten pairs of opposing statements into a single list of statements
+        opposing_flat = list(set([s for op_tuple in opposing for s in op_tuple]))
+        # Now get the statements that are *NOT* opposing--these are the reference
+        # set, because they suggest that there is no controversy about the correct
+        # polarity
+        non_opposing += [s for s in uniq if s not in opposing_flat]
+        # Now dump the non-opposing statements to a file
     ac.dump_statements(non_opposing, filename)
 
 
 def get_matching_db_stmts(source_stmts, filename):
-    all_db_stmts = []
+    # Make synthetic statements with inverted polarity
+    opp_stmts = []
+    for s in source_stmts:
+        if isinstance(s, Activation):
+            opp_stmts.append(Inhibition(s.subj, s.obj))
+        elif isinstance(s, Inhibition):
+            opp_stmts.append(Activation(s.subj, s.obj))
+        elif isinstance(s, Modification):
+            opposing_class = modclass_to_inverse[type(s)]
+            opp_stmts.append(opposing_class(s.enz, s.sub, s.residue, s.position))
+    # Make hash lists
+    match_hash_list = [s.get_hash(shallow=True) for s in source_stmts]
+    opp_hash_list = [s.get_hash(shallow=True) for s in opp_stmts]
+    # Get matching and opposing statements from the DB
     db = get_primary_db()
-    hash_list = [s.get_hash(shallow=True) for s in source_stmts]
-    stmts = client.get_statements([db.PAStatements.mk_hash.in_(hash_list)])
-    ac.dump_statements(stmts, filename)
-    return stmts
+    # Function to run for both matching and opposing stmts
+    def get_corresponding_stmts(hash_list, batch_size=50):
+        stmts = []
+        for ix, batch in enumerate(batch_iter(hash_list, batch_size)):
+            print(f"Loading batch {ix}")
+            result = client.get_statement_jsons_from_hashes(batch,
+                                                            ev_limit=100000)
+            jsons = list(result['statements'].values())
+            stmts += stmts_from_json(jsons)
+        return stmts
+    # Run the queries
+    print(f"Querying for matching JSONs for {len(match_hash_list)} statements")
+    match_stmts = get_corresponding_stmts(match_hash_list)
+    print(f"Querying for opposing JSONs for {len(opp_hash_list)} statements")
+    opp_stmts = get_corresponding_stmts(opp_hash_list)
+    # Save results in a single dict
+    result = {'matching': match_stmts, 'opposing': opp_stmts}
+    with open(filename, 'wb') as f:
+        pickle.dump(result, f)
+    return result
 
-    """
-    client.get_statements([
-    for ix, s in enumerate(signor_stmts):
-        if ix % 10 == 0:
-            print(ix)
-        if ix % 100 ==0:
-            print("Saving...")
-            ac.dump_statements(all_db_stmts, '%s_%d.pkl' % (filename, ix))
-        subj = s.agent_list()[0]
-        obj = s.agent_list()[1]
-        subj_hgnc = subj.db_refs.get('HGNC')
-        obj_hgnc = obj.db_refs.get('HGNC')
-        if subj_hgnc is None or obj_hgnc is None:
-            continue
-        db_stmts = get_statements(subject=subj.name, object=obj.name)
-        all_db_stmts.append((s, db_stmts))
-    ac.dump_statements(all_db_stmts, '%s_all.pkl' % filename)
-    return all_db_stmts
-    """
+
+def dump_reach_sentences(db_stmts, filename):
+    header = ['Statement', 'SubjText', 'ObjText', 'PMID', 'Rule', 'Sentence']
+    rows = [header]
+    for s in db_stmts:
+        for ev in s.evidence:
+            if ev.source_api == 'reach':
+                subj_text = ev.annotations['agents']['raw_text'][0]
+                obj_text = ev.annotations['agents']['raw_text'][1]
+                row = [str(s), subj_text, obj_text,
+                       ev.pmid, ev.annotations.get('found_by'),
+                       ev.text]
+                rows.append(row)
+    print(f"Dumping {len(rows)} sentences")
+    with open(filename, 'wt') as f:
+        csvwriter = csv.writer(f, delimiter=',')
+        csvwriter.writerows(rows)
+
 
 if __name__ == '__main__':
     # RELOAD?
     reload_signor = False
-    signor_nonopp_file = 'signor_non_opposing_regulate.pkl'
+    signor_nonopp_file = 'signor_non_opposing.pkl'
     if reload_signor:
         signor_stmts = signor_ref_set(signor_nonopp_file)
     else:
@@ -96,13 +133,16 @@ if __name__ == '__main__':
 
     # RELOAD?
     reload_db = True
-    db_stmts_file = 'non_opp_db_stmts.pkl'
+    db_stmts_file = 'db_stmts_dict.pkl'
     if reload_db == True:
         db_stmts = get_matching_db_stmts(signor_stmts, db_stmts_file)
     else:
-        db_stmts = ac.load_statements(db_stmts_file)
-
-
+        with open(db_stmts_file, 'rb') as f:
+            db_stmts = pickle.load(f)
+    print("Dumping opposing sentences")
+    dump_reach_sentences(db_stmts['opposing'], 'opposing_reach_stmts.csv')
+    print("Dumping concurring sentences")
+    dump_reach_sentences(db_stmts['matching'], 'concurring_reach_stmts.csv')
 
 """
 random.seed(1)
