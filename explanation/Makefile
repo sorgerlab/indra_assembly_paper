@@ -31,7 +31,7 @@ s3:
 
 $(OUTPUT)/bioexp_db_only_before_pysb.pkl: \
         $(OUTPUT)/bioexp_db_only_reduce_mods.pkl
-	python -u assemble_pysb.py preprocess_statements \
+	python -u assemble_pysb.py preprocess_stmts \
         db_only_reduce_mods db_only_before_pysb
 
 $(OUTPUT)/bioexp_db_only_pysb_model.pkl: \

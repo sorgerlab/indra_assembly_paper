@@ -1,4 +1,4 @@
-OUTPUT := output
+OUTPUT := ~/data/bioexp
 DATA := data
 
 all: assembly explanation stats

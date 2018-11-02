@@ -10,6 +10,7 @@ import indra.tools.assemble_corpus as ac
 from indra.assemblers.pysb import PysbAssembler
 import sys
 sys.path.append('..')
+sys.path.append('../run_assembly')
 import process_data
 from util import *
 from run_assembly.util import pklload, pkldump, prefixed_file
