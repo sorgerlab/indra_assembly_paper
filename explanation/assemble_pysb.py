@@ -81,9 +81,9 @@ def set_context(pa):
     in a mutated form."""
     pa.set_context('SKMEL28_SKIN')
     # Set BRAF V600E
-    for ic in pa.model.initial_conditions:
-        if str(ic[0]).startswith('BRAF'):
-            ic[0].monomer_patterns[0].site_conditions['V600'] = 'E'
+    # for ic in pa.model.initial_conditions:
+    #    if str(ic[0]).startswith('BRAF'):
+    #        ic[0].monomer_patterns[0].site_conditions['V600'] = 'E'
 
 
 def add_observables(model):
