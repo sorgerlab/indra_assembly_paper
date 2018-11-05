@@ -1,16 +1,15 @@
-import json
-import pickle
 import itertools
 from indra.util import write_unicode_csv
-from indra.assemblers import PysbAssembler, EnglishAssembler, CyJSAssembler
+from indra.assemblers.english import EnglishAssembler
+from indra.assemblers.cyjs import CyJSAssembler
 from indra.explanation.model_checker import ModelChecker
 import indra.tools.assemble_corpus as ac
-from assemble_pysb import set_context, add_observables
 import sys
 sys.path.append('..')
 import process_data
 import make_stmts_for_checking as make_stmts
 from run_assembly.util import pklload, pkldump, prefixed_file
+
 
 def get_path_stmts(results, model, stmts):
     all_path_stmts = []
@@ -23,6 +22,7 @@ def get_path_stmts(results, model, stmts):
         all_path_stmts.append(path_stmts)
     return all_path_stmts
 
+
 def stmts_for_path(path, model, stmts):
     path_stmts = []
     for path_rule, sign in path:
@@ -31,6 +31,7 @@ def stmts_for_path(path, model, stmts):
                 stmt = _stmt_from_rule(model, path_rule, stmts)
                 path_stmts.append(stmt)
     return path_stmts
+
 
 def get_path_genes(all_path_stmts):
     path_genes = []
@@ -41,6 +42,7 @@ def get_path_genes(all_path_stmts):
                     path_genes.append(agent.name)
     path_genes = sorted(list(set(path_genes)))
     return path_genes
+
 
 def _stmt_from_rule(model, rule_name, stmts):
     """Return the INDRA Statement corresponding to a given rule by name."""
@@ -54,6 +56,7 @@ def _stmt_from_rule(model, rule_name, stmts):
         for stmt in stmts:
             if stmt.uuid == stmt_uuid:
                 return stmt
+
 
 def make_cyjs_network(results, model, stmts):
     path_stmts = get_path_stmts(results, model, stmts)
@@ -127,6 +130,7 @@ def make_english_output(results, model, stmts):
         references += '[%d] https://www.ncbi.nlm.nih.gov/pubmed/%s\n' % (v, k)
     print(references)
 
+
 def export_json(results, model, stmts):
     """Export a set of paths in JSON format for visualization."""
     json_dict = {}
@@ -143,12 +147,15 @@ def export_json(results, model, stmts):
             json_dict[drug][ab][idx] = path_stmts
     return json_dict
 
-if __name__ == '__main__':
-    print("Processing data")
 
-    data = process_data.read_data(process_data.data_file)
+if __name__ == '__main__':
+    data = process_data.read_data()
     data_genes = process_data.get_all_gene_names(data)
     ab_map = process_data.get_antibody_map(data)
+
+    input_file = sys.argv[1]
+    model = pklload(input_file)
+    output_file = sys.argv[2]
 
     print('Loading data statements.')
     data_stmts, data_values = make_stmts.run(dec_thresh=0.5, inc_thresh=1.5)
@@ -172,72 +179,64 @@ if __name__ == '__main__':
             for agent in agents:
                 agent_data[drug_name][agent] = value
 
-    base_stmts = pklload('before_pa')
-    model = pklload('pysb')
-
     # Some parameters up front
     MAX_PATHS_ONE = 5
     MAX_PATHS_ALL = 5
     MAX_PATH_LENGTH = 6
 
     # Preprocess and assemble the pysb model
-    #model = assemble_pysb(combined_stmts, data_genes, '')
-    rerun = True
-    if rerun:
-        mc = ModelChecker(model, all_data_stmts, agent_obs)
-        mc.prune_influence_map()
+    mc = ModelChecker(model, all_data_stmts, agent_obs)
+    mc.prune_influence_map()
 
-        # Iterate over each drug/ab statement subset
-        results = []
-        for drug_name, ab_dict in data_stmts.items():
-            agent_values = agent_data[drug_name]
-            for ab, stmt_list in ab_dict.items():
-                value = data_values[drug_name][ab]
-                # For each subset, check statements; if any of them checks
-                # out, we're good and can move on to the next group
-                print("-- Checking the effect of %s on %s --" % (drug_name, ab))
-                relation = 'positive' if value > 1 else 'negative'
-                path_found = 0
-                paths = []
-                for stmt in stmt_list:
-                    print("Checking: %s" % stmt)
-                    result = \
-                        mc.check_statement(stmt,
-                                           max_paths=MAX_PATHS_ONE,
-                                           max_path_length=MAX_PATH_LENGTH)
-                    print(result)
+    # Iterate over each drug/ab statement subset
+    results = []
+    for drug_name, ab_dict in data_stmts.items():
+        agent_values = agent_data[drug_name]
+        for ab, stmt_list in ab_dict.items():
+            value = data_values[drug_name][ab]
+            # For each subset, check statements; if any of them checks
+            # out, we're good and can move on to the next group
+            print("-- Checking the effect of %s on %s --" % (drug_name, ab))
+            relation = 'positive' if value > 1 else 'negative'
+            path_found = 0
+            paths = []
+            for stmt in stmt_list:
+                print("Checking: %s" % stmt)
+                result = \
+                    mc.check_statement(stmt,
+                                       max_paths=MAX_PATHS_ONE,
+                                       max_path_length=MAX_PATH_LENGTH)
+                print(result)
 
-                    if result.path_found:
-                        path_found = 1
-                        if result.paths:
-                            paths += result.paths
-                    else:
-                        print("No path found")
+                if result.path_found:
+                    path_found = 1
+                    if result.paths:
+                        paths += result.paths
+                else:
+                    print("No path found")
 
-                    # For efficiency, break out of loop as soon as 5 paths
-                    # in total are found
-                    if len(paths) >= MAX_PATHS_ALL:
-                        break
-                if paths:
-                    print('===========================')
-                    print('Scoring a total of %d paths' % len(paths))
-                    scored_result = mc.score_paths(paths, agent_values,
-                                                   loss_of_function=True)
-                    for res in scored_result:
-                        print(res[1])
-                        for link in res[0]:
-                            print('--->', link[0], link[1])
-                    paths = [s[0] for s in scored_result]
-                    print('===========================')
-                results.append((drug_name, ab, relation, value, path_found,
-                                paths, result.result_code))
-        pkldump(results, 'pathfinding_results')
-    else:
-        results = pklload('pathfinding_results')
+                # For efficiency, break out of loop as soon as 5 paths
+                # in total are found
+                if len(paths) >= MAX_PATHS_ALL:
+                    break
+            if paths:
+                print('===========================')
+                print('Scoring a total of %d paths' % len(paths))
+                scored_result = mc.score_paths(paths, agent_values,
+                                               loss_of_function=True)
+                for res in scored_result:
+                    print(res[1])
+                    for link in res[0]:
+                        print('--->', link[0], link[1])
+                paths = [s[0] for s in scored_result]
+                print('===========================')
+            results.append((drug_name, ab, relation, value, path_found,
+                            paths, result.result_code))
+    pkldump(results, output_file)
 
-    write_unicode_csv(results, prefixed_file('model_check_results', 'csv'))
-    path_stmts = get_path_stmts(results, model, base_stmts)
-    path_genes = get_path_genes(path_stmts)
-    make_english_output(results, model, base_stmts)
+    #write_unicode_csv(results, prefixed_file('model_check_results', 'csv'))
+    #path_stmts = get_path_stmts(results, model, base_stmts)
+    #path_genes = get_path_genes(path_stmts)
+    #make_english_output(results, model, base_stmts)
     #make_cyjs_network(results, model, base_stmts)
     #paths_json = export_json(results, model, base_stmts)
