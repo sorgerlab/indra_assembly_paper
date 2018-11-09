@@ -76,7 +76,8 @@ def get_matching_db_stmts(source_stmts, filename):
             opp_stmts.append(Activation(s.subj, s.obj))
         elif isinstance(s, Modification):
             opposing_class = modclass_to_inverse[type(s)]
-            opp_stmts.append(opposing_class(s.enz, s.sub, s.residue, s.position))
+            opp_stmts.append(opposing_class(s.enz, s.sub, s.residue,
+                             s.position))
     # Make hash lists
     match_hash_list = [s.get_hash(shallow=True) for s in source_stmts]
     opp_hash_list = [s.get_hash(shallow=True) for s in opp_stmts]
@@ -122,37 +123,16 @@ def dump_reach_sentences(db_stmts, filename):
         csvwriter.writerows(rows)
 
 
-if __name__ == '__main__':
-    # RELOAD?
-    reload_signor = False
-    signor_nonopp_file = 'signor_non_opposing.pkl'
-    if reload_signor:
-        signor_stmts = signor_ref_set(signor_nonopp_file)
-    else:
-        signor_stmts = ac.load_statements(signor_nonopp_file)
-
-    # RELOAD?
-    reload_db = True
-    db_stmts_file = 'db_stmts_dict.pkl'
-    if reload_db == True:
-        db_stmts = get_matching_db_stmts(signor_stmts, db_stmts_file)
-    else:
-        with open(db_stmts_file, 'rb') as f:
-            db_stmts = pickle.load(f)
-    print("Dumping opposing sentences")
-    dump_reach_sentences(db_stmts['opposing'], 'opposing_reach_stmts.csv')
-    print("Dumping concurring sentences")
-    dump_reach_sentences(db_stmts['matching'], 'concurring_reach_stmts.csv')
-
-"""
-random.seed(1)
-random.shuffle(non_opposing)
-stmts_match = []
-stmts_not_match = []
-matching_ct = 0
-nonmatching_ct = 0
-m_ev = []
-nm_ev = []
+def train_naive_bayes(db_stmts_dict):
+    from sklearn.naive_bayes import MultinomialNB
+    random.seed(1)
+    random.shuffle(non_opposing)
+    stmts_match = []
+    stmts_not_match = []
+    matching_ct = 0
+    nonmatching_ct = 0
+    m_ev = []
+    nm_ev = []
 
     # is activation
     # is inhibition
@@ -189,62 +169,62 @@ nm_ev = []
             m_ev.extend(inh_reach)
         matching_ct += len(inh_reach)
         nonmatching_ct += len(act_reach)
-"""
+
+    # Preprocess the data into a vector of counts for each evidence type,
+    # plus a matching/opposing (correct/incorrect) class identifier
+    data = list(zip([e.text for e in m_ev], [0] * len(m_ev))) + \
+           list(zip([e.text for e in nm_ev], [1] * len(nm_ev)))
+    random.shuffle(data)
+    corpus, classes = zip(*data)
+    y = np.array(classes)
+    #cv = CountVectorizer()
+    cv = HashingVectorizer(n_features=1000)
+    #cv = TfidfVectorizer()
+    X = cv.fit_transform(corpus)
+    X_train = X[0:4000]
+    y_train = y[0:4000]
+    X_test = X[4000:]
+    y_test = y[4000:]
+    clf = MultinomialNB()
+    clf.fit(X_train, y_train)
+    train_score = clf.score(X_train, y_train)
+    test_score = clf.score(X_test, y_test)
+    (train_score, test_score)
+
+
+def belief_phos_example(db_stmts_dict):
+    # Filter to statements involving MEK and ERK
+    #gene_list = ['MAP2K1', 'MAPK1']
+    act_match = ac.filter_by_type(db_stmts_dict['matching']
+    act_opp = ac.filter_by_type(db_stmts_dict['opposing'], Inhibition)
+    globals().update(locals())
+    
+
+if __name__ == '__main__':
+    # RELOAD?
+    reload_signor = False
+    signor_nonopp_file = 'signor_non_opposing.pkl'
+    if reload_signor:
+        signor_stmts = signor_ref_set(signor_nonopp_file)
+    else:
+        signor_stmts = ac.load_statements(signor_nonopp_file)
+
+    # RELOAD?
+    reload_db = False
+    db_stmts_file = 'db_stmts_dict.pkl'
+    if reload_db == True:
+        db_stmts = get_matching_db_stmts(signor_stmts, db_stmts_file)
+    else:
+        with open(db_stmts_file, 'rb') as f:
+            db_stmts = pickle.load(f)
+    #print("Dumping opposing sentences")
+    #dump_reach_sentences(db_stmts['opposing'], 'opposing_reach_stmts.csv')
+    #print("Dumping concurring sentences")
+    #dump_reach_sentences(db_stmts['matching'], 'concurring_reach_stmts.csv')
+
+    belief_mek_erk_example(db_stmts)
 
 
 
 
-
-
-
-
-
-"""
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer, \
-                                            HashingVectorizer
-from sklearn.naive_bayes import MultinomialNB
-
-data = list(zip([e.text for e in m_ev], [0] * len(m_ev))) + \
-       list(zip([e.text for e in nm_ev], [1] * len(nm_ev)))
-random.shuffle(data)
-corpus, classes = zip(*data)
-y = np.array(classes)
-#cv = CountVectorizer()
-cv = HashingVectorizer(n_features=1000)
-#cv = TfidfVectorizer()
-X = cv.fit_transform(corpus)
-X_train = X[0:4000]
-y_train = y[0:4000]
-X_test = X[4000:]
-y_test = y[4000:]
-clf = MultinomialNB()
-clf.fit(X_train, y_train)
-train_score = clf.score(X_train, y_train)
-test_score = clf.score(X_test, y_test)
-(train_score, test_score)
-"""
-
-# For each statement where there is a DB stmt with a polarity that doesn't
-# match the polarity of the SIGNOR statement, create an entry marked "incorrect"
-
-
-#contra = pa.find_contradicts()
-
-# We get statement from REACH; we run it through our classifier and get a
-# probability estimate of the statement being correct
-# Features:
-# - length of sentence,
-# - num of words between entities
-# - do we know if there is a phosphorylation or binding event between the two
-#   proteins?
-# - number of evidences
-# - number of opposing evidences from reading
-# - ratio between supporting and opposing evidences
-# Stemmed word vector?
-
-# Of course, could use the sentences to create a training corpus 
-
-# What fraction of the time do we get statements from the database 
-# Purpose: predict when the statement is likely to be incorrect, at least
-# due to polarity
 
