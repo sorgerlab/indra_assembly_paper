@@ -105,18 +105,20 @@ def get_matching_db_stmts(source_stmts, filename):
     return result
 
 
-def dump_reach_sentences(db_stmts, filename):
-    header = ['Statement', 'SubjText', 'ObjText', 'PMID', 'Rule', 'Sentence']
+def dump_sentences(db_stmts, filename, reader=None):
+    header = ['Statement', 'Source', 'SubjText', 'ObjText', 'PMID', 'Rule',
+              'StmtHash', 'Sentence']
     rows = [header]
     for s in db_stmts:
         for ev in s.evidence:
-            if ev.source_api == 'reach':
-                subj_text = ev.annotations['agents']['raw_text'][0]
-                obj_text = ev.annotations['agents']['raw_text'][1]
-                row = [str(s), subj_text, obj_text,
-                       ev.pmid, ev.annotations.get('found_by'),
-                       ev.text]
-                rows.append(row)
+            if reader is not None and ev.source_api != reader:
+                continue
+            subj_text = ev.annotations['agents']['raw_text'][0]
+            obj_text = ev.annotations['agents']['raw_text'][1]
+            row = [str(s), ev.source_api, subj_text, obj_text,
+                   ev.pmid, ev.annotations.get('found_by'),
+                   s.get_hash(shallow=True), ev.text]
+            rows.append(row)
     print(f"Dumping {len(rows)} sentences")
     with open(filename, 'wt') as f:
         csvwriter = csv.writer(f, delimiter=',')
@@ -192,14 +194,6 @@ def train_naive_bayes(db_stmts_dict):
     (train_score, test_score)
 
 
-def belief_phos_example(db_stmts_dict):
-    # Filter to statements involving MEK and ERK
-    #gene_list = ['MAP2K1', 'MAPK1']
-    act_match = ac.filter_by_type(db_stmts_dict['matching']
-    act_opp = ac.filter_by_type(db_stmts_dict['opposing'], Inhibition)
-    globals().update(locals())
-    
-
 if __name__ == '__main__':
     # RELOAD?
     reload_signor = False
@@ -218,9 +212,11 @@ if __name__ == '__main__':
         with open(db_stmts_file, 'rb') as f:
             db_stmts = pickle.load(f)
     #print("Dumping opposing sentences")
-    #dump_reach_sentences(db_stmts['opposing'], 'opposing_reach_stmts.csv')
+    #dump_sentences(db_stmts['opposing'], 'opposing_reach_stmts.csv',
+                    #reader='reach')
     #print("Dumping concurring sentences")
-    #dump_reach_sentences(db_stmts['matching'], 'concurring_reach_stmts.csv')
+    #dump_sentences(db_stmts['matching'], 'concurring_reach_stmts.csv',
+                    #reader='reach')
 
     belief_mek_erk_example(db_stmts)
 
