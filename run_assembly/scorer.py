@@ -42,7 +42,9 @@ local_probs['syst']['medscan'] = 0
 
 
 class CuratedScorer(BeliefScorer):
-    def score_statement(self, st):
+    def score_statement(self, st, extra_evidence=None):
+        if extra_evidence is None:
+            extra_evidence = []
         # This part is the same as in the SimpleScorer of the BeliefEngine
         sources = [ev.source_api for ev in st.evidence]
         uniq_sources = numpy.unique(sources)
@@ -63,7 +65,8 @@ class CuratedScorer(BeliefScorer):
         else:
             stmt_type = 'other'
         # Collect random errors values for each
-        for ev in st.evidence:
+        all_evidence = st.evidence + etra_evidence
+        for ev in all_evidence:
             if ev.source_api in ('reach', 'sparser', 'medscan'):
                 prob_incorrect = 1 - precision_scores[ev.source_api][stmt_type]
             else:
