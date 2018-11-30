@@ -3,9 +3,10 @@ DATA := data
 NET := networks
 FIG1 := bioexp/figures/figure1
 FIG2 := bioexp/figures/figure2
+FIG4 := bioexp/figures/figure4
 DEPLOY := ~/Dropbox/DARPA\ projects/papers/INDRA\ paper\ 2/figure_panels/
 
-all: preprocessing fig2
+all: preprocessing fig2 fig4 fig5
 
 preprocessing: \
         $(BUILD)/prior_genes.txt \
@@ -22,7 +23,9 @@ fig1: $(BUILD)/fig1_pc_egfr_mapk1_paths.txt
 fig2: $(BUILD)/fig2_evidence_distribution.pdf \
       $(BUILD)/fig2_stmt_counts_before_pa.pdf
 
-fig4: $(BUILD)/reach_complexes_raw.csv
+fig4: $(BUILD)/fig4_belief_surface.pdf
+
+fig5: $(BUILD)/reach_complexes_raw.csv
 
 
 # DATA -----------------------------------------------------------------------
@@ -71,9 +74,14 @@ $(BUILD)/fig2_stmt_counts_before_pa.pdf: \
 	python -m bioexp.figures.figure2.plot_stmt_counts
 
 # FIGURE 4 -------------------------------------------------------------------
+$(BUILD)/fig4_belief_surface.pdf: \
+        $(FIG4)/belief_surface.py
+	python -m bioexp.figures.figure4.belief_surface
+
+# FIGURE 5 -------------------------------------------------------------------
 
 $(BUILD)/reach_complexes_raw.csv: $(DATA)/bioexp_reach.pkl
-	python -m bioexp.figures.figure4.validate_complex \
+	python -m bioexp.figures.figure5.validate_complex \
                              $(DATA)/bioexp_reach.pkl \
                              $(BUILD)/reach_complexes_raw.tsv
 
