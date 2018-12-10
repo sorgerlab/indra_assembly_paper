@@ -12,7 +12,8 @@ reading_only_assembly: \
     $(OUTPUT)/bioexp_reading_only_asmb_preassembled.pkl \
     $(OUTPUT)/bioexp_reach_only_preassembled.pkl \
     $(OUTPUT)/bioexp_medscan_only_preassembled.pkl \
-    $(OUTPUT)/bioexp_sparser_only_preassembled.pkl
+    $(OUTPUT)/bioexp_sparser_only_preassembled.pkl \
+    $(OUTPUT)/bioexp_trips_only_preassembled.pkl
 
 explanation: \
     $(OUTPUT)/bioexp_reduce_mods.pkl \
@@ -65,6 +66,7 @@ $(OUTPUT)/bioexp_all_raw.pkl: \
         $(DATA)/bioexp_biopax_fixed.pkl \
         $(DATA)/bioexp_reach.pkl \
         $(DATA)/bioexp_sparser.pkl \
+        $(DATA)/bioexp_trips.pkl \
         $(DATA)/bioexp_medscan_merged_statements.pkl
 	python -u assemble_sources.py load_stmts all_raw \
         $(OUTPUT)/bioexp_signor.pkl \
@@ -72,6 +74,7 @@ $(OUTPUT)/bioexp_all_raw.pkl: \
         $(DATA)/bioexp_biopax_fixed.pkl \
         $(DATA)/bioexp_reach.pkl \
         $(DATA)/bioexp_sparser.pkl \
+        $(DATA)/bioexp_trips.pkl \
         $(DATA)/bioexp_medscan_merged_statements.pkl
 
 # Filter no hypotheses
@@ -179,10 +182,12 @@ $(OUTPUT)/bioexp_reduce_mods.pkl: $(OUTPUT)/bioexp_reduce_activities.pkl
 $(OUTPUT)/bioexp_reading_only_all_raw.pkl: \
         $(DATA)/bioexp_reach.pkl \
         $(DATA)/bioexp_sparser.pkl \
+        $(DATA)/bioexp_trips.pkl \
         $(DATA)/bioexp_medscan_merged_statements.pkl
 	python -u assemble_sources.py load_stmts reading_only_all_raw \
         $(DATA)/bioexp_reach.pkl \
         $(DATA)/bioexp_sparser.pkl \
+        $(DATA)/bioexp_trips.pkl \
         $(DATA)/bioexp_medscan_merged_statements.pkl
 
 # Filter no hypotheses
@@ -327,6 +332,17 @@ $(OUTPUT)/bioexp_sparser_only_preassembled.pkl: \
         sparser_only sparser_only_preassembled
 
 
+# TRIPS only
+$(OUTPUT)/bioexp_trips_only.pkl: \
+        $(OUTPUT)/bioexp_reading_only_asmb_map_sequence.pkl
+	python -u assemble_sources.py filter_source reading_only_asmb_map_sequence \
+        trips trips_only
+
+$(OUTPUT)/bioexp_trips_only_preassembled.pkl: \
+        $(OUTPUT)/bioexp_trips_only.pkl
+	python -u assemble_sources.py preassembled \
+        trips_only trips_only_preassembled
+
 # DATABASE-ONLY ASSEMBLY PIPELINE (for evaluation) ----------------------------
 
 $(OUTPUT)/bioexp_db_only_all_raw.pkl: \
@@ -450,6 +466,7 @@ $(OUTPUT)/bioexp_db_only_reduce_mods.pkl: \
 $(OUTPUT)/fig2_stmt_counts.txt: \
         $(DATA)/bioexp_reach.pkl \
         $(DATA)/bioexp_sparser.pkl \
+        $(DATA)/bioexp_trips.pkl \
         $(OUTPUT)/bioexp_bel.pkl \
         $(OUTPUT)/bioexp_signor.pkl \
         $(DATA)/bioexp_biopax_fixed.pkl \
@@ -476,6 +493,7 @@ $(OUTPUT)/stmt_overlap_reading.pdf: \
         $(OUTPUT)/bioexp_reach_only_preassembled.pkl \
         $(OUTPUT)/bioexp_medscan_only_preassembled.pkl \
         $(OUTPUT)/bioexp_sparser_only_preassembled.pkl \
+        $(OUTPUT)/bioexp_trips_only_preassembled.pkl \
         $(OUTPUT)/bioexp_reading_only_asmb_preassembled.pkl
 	python -u multi_reader_analysis.py
 
