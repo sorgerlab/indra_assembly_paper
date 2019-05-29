@@ -111,3 +111,12 @@ def process_trrust(data_folder):
     from indra.sources import trrust
     tp = trrust.process_from_web()
     return tp.statements
+
+
+if __name__ == '__main__':
+    data_folder = sys.argv[1]
+    target_folder = sys.argv[2]
+    cached = True if sys.argv[3] == 'True' else False
+    sources = sys.argv[3:]
+    for source in sources:
+        process_source(source, cached, data_folder, target_folder)
