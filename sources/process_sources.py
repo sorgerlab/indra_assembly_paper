@@ -121,6 +121,40 @@ def process_trrust(data_folder):
     return tp.statements
 
 
+def _process_medscan_get_stmts(fname):
+    mp = medscan.process_file(fname)
+    if mp:
+        return mp.statements
+    else:
+        return []
+
+
+def process_medscan(data_folder):
+    import glob
+    from multiprocessing import Pool
+    from indra.sources import medscan
+    # Process PMID file first
+    pmid_file = os.path.join(data_folder, 'medscan', 'DARPAcorpus.csxml')
+    mp = medscan.process_file(pmid_file)
+    pmid_stmts = mp.statements
+    # Process PMC files next
+    file_pattern = os.path.join(data_folder, 'medscan', 'pmids', '*.csxml')
+    fnames = glob.glbo(file_pattern)
+    # Now process files in parallel
+    pool = Pool(4)
+    stmts_ll = pool.map(_process_medscan_get_stmts, fnames)
+    # Flatten the list of lists
+    stmts = []
+    for sts in stmts_ll:
+        stmts += sts
+    # Only add PMID statements if their PMID isn't covered by PMC
+    pmc_pmids = {s.evidence[0].pmid for s in stmts}
+    for stmt in pmid_stmts:
+        if stmt.evidence[0].pmid not in pmc_pmids:
+            stmts.append(stmt)
+    return stmts
+
+
 def _process_reach_pmid(pmid):
     from indra.literature import s3_client
     try:
