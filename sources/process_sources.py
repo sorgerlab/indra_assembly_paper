@@ -15,14 +15,18 @@ logger = logging.getLogger(__name__)
 
 
 def process_source(source, cached, data_folder, target_folder):
+    logger.info('Processing %s' % source)
+    key = 'bioexp_%s.pkl' % source
     if cached:
-        download_from_s3('bioexp_%s.pkl' % source, target_folder)
+        logger.info('Loading %s from cache' % key)
+        download_from_s3(key, target_folder)
     else:
-        fun = 'process_%s(data_folder)' % source
-        res = exec(fun)
-        fname = os.path.join(target_folder, 'bioexp_%s.pkl' % source)
+        fun = globals()['process_%s' % source]
+        stmts = fun(data_folder)
+        logger.info('Dumping %d statements into %s' % (len(stmts), key))
+        fname = os.path.join(target_folder, key)
         with open(fname, 'wb') as fh:
-            pickle.dump(res, fh)
+            pickle.dump(stmts, fh)
         upload_to_s3(fname)
 
 
@@ -51,7 +55,8 @@ def process_pathway_commons(data_folder):
 
 def process_bel(data_folder):
     from indra.sources import bel
-    fname = os.path.join(indra.__path__, os.pardir, 'data', 'large_corpus.bel')
+    fname = os.path.join(indra.__path__[0], os.pardir, 'data',
+                         'large_corpus.bel')
     bp = bel.process_belscript(fname)
     return bp.statements
 
@@ -95,13 +100,13 @@ def process_cbn(data_folder):
     from indra.sources import bel
     url = 'http://causalbionet.com/Content/jgf_bulk_files/Human-2.0.zip'
     zip_file = os.path.join(data_folder, 'Human-2.0.zip')
-    urllib.request.urlretrieve(zip_file)
+    urllib.request.urlretrieve(url, zip_file)
     cbn_folder = os.path.join(data_folder, 'cbn')
     os.mkdir(cbn_folder)
     with zipfile.ZipFile(zip_file) as fh:
         fh.extractall(path=cbn_folder)
     stmts = []
-    for fname in glob.glob(os.path.join(cbn_folder, '*.jgif')):
+    for fname in glob.glob(os.path.join(cbn_folder, '*.jgf')):
         bp = bel.process_cbn_jgif_file(fname)
         stmts += bp.statements
     return stmts
@@ -117,6 +122,7 @@ if __name__ == '__main__':
     data_folder = sys.argv[1]
     target_folder = sys.argv[2]
     cached = True if sys.argv[3] == 'True' else False
-    sources = sys.argv[3:]
+    sources = sys.argv[4:]
+    print(sys.argv)
     for source in sources:
         process_source(source, cached, data_folder, target_folder)
