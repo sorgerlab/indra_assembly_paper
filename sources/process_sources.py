@@ -124,6 +124,7 @@ def process_trrust(data_folder):
 def _process_reach_pmid(pmid):
     from indra.literature import s3_client
     try:
+        logger.info('Processing %s' % pmid)
         reach_json_str = s3_client.get_reader_json_str('reach', pmid)
         rp = reach.process_json_str(reach_json_str, citation=pmid)
         return rp.statements
@@ -138,6 +139,8 @@ def process_reach(data_folder):
     pmids = [l.strip() for l in open(pmid_file).readlines()]
     pool = Pool(4)
     stmts_ll = pool.map(_process_reach_pmid, pmids)
+    pool.close()
+    pool.join()
     stmts = []
     for stmts_l in stmts_ll:
         stmts += stmts_l
