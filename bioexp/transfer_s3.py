@@ -7,20 +7,22 @@ import boto3
 bucket_name = 'bioexp-paper'
 
 
-def download_from_s3(key, filename):
+def download_from_s3(key, target_dir):
     # Get data from S3
     print("Getting %s..." % key)
     obj_response = s3_client.get_object(Bucket=bucket_name, Key=key)
     data = obj_response['Body']
+    filename = join(target_dir, key)
     # Write data to a file
     with open(filename, 'wb') as f:
         print("Downloading to %s..." % filename)
         shutil.copyfileobj(data, f)
 
 
-def upload_to_s3(key, filename):
+def upload_to_s3(filename):
+    key = basename(sys.argv[2])
     with open(filename, 'rb') as f:
-        s3_client.put_object(Bucket=bucket_name, Key=s3_key, Body=f)
+        s3_client.put_object(Bucket=bucket_name, Key=key, Body=f)
 
 
 if __name__ == '__main__':
@@ -38,9 +40,7 @@ if __name__ == '__main__':
     if action == 'get':
         s3_key = basename(sys.argv[2])
         target_dir = sys.argv[3]
-        filename = join(target_dir, s3_key)
-        download_from_s3(s3_key, filename)
+        download_from_s3(s3_key, target_dir)
     else:
         filename = sys.argv[2]
-        s3_key = basename(sys.argv[2])
-        upload_to_s3(s3_key, filename)
+        upload_to_s3(filename)
