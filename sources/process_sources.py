@@ -8,6 +8,7 @@ import pickle
 import zipfile
 import logging
 import urllib.request
+from indra.sources import reach
 from bioexp.transfer_s3 import download_from_s3, upload_to_s3
 
 
@@ -55,8 +56,10 @@ def process_pathway_commons(data_folder):
 
 def process_bel(data_folder):
     from indra.sources import bel
-    fname = os.path.join(indra.__path__[0], os.pardir, 'data',
-                         'large_corpus.bel')
+    url = 'https://arty.scai.fraunhofer.de/artifactory/bel/knowledge/' + \
+        'large_corpus/large_corpus-20170611.bel'
+    fname = os.path.join(data_folder, 'large_corpus-20170611.bel')
+    urllib.request.urlretrieve(url, fname)
     bp = bel.process_belscript(fname)
     return bp.statements
 
@@ -116,6 +119,29 @@ def process_trrust(data_folder):
     from indra.sources import trrust
     tp = trrust.process_from_web()
     return tp.statements
+
+
+def _process_reach_pmid(pmid):
+    from indra.literature import s3_client
+    try:
+        reach_json_str = s3_client.get_reader_json_str('reach', pmid)
+        rp = reach.process_json_str(reach_json_str, citation=pmid)
+        return rp.statements
+    except Exception as e:
+        return []
+
+
+def process_reach(data_folder):
+    from multiprocessing import Pool
+    pmid_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             os.pardir, 'run_assembly', 'pmids.txt')
+    pmids = [l.strip() for l in open(pmid_file).readlines()]
+    pool = Pool(4)
+    stmts_ll = pool.map(_process_reach_pmid, pmids)
+    stmts = []
+    for stmts_l in stmts_ll:
+        stmts += stmts_l
+    return stmts
 
 
 if __name__ == '__main__':
