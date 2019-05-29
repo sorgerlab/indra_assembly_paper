@@ -8,7 +8,7 @@ import pickle
 import zipfile
 import logging
 import urllib.request
-from indra.sources import reach
+from indra.sources import reach, trips, medscan
 from bioexp.transfer_s3 import download_from_s3, upload_to_s3
 
 
@@ -130,8 +130,9 @@ def _process_medscan_get_stmts(fname):
 
 
 def process_medscan(data_folder):
+    # NOTE: this function has not been run as is, unexpected issues could
+    # come up
     from multiprocessing import Pool
-    from indra.sources import medscan
     # Process PMID file first
     pmid_file = os.path.join(data_folder, 'medscan', 'DARPAcorpus.csxml')
     mp = medscan.process_file(pmid_file)
@@ -194,7 +195,6 @@ def _process_trips_fname(fname):
 
 def process_trips(data_folder):
     from multiprocessing import Pool
-    from indra.sources import trips
     file_pattern = os.path.join(data_folder, 'trips', '*.ekb')
     fnames = glob.glob(file_pattern)
     stmts = []
