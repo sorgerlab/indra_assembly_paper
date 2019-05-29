@@ -180,19 +180,31 @@ def process_reach(data_folder):
     return stmts
 
 
+def _process_trips_fname(fname):
+    tp = trips.process_xml_file(fname)
+    if tp:
+        pmid = os.path.basename(fname)[:-4]
+        for stmt in tp.statements:
+            for ev in stmt.evidence:
+                ev.pmid = pmid
+        return tp.statements
+    else:
+        return []
+
+
 def process_trips(data_folder):
+    from multiprocessing import Pool
     from indra.sources import trips
     file_pattern = os.path.join(data_folder, 'trips', '*.ekb')
     fnames = glob.glob(file_pattern)
     stmts = []
-    for fname in fnames:
-        pmid = os.path.basename(fname)[:-4]
-        tp = trips.process_xml_file(fname)
-        if tp:
-            for stmt in tp.statements:
-                for ev in stmt.evidence:
-                    ev.pmid = pmid
-                stmts.append(stmt)
+    pool = Pool(4)
+    stmts_ll = pool.map(_process_trips_fname, fnames)
+    pool.close()
+    pool.join()
+    stmts = []
+    for stmts_l in stmts_ll:
+        stmts += stmts_l
     return stmts
 
 
