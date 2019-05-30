@@ -13,6 +13,8 @@ from bioexp.transfer_s3 import download_from_s3, upload_to_s3
 
 
 logger = logging.getLogger(__name__)
+pmid_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         os.pardir, 'run_assembly', 'pmids.txt')
 
 
 def process_source(source, cached, data_folder, target_folder):
@@ -168,8 +170,6 @@ def _process_reach_pmid(pmid):
 
 def process_reach(data_folder):
     from multiprocessing import Pool
-    pmid_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                             os.pardir, 'run_assembly', 'pmids.txt')
     pmids = [l.strip() for l in open(pmid_file).readlines()]
     pool = Pool(4)
     stmts_ll = pool.map(_process_reach_pmid, pmids)
@@ -206,6 +206,17 @@ def process_trips(data_folder):
     for stmts_l in stmts_ll:
         stmts += stmts_l
     return stmts
+
+
+def process_sparser(data_folder):
+    from indra.tools.reading.submit_reading_pipeline import \
+        submit_reading, submit_combine, wait_for_complete
+    basen = 'sparser_bioexp_201905'
+    job_list = submit_reading(basen, pmid_file, ['sparser'],
+                              pmids_per_job=1000, force_read=True,
+                              project_name='cwc')
+    reading_res = wait_for_complete('run_reach_queue', job_list)
+    combine_res = submit_combine(basen, job_list)
 
 
 if __name__ == '__main__':
