@@ -8,7 +8,7 @@ import pickle
 import zipfile
 import logging
 import urllib.request
-from indra.sources import reach, trips, medscan
+from indra.sources import reach, trips, medscan, sparser
 from bioexp.transfer_s3 import download_from_s3, upload_to_s3
 
 
@@ -208,7 +208,27 @@ def process_trips(data_folder):
     return stmts
 
 
+def _process_sparser_pmid(pmid):
+    from indra.literature import s3_client
+    try:
+        logger.info('Processing %s' % pmid)
+        js = s3_client.get_reader_json_str('sparser', pmid)
+        jd = json.loads(js)
+        sp = sparser.process_json_dict(jd)
+        if sp:
+            for stmt in sp.statements:
+                for ev in stmt.evidence:
+                    ev.pmid = pmid
+            return rp.statements
+        else:
+            return []
+    except Exception as e:
+        return []
+
+
 def process_sparser(data_folder):
+    """
+    # Step 1: re-run reading
     from indra.tools.reading.submit_reading_pipeline import \
         submit_reading, submit_combine, wait_for_complete
     basen = 'sparser_bioexp_201905'
@@ -216,7 +236,18 @@ def process_sparser(data_folder):
                               pmids_per_job=1000, force_read=True,
                               project_name='cwc')
     reading_res = wait_for_complete('run_reach_queue', job_list)
-    combine_res = submit_combine(basen, job_list)
+    """
+    # Step 2: re-process reading results
+    from multiprocessing import Pool
+    pmids = [l.strip() for l in open(pmid_file).readlines()]
+    pool = Pool(4)
+    stmts_ll = pool.map(_process_reach_pmid, pmids)
+    pool.close()
+    pool.join()
+    stmts = []
+    for stmts_l in stmts_ll:
+        stmts += stmts_l
+    return stmts
 
 
 if __name__ == '__main__':
