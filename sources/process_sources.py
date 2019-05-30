@@ -7,6 +7,7 @@ import indra
 import shutil
 import pickle
 import zipfile
+import tarfile
 import logging
 import urllib.request
 from indra.sources import reach, trips, medscan, sparser
@@ -122,6 +123,31 @@ def process_trrust(data_folder):
     from indra.sources import trrust
     tp = trrust.process_from_web()
     return tp.statements
+
+
+def process_hprd(data_folder):
+    from indra.sources import hprd
+    tgz_fname = 'HPRD_FLAT_FILES_041310.tar.gz'
+    url = 'http://www.hprd.org/RELEASE9/%s' % tgz_fname
+    local_tgz_fname = os.path.join(data_folder, tgz_fname)
+    urllib.request.urlretrieve(url, local_tgz_fname)
+    with tarfile.open(local_tgz_fname, 'r:gz') as fh:
+        fh.extractall(data_folder)
+    hprd_path = os.path.join(data_folder, 'FLAT_FILES_072010')
+    hp = hprd.process_flat_files(
+        id_mappings_file=os.path.join(hprd_path,
+                                      'HPRD_ID_MAPPINGS.txt'),
+        complexes_file=os.path.join(hprd_path,
+                                    'PROTEIN_COMPLEXES.txt'),
+        ptm_file=os.path.join(hprd_path,
+                              'POST_TRANSLATIONAL_MODIFICATIONS.txt'),
+        ppi_file=os.path.join(hprd_path,
+                              'BINARY_PROTEIN_PROTEIN_INTERACTIONS.txt'),
+        seq_file=os.path.join(hprd_path,
+                              'PROTEIN_SEQUENCES.txt')
+        )
+    return hp.statements
+
 
 
 def _process_medscan_get_stmts(fname):
