@@ -1,6 +1,7 @@
 import os
 import sys
 import gzip
+import json
 import glob
 import indra
 import shutil
@@ -219,7 +220,7 @@ def _process_sparser_pmid(pmid):
             for stmt in sp.statements:
                 for ev in stmt.evidence:
                     ev.pmid = pmid
-            return rp.statements
+            return sp.statements
         else:
             return []
     except Exception as e:
@@ -227,7 +228,6 @@ def _process_sparser_pmid(pmid):
 
 
 def process_sparser(data_folder):
-    """
     # Step 1: re-run reading
     from indra.tools.reading.submit_reading_pipeline import \
         submit_reading, submit_combine, wait_for_complete
@@ -236,12 +236,11 @@ def process_sparser(data_folder):
                               pmids_per_job=1000, force_read=True,
                               project_name='cwc')
     reading_res = wait_for_complete('run_reach_queue', job_list)
-    """
     # Step 2: re-process reading results
     from multiprocessing import Pool
     pmids = [l.strip() for l in open(pmid_file).readlines()]
     pool = Pool(4)
-    stmts_ll = pool.map(_process_reach_pmid, pmids)
+    stmts_ll = pool.map(_process_sparser_pmid, pmids)
     pool.close()
     pool.join()
     stmts = []
