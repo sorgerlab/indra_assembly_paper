@@ -275,6 +275,19 @@ def process_sparser(data_folder):
     return stmts
 
 
+def process_isi(data_folder):
+    from indra.sources import isi
+    fnames = glob.glob(os.path.join(data_folder, 'isi', 'output_amazon',
+                                    'output', '*.json'))
+    stmts = []
+    for fname in fnames:
+        pmid = os.path.basename(fname)[:-5]
+        ip = isi.process_json_file(fname, pmid=pmid)
+        stmts += ip.statements
+    # Note, we usually do some grounding here
+    return stmts
+
+
 if __name__ == '__main__':
     data_folder = sys.argv[1]
     target_folder = sys.argv[2]
