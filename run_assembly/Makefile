@@ -1,12 +1,13 @@
-OUTPUT := ~/data/bioexp
+OUTPUT := output
 DATA := data
 
-all: assembly explanation stats
+all: assembly explanation
 
 assembly: \
     $(OUTPUT)/bioexp_asmb_preassembled.pkl \
     $(OUTPUT)/bioexp_db_only_asmb_preassembled.pkl \
-    reading_only_assembly
+    reading_only_assembly \
+    db_only
 
 reading_only_assembly: \
     $(OUTPUT)/bioexp_reading_only_asmb_preassembled.pkl \
@@ -29,7 +30,7 @@ stats: $(OUTPUT)/fig2_stmt_counts.txt
 clean:
 	cd $(OUTPUT); rm -rf *
 
-s3:
+to_s3:
 	aws s3 cp --recursive output s3://bioexp-paper
 
 # MAKEFILE GRAPH
@@ -39,65 +40,46 @@ makegraph.pdf: makegraph.dot
 	dot -T pdf makegraph.dot -o makegraph.pdf
 
 makegraph.dot: Makefile
-	make -Bnd | make2graph > makegraph.dot
+	make -Bnd all | make2graph > makegraph.dot
 
 
 # DATA -----------------------------------------------------------------------
 
 $(DATA)/%:
-	python -u -m bioexp.transfer_s3 get $@ $(DATA)
-
-# PREPROCESSING --------------------------------------------------------------
-
-# Process the BEL large corpus
-$(OUTPUT)/bioexp_bel.pkl: \
-        $(DATA)/large_corpus-20170611.bel \
-        process_bel.py
-	python -u process_bel.py
-
-# Fix the biopax pickle
-#$(OUTPUT)/bioexp_biopax_fixed.pkl: $(DATA)/bioexp_biopax.pkl
-#	python -u fix_biopax.py
-
-# Download Signor statements
-$(OUTPUT)/bioexp_signor.pkl:
-	python -u assemble_sources.py signor
-
-# Download Biogrid statements
-$(OUTPUT)/bioexp_biogrid.pkl:
-	python -u get_biogrid_data.py
+	aws s3 cp s3://bioexp-paper/$(notdir $@) $(DATA)
+#	python -u -m bioexp.transfer_s3 get $@ $(DATA)
 
 # FULL ASSEMBLY PIPELINE (DBs + Reading) -------------------------------------
 
 # Load the statements
 $(OUTPUT)/bioexp_all_raw.pkl: \
-        $(OUTPUT)/bioexp_signor.pkl \
-        $(OUTPUT)/bioexp_bel.pkl \
-        $(OUTPUT)/bioexp_biopax.pkl \
-        $(OUTPUT)/bioexp_hprd.pkl \
-        $(OUTPUT)/bioexp_trrust.pkl \
-        $(OUTPUT)/bioexp_cbn.pkl \
-        $(OUTPUT)/bioexp_phosphosite.pkl \
-        $(OUTPUT)/bioexp_reach.pkl \
-        $(OUTPUT)/bioexp_sparser.pkl \
-        $(OUTPUT)/bioexp_trips.pkl \
-        $(OUTPUT)/bioexp_rlimsp.pkl \
-        $(OUTPUT)/bioexp_medscan.pkl \
-        $(OUTPUT)/bioexp_isi.pkl
+        $(DATA)/bioexp_signor.pkl \
+        $(DATA)/bioexp_bel.pkl \
+        $(DATA)/bioexp_biopax.pkl \
+        $(DATA)/bioexp_hprd.pkl \
+        $(DATA)/bioexp_trrust.pkl \
+        $(DATA)/bioexp_cbn.pkl \
+        $(DATA)/bioexp_phosphosite.pkl \
+        $(DATA)/bioexp_reach.pkl \
+        $(DATA)/bioexp_sparser.pkl \
+        $(DATA)/bioexp_trips.pkl \
+        $(DATA)/bioexp_rlimsp.pkl \
+        $(DATA)/bioexp_medscan.pkl \
+        $(DATA)/bioexp_isi.pkl
 	python -u assemble_sources.py load_stmts all_raw \
-        $(OUTPUT)/bioexp_signor.pkl \
-        $(OUTPUT)/bioexp_bel.pkl \
-        $(OUTPUT)/bioexp_biopax.pkl \
-        $(OUTPUT)/bioexp_hprd.pkl \
-        $(OUTPUT)/bioexp_trrust.pkl \
-        $(OUTPUT)/bioexp_cbn.pkl \
-        $(OUTPUT)/bioexp_phosphosite.pkl \
-        $(OUTPUT)/bioexp_reach.pkl \
-        $(OUTPUT)/bioexp_sparser.pkl \
-        $(OUTPUT)/bioexp_trips.pkl \
-        $(OUTPUT)/bioexp_rlimsp.pkl \
-        $(OUTPUT)/bioexp_medscan.pkl \
-        $(OUTPUT)/bioexp_isi.pkl
+        $(DATA)/bioexp_signor.pkl \
+        $(DATA)/bioexp_bel.pkl \
+        $(DATA)/bioexp_biopax.pkl \
+        $(DATA)/bioexp_hprd.pkl \
+        $(DATA)/bioexp_trrust.pkl \
+        $(DATA)/bioexp_cbn.pkl \
+        $(DATA)/bioexp_phosphosite.pkl \
+        $(DATA)/bioexp_reach.pkl \
+        $(DATA)/bioexp_sparser.pkl \
+        $(DATA)/bioexp_trips.pkl \
+        $(DATA)/bioexp_rlimsp.pkl \
+        $(DATA)/bioexp_medscan.pkl \
+        $(DATA)/bioexp_isi.pkl
 
 # Filter no hypotheses
 $(OUTPUT)/bioexp_filter_no_hypothesis.pkl: $(OUTPUT)/bioexp_all_raw.pkl
@@ -202,20 +184,19 @@ $(OUTPUT)/bioexp_reduce_mods.pkl: $(OUTPUT)/bioexp_reduce_activities.pkl
 # READING-ONLY ASSEMBLY PIPELINE (for evaluation) ----------------------------
 
 $(OUTPUT)/bioexp_reading_only_all_raw.pkl: \
-        $(OUTPUT)/bioexp_reach.pkl \
-        $(OUTPUT)/bioexp_sparser.pkl \
-        $(OUTPUT)/bioexp_trips.pkl \
-        $(OUTPUT)/bioexp_rlimsp.pkl \
-        $(OUTPUT)/bioexp_medscan.pkl \
-        $(OUTPUT)/bioexp_isi.pkl
-
+        $(DATA)/bioexp_reach.pkl \
+        $(DATA)/bioexp_sparser.pkl \
+        $(DATA)/bioexp_trips.pkl \
+        $(DATA)/bioexp_rlimsp.pkl \
+        $(DATA)/bioexp_medscan.pkl \
+        $(DATA)/bioexp_isi.pkl
 	python -u assemble_sources.py load_stmts reading_only_all_raw \
-        $(OUTPUT)/bioexp_reach.pkl \
-        $(OUTPUT)/bioexp_sparser.pkl \
-        $(OUTPUT)/bioexp_trips.pkl \
-        $(OUTPUT)/bioexp_rlimsp.pkl \
-        $(OUTPUT)/bioexp_medscan.pkl \
-        $(OUTPUT)/bioexp_isi.pkl
+        $(DATA)/bioexp_reach.pkl \
+        $(DATA)/bioexp_sparser.pkl \
+        $(DATA)/bioexp_trips.pkl \
+        $(DATA)/bioexp_rlimsp.pkl \
+        $(DATA)/bioexp_medscan.pkl \
+        $(DATA)/bioexp_isi.pkl
 
 # Filter no hypotheses
 $(OUTPUT)/bioexp_reading_only_filter_no_hypothesis.pkl: \
@@ -373,21 +354,21 @@ $(OUTPUT)/bioexp_trips_only_preassembled.pkl: \
 # DATABASE-ONLY ASSEMBLY PIPELINE (for evaluation) ----------------------------
 
 $(OUTPUT)/bioexp_db_only_all_raw.pkl: \
-        $(OUTPUT)/bioexp_signor.pkl \
-        $(OUTPUT)/bioexp_bel.pkl \
-        $(OUTPUT)/bioexp_biopax.pkl \
-        $(OUTPUT)/bioexp_hprd.pkl \
-        $(OUTPUT)/bioexp_trrust.pkl \
-        $(OUTPUT)/bioexp_cbn.pkl \
-        $(OUTPUT)/bioexp_phosphosite.pkl
+        $(DATA)/bioexp_signor.pkl \
+        $(DATA)/bioexp_bel.pkl \
+        $(DATA)/bioexp_biopax.pkl \
+        $(DATA)/bioexp_hprd.pkl \
+        $(DATA)/bioexp_trrust.pkl \
+        $(DATA)/bioexp_cbn.pkl \
+        $(DATA)/bioexp_phosphosite.pkl
 	python -u assemble_sources.py load_stmts db_only_all_raw \
-        $(OUTPUT)/bioexp_signor.pkl \
-        $(OUTPUT)/bioexp_bel.pkl \
-        $(OUTPUT)/bioexp_biopax.pkl \
-        $(OUTPUT)/bioexp_hprd.pkl \
-        $(OUTPUT)/bioexp_trrust.pkl \
-        $(OUTPUT)/bioexp_cbn.pkl \
-        $(OUTPUT)/bioexp_phosphosite.pkl
+        $(DATA)/bioexp_signor.pkl \
+        $(DATA)/bioexp_bel.pkl \
+        $(DATA)/bioexp_biopax.pkl \
+        $(DATA)/bioexp_hprd.pkl \
+        $(DATA)/bioexp_trrust.pkl \
+        $(DATA)/bioexp_cbn.pkl \
+        $(DATA)/bioexp_phosphosite.pkl
 
 # Filter no hypotheses
 $(OUTPUT)/bioexp_db_only_filter_no_hypothesis.pkl: \
@@ -499,19 +480,19 @@ $(OUTPUT)/bioexp_db_only_reduce_mods.pkl: \
 # -- ANALYSIS/STATISTICS -----------------------------------------------------
 
 $(OUTPUT)/fig2_stmt_counts.txt: \
-        $(OUTPUT)/bioexp_signor.pkl \
-        $(OUTPUT)/bioexp_bel.pkl \
-        $(OUTPUT)/bioexp_biopax.pkl \
-        $(OUTPUT)/bioexp_hprd.pkl \
-        $(OUTPUT)/bioexp_trrust.pkl \
-        $(OUTPUT)/bioexp_cbn.pkl \
-        $(OUTPUT)/bioexp_phosphosite.pkl \
-        $(OUTPUT)/bioexp_reach.pkl \
-        $(OUTPUT)/bioexp_sparser.pkl \
-        $(OUTPUT)/bioexp_trips.pkl \
-        $(OUTPUT)/bioexp_rlimsp.pkl \
-        $(OUTPUT)/bioexp_medscan.pkl \
-        $(OUTPUT)/bioexp_isi.pkl \
+        $(DATA)/bioexp_signor.pkl \
+        $(DATA)/bioexp_bel.pkl \
+        $(DATA)/bioexp_biopax.pkl \
+        $(DATA)/bioexp_hprd.pkl \
+        $(DATA)/bioexp_trrust.pkl \
+        $(DATA)/bioexp_cbn.pkl \
+        $(DATA)/bioexp_phosphosite.pkl \
+        $(DATA)/bioexp_reach.pkl \
+        $(DATA)/bioexp_sparser.pkl \
+        $(DATA)/bioexp_trips.pkl \
+        $(DATA)/bioexp_rlimsp.pkl \
+        $(DATA)/bioexp_medscan.pkl \
+        $(DATA)/bioexp_isi.pkl \
         $(OUTPUT)/bioexp_all_raw.pkl \
         $(OUTPUT)/bioexp_filter_no_hypothesis.pkl \
         $(OUTPUT)/bioexp_map_grounding.pkl \
