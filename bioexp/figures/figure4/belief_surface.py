@@ -1,9 +1,13 @@
+from os.path import dirname, join
 import numpy as np
 from indra.statements import *
 from indra.belief import BeliefEngine, SimpleScorer
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from indra.util import plot_formatting as pf
+
+build_dir = join(dirname(__file__), '..', '..', '..', 'build')
+plot_filename = join(build_dir, 'fig4_belief_surface.pdf')
 
 ag1 = Agent('Agent1', db_refs={'HGNC':'1', 'UP':'1'})
 ag2 = Agent('Agent2', db_refs={'HGNC':'2', 'UP':'2'})
@@ -45,4 +49,4 @@ ax.set_ylabel('Source 1')
 ax.set_zlabel('Belief')
 ax.set_zlim(0.5, 1)
 ax.view_init(elev=16., azim=-116.)
-plt.savefig('fig4_belief_surface.pdf')
+plt.savefig(plot_filename)

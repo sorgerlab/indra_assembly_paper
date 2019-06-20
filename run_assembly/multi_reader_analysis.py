@@ -146,12 +146,12 @@ if __name__ == '__main__':
     # Make plots
     plt.ioff()
     plot_statement_overlap(stmts_dict['reading'], 'output/stmt_overlap')
-    """
     plot_belief_distributions(stmts_dict, 'output/belief_scores')
 
     # Proportion of top-level statements in each bin
     plot_belief_top_level(stmts_dict, 'output/reading_belief')
 
+    """
     # Sample statements from each belief bin
     stmt_bins = ((0.5, 0.8, '0.5_0.8'),
                  (0.8, 0.9, '0.8_0.9'),

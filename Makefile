@@ -4,7 +4,7 @@ NET := networks
 FIG1 := bioexp/figures/figure1
 FIG2 := bioexp/figures/figure2
 FIG4 := bioexp/figures/figure4
-DEPLOY := ~/Dropbox/DARPA\ projects/papers/INDRA\ paper\ 2/figure_panels/
+DEPLOY := ../bioexp_manuscript/figures/figure_panels
 
 all: preprocessing fig2 fig4 fig5
 
