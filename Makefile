@@ -27,6 +27,15 @@ fig4: $(BUILD)/fig4_belief_surface.pdf
 
 fig5: $(BUILD)/reach_complexes_raw.csv
 
+# MAKEFILE GRAPH
+graph: makegraph.pdf
+
+makegraph.pdf: makegraph.dot
+	dot -T pdf makegraph.dot -o makegraph.pdf
+
+makegraph.dot: Makefile
+	make -Bnd | make2graph > makegraph.dot
+
 
 # DATA -----------------------------------------------------------------------
 

@@ -7,4 +7,5 @@ data
 *.pdf
 __pycache__
 config.json
-
+makegraph.dot
+makegraph.pdf

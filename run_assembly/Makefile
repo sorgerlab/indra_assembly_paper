@@ -32,6 +32,16 @@ clean:
 s3:
 	aws s3 cp --recursive output s3://bioexp-paper
 
+# MAKEFILE GRAPH
+graph: makegraph.pdf
+
+makegraph.pdf: makegraph.dot
+	dot -T pdf makegraph.dot -o makegraph.pdf
+
+makegraph.dot: Makefile
+	make -Bnd | make2graph > makegraph.dot
+
+
 # DATA -----------------------------------------------------------------------
 
 $(DATA)/%:
