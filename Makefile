@@ -66,8 +66,8 @@ $(BUILD)/pc_multidigraph.pkl: $(DATA)/PathwayCommons9.All.hgnc.txt \
 
 
 # STMT SAMPLE FOR CURATION --------------------------------------------------
-$(BUILD)/reach_sample_uncurated.tsv: $(DATA)/bioexp_filter_top_level.pkl
-	python -m bioexp.curation.sample $< 100 $(BUILD) \
+$(BUILD)/reach_sample_uncurated.tsv: $(DATA)/bioexp_asmb_preassembled.pkl
+	python -m bioexp.curation.sample $< 1000 $(BUILD) \
                              reach sparser rlimsp isi medscan trips
 
 
