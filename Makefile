@@ -8,6 +8,8 @@ DEPLOY := ../bioexp_manuscript/figures/figure_panels
 
 all: preprocessing fig2 fig4 fig5
 
+sample: $(BUILD)/reach_sample_uncurated.tsv
+
 preprocessing: \
         $(BUILD)/prior_genes.txt \
         $(BUILD)/pc_multidigraph.pkl
@@ -61,6 +63,13 @@ $(BUILD)/pc_multidigraph.pkl: $(DATA)/PathwayCommons9.All.hgnc.txt \
                               $(FIG1)/find_paths.py \
                               $(BUILD)/prior_genes.txt
 	python $(FIG1)/find_paths.py parse_pc
+
+
+# STMT SAMPLE FOR CURATION --------------------------------------------------
+$(BUILD)/reach_sample_uncurated.tsv: $(DATA)/bioexp_filter_top_level.pkl
+	python -m bioexp.curation.sample $< 100 $(BUILD) \
+                             reach sparser rlimsp isi medscan trips
+
 
 # FIGURE 1 -------------------------------------------------------------------
 

@@ -521,6 +521,3 @@ $(OUTPUT)/stmt_overlap_reading.pdf: \
 	python -u multi_reader_analysis.py
 
 
-#asdfasdf: \
-#        $(OUTPUT)/bioexp_biogrid.pkl
-
