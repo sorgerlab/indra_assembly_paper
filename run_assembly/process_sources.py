@@ -16,6 +16,8 @@ from bioexp.transfer_s3 import download_from_s3, upload_to_s3
 logger = logging.getLogger(__name__)
 pmid_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                          os.pardir, 'run_assembly', 'pmids.txt')
+with open(pmid_file, 'r') as fh:
+    pmids = [l.strip() for l in fh.readlines()]
 
 
 def process_source(source, cached, data_folder, target_folder):
@@ -90,11 +92,8 @@ def process_rlimsp(data_folder):
 
     # Filter to only the relevant PMIDs
     logger.info('Filtering RLIMS-P to relevant PMIDs')
-    pmids = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                         'pmids.txt')
-    with open(pmids, 'r') as fh:
-        pmids = {l.strip() for l in fh.readlines()}
-        stmts = [stmt for stmt in stmts if stmt.evidence[0].pmid in pmids]
+    pmid_set = set(pmids)
+    stmts = [stmt for stmt in stmts if stmt.evidence[0].pmid in pmid_set]
 
     return stmts
 
@@ -205,7 +204,6 @@ def _process_reach_pmid(pmid):
 
 def process_reach(data_folder):
     from multiprocessing import Pool
-    pmids = [l.strip() for l in open(pmid_file).readlines()]
     pool = Pool(4)
     stmts_ll = pool.map(_process_reach_pmid, pmids)
     pool.close()
@@ -272,7 +270,6 @@ def process_sparser(data_folder):
     reading_res = wait_for_complete('run_reach_queue', job_list)
     # Step 2: re-process reading results
     from multiprocessing import Pool
-    pmids = [l.strip() for l in open(pmid_file).readlines()]
     pool = Pool(4)
     stmts_ll = pool.map(_process_sparser_pmid, pmids)
     pool.close()
