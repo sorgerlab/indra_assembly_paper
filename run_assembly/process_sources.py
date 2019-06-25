@@ -3,7 +3,6 @@ import sys
 import gzip
 import json
 import glob
-import indra
 import shutil
 import pickle
 import zipfile
@@ -82,11 +81,21 @@ def process_rlimsp(data_folder):
 
     stmts = []
     for fname, id_type in ((medline_file, 'pmid'), (pmc_file, 'pmcid')):
+        logger.info('Processing %s' % fname)
         out_file = os.path.join(data_folder, fname)
         url = rlimsp_url + fname
         urllib.request.urlretrieve(url, out_file)
         rp = rlimsp.process_from_json_file(out_file, id_type)
         stmts += rp.statements
+
+    # Filter to only the relevant PMIDs
+    logger.info('Filtering RLIMS-P to relevant PMIDs')
+    pmids = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         'pmids.txt')
+    with open(pmids, 'r') as fh:
+        pmids = {l.strip() for l in fh.readlines()}
+        stmts = [stmt for stmt in stmts if stmt.evidence[0].pmid in pmids]
+
     return stmts
 
 
@@ -147,7 +156,6 @@ def process_hprd(data_folder):
                               'PROTEIN_SEQUENCES.txt')
         )
     return hp.statements
-
 
 
 def _process_medscan_get_stmts(fname):
