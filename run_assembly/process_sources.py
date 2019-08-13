@@ -285,15 +285,21 @@ def process_isi(data_folder):
     fnames = glob.glob(os.path.join(data_folder, 'isi', 'output_amazon',
                                     'output', '*.json'))
     stmts = []
+    pmid_set = set(pmids)
+    skipped_pmids = []
     for fname in fnames:
         pmid = os.path.basename(fname)[:-5]
+        # Skip PMIDs that aren't part of the PMID list
+        if pmid not in pmid_set:
+            skipped_pmids.append(pmid)
+            continue
         ip = isi.process_json_file(fname, pmid=pmid, add_grounding=False)
         stmts += ip.statements
 
     # Note, we usually do some grounding here
     import requests
     def get_grounding(agent):
-        grounding_url = 'http://localhost:8001/ground'
+        grounding_url = 'http://34.201.164.108:8001/ground'
         if 'TEXT' not in agent.db_refs:
             return None
         res = requests.post(grounding_url,
