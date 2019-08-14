@@ -41,9 +41,11 @@ if __name__ == '__main__':
     num_evs = sorted(correct_by_num_ev.keys())
     means = [numpy.mean(correct_by_num_ev[n]) for n in num_evs]
     beliefs = [belief(n, 0.4, 0.05) for n in num_evs]
-    plt.plot(num_evs, means)
-    plt.plot(num_evs, beliefs)
+    plt.plot(num_evs, means, 'bo-', label='Empirical mean correctness')
+    plt.plot(num_evs, beliefs, 'ro-', label='INDRA belief score')
     plt.ylim(0, 1)
     plt.grid(True)
     plt.xticks(num_evs)
+    plt.xlabel('Number of evidence per INDRA Statement')
+    plt.legend()
     plt.show()
