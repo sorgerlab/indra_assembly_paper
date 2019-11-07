@@ -9,6 +9,7 @@ import zipfile
 import tarfile
 import logging
 import urllib.request
+from collections import Counter
 from indra.sources import reach, trips, medscan, sparser
 from indra.preassembler.grounding_mapper.gilda import ground_statements
 from bioexp.transfer_s3 import download_from_s3, upload_to_s3
@@ -39,11 +40,11 @@ def process_source(source, cached, data_folder, target_folder):
 
 def process_pathway_commons(data_folder):
     # Reetreive the OWL file and put it in the data folder
-    url = 'https://www.pathwaycommons.org/archives/PC2/v11/' + \
-        'PathwayCommons11.All.BIOPAX.owl.gz'
-    fname = os.path.join(data_folder, 'PathwayCommons11.All.BIOPAX.owl')
+    url = 'https://www.pathwaycommons.org/archives/PC2/v12/' + \
+        'PathwayCommons12.All.BIOPAX.owl.gz'
+    fname = os.path.join(data_folder, 'PathwayCommons12.All.BIOPAX.owl')
     logger.info('Downloading %s and extracting into %s' % (url, fname))
-    gz_file = os.path.join(data_folder, 'PathwayCommons11.All.BIOPAX.owl.gz')
+    gz_file = os.path.join(data_folder, 'PathwayCommons12.All.BIOPAX.owl.gz')
     urllib.request.urlretrieve(url, gz_file)
     with gzip.open(gz_file, 'rb') as fin:
         with open(fname, 'wb') as fout:
@@ -56,7 +57,10 @@ def process_pathway_commons(data_folder):
     # Now filter out phosphosite
     stmts = [s for s in bp.statements if
              (s.evidence[0].annotations.get('source_sub_id')
-              == 'phosphositeplus')]
+              != 'phosphositeplus')]
+    # Print some source stats as a sanity check
+    counter = Counter([s.evidence[0].annotations.get('source_sub_id')])
+    logger.info(counter.most_common())
     return stmts
 
 
