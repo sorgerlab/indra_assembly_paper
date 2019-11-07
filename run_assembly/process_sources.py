@@ -59,7 +59,8 @@ def process_pathway_commons(data_folder):
              (s.evidence[0].annotations.get('source_sub_id')
               != 'phosphositeplus')]
     # Print some source stats as a sanity check
-    counter = Counter([s.evidence[0].annotations.get('source_sub_id')])
+    counter = Counter([s.evidence[0].annotations.get('source_sub_id')
+                       for s in bp.statements])
     logger.info(counter.most_common())
     return stmts
 
