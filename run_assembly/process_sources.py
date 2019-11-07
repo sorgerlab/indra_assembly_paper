@@ -10,6 +10,7 @@ import tarfile
 import logging
 import urllib.request
 from indra.sources import reach, trips, medscan, sparser
+from indra.preassembler.grounding_mapper.gilda import ground_statements
 from bioexp.transfer_s3 import download_from_s3, upload_to_s3
 
 
@@ -277,6 +278,7 @@ def process_sparser(data_folder):
     stmts = []
     for stmts_l in stmts_ll:
         stmts += stmts_l
+    #ground_statements(stmts)
     return stmts
 
 
@@ -295,29 +297,7 @@ def process_isi(data_folder):
             continue
         ip = isi.process_json_file(fname, pmid=pmid, add_grounding=False)
         stmts += ip.statements
-
-    # Note, we usually do some grounding here
-    import requests
-    def get_grounding(agent):
-        grounding_url = 'http://34.201.164.108:8001/ground'
-        if 'TEXT' not in agent.db_refs:
-            return None
-        res = requests.post(grounding_url,
-                            json={'text': agent.db_refs['TEXT']})
-        entries = res.json()
-        if entries:
-            return entries[0]['entry']
-        else:
-            return None
-    for stmt in stmts:
-        for agent in stmt.agent_list():
-            if agent is not None:
-                grounding = get_grounding(agent)
-                if grounding:
-                    print(grounding)
-                    agent.db_refs[grounding['db']] = grounding['id']
-                    if grounding['entry_name']:
-                        agent.name = grounding['entry_name']
+    ground_statements(stmts)
     return stmts
 
 
