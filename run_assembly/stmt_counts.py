@@ -2,7 +2,7 @@ from util import pklload
 from indra.tools import assemble_corpus as ac
 from collections import Counter
 
-filenames = ['reach', 'sparser', 'bel', 'signor', 'biopax_fixed', 'all_raw',
+filenames = ['reach', 'sparser', 'bel', 'signor', 'pathway_commons', 'all_raw',
              'filter_no_hypothesis', 'map_grounding', 'filter_grounded_only',
              'filter_genes_only', 'filter_human_only', 'expand_families',
              'filter_gene_list', 'map_sequence', 'preassembled',
@@ -13,7 +13,7 @@ stmt_counts = []
 for filename in filenames:
     # Load the pickle file
     print("Loading %s" % filename)
-    if filename in ('reach', 'sparser', 'biopax_fixed'):
+    if filename in ('reach', 'sparser', 'pathway_commons'):
         stmts = ac.load_statements('data/bioexp_%s.pkl' % filename)
     else:
         stmts = pklload(filename)
