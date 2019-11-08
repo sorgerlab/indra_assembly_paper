@@ -7,7 +7,7 @@ from os.path import dirname, abspath, join
 
 # CREATE A JSON FILE WITH THIS INFORMATION, E.G., a file consisting of:
 # {"basename": "fallahi_eval", "basedir": "output"}
-config_file = join(dirname(abspath(__file__)), 'config.json')
+config_file = join(dirname(abspath(__file__)), '..', 'config.json')
 with open(config_file, 'rt') as f:
     config = json.load(f)
 # This is the base name used for all files created/saved

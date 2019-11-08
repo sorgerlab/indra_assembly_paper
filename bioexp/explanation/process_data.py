@@ -5,8 +5,8 @@ from indra.databases import hgnc_client
 from indra.statements import Agent, ModCondition
 
 
-build_dir = join(dirname(__file__), 'build')
-data_dir = join(dirname(__file__), 'data')
+build_dir = join(dirname(__file__), '..', '..', 'build')
+data_dir = join(dirname(__file__), '..', '..', 'data')
 data_file = join(data_dir, 'Korkut et al. Data 05122017.xlsx')
 antibody_map_file = join(data_dir, 'antibody_site_map.csv')
 ras227_file = join(data_dir, 'ras_pathway_proteins.csv')
@@ -22,16 +22,16 @@ def read_data(fname=data_file):
         skiprows1 = [0]
         skiprows2 = range(5)
     data = {}
-    data['protein'] = pandas.read_excel(fname, sheetname='Protein Data',
+    data['protein'] = pandas.read_excel(fname, sheet_name='Protein Data',
                                         skiprows=skiprows1, index_col=None)
     data['phenotype'] = pandas.read_excel(fname,
-                                          sheetname='Phenotype Data',
+                                          sheet_name='Phenotype Data',
                                           skiprows=skiprows1, index_col=None)
     data['antibody'] = pandas.read_excel(fname,
-                                         sheetname='Antibody Data',
+                                         sheet_name='Antibody Data',
                                          skiprows=skiprows2, index_col=None)
     data['prediction'] = pandas.read_excel(fname,
-                                           sheetname='Prediction Targets',
+                                           sheet_name='Prediction Targets',
                                            index_col=None)
     return data
 
