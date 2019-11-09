@@ -23,11 +23,13 @@ $(OUTPUT)/bioexp_test_pysb_model.pkl: $(OUTPUT)/bioexp_test_before_pysb.pkl
 	python -u -m bioexp.explanation.assemble_pysb assemble_pysb \
         test_before_pysb test_pysb_model
 
-
+$(OUTPUT)/bioexp_data_stmts.pkl: $(DATA)/Korkut\ et\ al.\ Data\ 05122017.xlsx
+	python -u -m bioexp.explanation.make_stmts_for_checking $@
 
 # -- ANALYSIS/STATISTICS -----------------------------------------------------
 
 $(OUTPUT)/bioexp_test_paths.pkl: \
-        $(OUTPUT)/bioexp_test_pysb_model.pkl
+        $(OUTPUT)/bioexp_test_pysb_model.pkl \
+        $(OUTPUT)/bioexp_data_stmts.pkl
 	python -u -m bioexp.explanation.check_pysb_model test_pysb_model \
-        test_paths
+        data_stmts test_paths
