@@ -55,7 +55,7 @@ $(DATA)/%:
 $(OUTPUT)/bioexp_all_raw.pkl: \
         $(DATA)/bioexp_signor.pkl \
         $(DATA)/bioexp_bel.pkl \
-        $(DATA)/bioexp_biopax.pkl \
+        $(DATA)/bioexp_pathway_commons.pkl \
         $(DATA)/bioexp_hprd.pkl \
         $(DATA)/bioexp_trrust.pkl \
         $(DATA)/bioexp_cbn.pkl \
@@ -69,7 +69,7 @@ $(OUTPUT)/bioexp_all_raw.pkl: \
 	python -u assemble_sources.py load_stmts all_raw \
         $(DATA)/bioexp_signor.pkl \
         $(DATA)/bioexp_bel.pkl \
-        $(DATA)/bioexp_biopax.pkl \
+        $(DATA)/bioexp_pathway_commons.pkl \
         $(DATA)/bioexp_hprd.pkl \
         $(DATA)/bioexp_trrust.pkl \
         $(DATA)/bioexp_cbn.pkl \
@@ -356,7 +356,7 @@ $(OUTPUT)/bioexp_trips_only_preassembled.pkl: \
 $(OUTPUT)/bioexp_db_only_all_raw.pkl: \
         $(DATA)/bioexp_signor.pkl \
         $(DATA)/bioexp_bel.pkl \
-        $(DATA)/bioexp_biopax.pkl \
+        $(DATA)/bioexp_pathway_commons.pkl \
         $(DATA)/bioexp_hprd.pkl \
         $(DATA)/bioexp_trrust.pkl \
         $(DATA)/bioexp_cbn.pkl \
@@ -364,7 +364,7 @@ $(OUTPUT)/bioexp_db_only_all_raw.pkl: \
 	python -u assemble_sources.py load_stmts db_only_all_raw \
         $(DATA)/bioexp_signor.pkl \
         $(DATA)/bioexp_bel.pkl \
-        $(DATA)/bioexp_biopax.pkl \
+        $(DATA)/bioexp_pathway_commons.pkl \
         $(DATA)/bioexp_hprd.pkl \
         $(DATA)/bioexp_trrust.pkl \
         $(DATA)/bioexp_cbn.pkl \
@@ -482,7 +482,7 @@ $(OUTPUT)/bioexp_db_only_reduce_mods.pkl: \
 $(OUTPUT)/fig2_stmt_counts.txt: \
         $(DATA)/bioexp_signor.pkl \
         $(DATA)/bioexp_bel.pkl \
-        $(DATA)/bioexp_biopax.pkl \
+        $(DATA)/bioexp_pathway_commons.pkl \
         $(DATA)/bioexp_hprd.pkl \
         $(DATA)/bioexp_trrust.pkl \
         $(DATA)/bioexp_cbn.pkl \

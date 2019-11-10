@@ -55,7 +55,10 @@ if __name__ == '__main__':
         ac.dump_statements(filt_stmts, prefixed_pkl(output_file))
     elif cmd == 'expand_families':
         stmts = pklload(input_file)
-        stmts = ac.expand_families(stmts, save=prefixed_pkl(output_file))
+        # NOTE: despite the name of this command, here, we filter out
+        # families rather than expand them
+        stmts = ac.filter_genes_only(stmts, specific_only=True,
+                                     save=prefixed_pkl(output_file))
     elif cmd == 'filter_gene_list':
         stmts = pklload(input_file)
         # Load the genes from the outer build directory

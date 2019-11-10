@@ -9,7 +9,9 @@ import zipfile
 import tarfile
 import logging
 import urllib.request
+from collections import Counter
 from indra.sources import reach, trips, medscan, sparser
+from indra.preassembler.grounding_mapper.gilda import ground_statements
 from bioexp.transfer_s3 import download_from_s3, upload_to_s3
 
 
@@ -38,11 +40,11 @@ def process_source(source, cached, data_folder, target_folder):
 
 def process_pathway_commons(data_folder):
     # Reetreive the OWL file and put it in the data folder
-    url = 'https://www.pathwaycommons.org/archives/PC2/v11/' + \
-        'PathwayCommons11.All.BIOPAX.owl.gz'
-    fname = os.path.join(data_folder, 'PathwayCommons11.All.BIOPAX.owl')
+    url = 'https://www.pathwaycommons.org/archives/PC2/v12/' + \
+        'PathwayCommons12.All.BIOPAX.owl.gz'
+    fname = os.path.join(data_folder, 'PathwayCommons12.All.BIOPAX.owl')
     logger.info('Downloading %s and extracting into %s' % (url, fname))
-    gz_file = os.path.join(data_folder, 'PathwayCommons11.All.BIOPAX.owl.gz')
+    gz_file = os.path.join(data_folder, 'PathwayCommons12.All.BIOPAX.owl.gz')
     urllib.request.urlretrieve(url, gz_file)
     with gzip.open(gz_file, 'rb') as fin:
         with open(fname, 'wb') as fout:
@@ -55,7 +57,11 @@ def process_pathway_commons(data_folder):
     # Now filter out phosphosite
     stmts = [s for s in bp.statements if
              (s.evidence[0].annotations.get('source_sub_id')
-              == 'phosphositeplus')]
+              != 'phosphositeplus')]
+    # Print some source stats as a sanity check
+    counter = Counter([s.evidence[0].annotations.get('source_sub_id')
+                       for s in bp.statements])
+    logger.info(counter.most_common())
     return stmts
 
 
@@ -277,6 +283,7 @@ def process_sparser(data_folder):
     stmts = []
     for stmts_l in stmts_ll:
         stmts += stmts_l
+    #ground_statements(stmts)
     return stmts
 
 
@@ -295,29 +302,7 @@ def process_isi(data_folder):
             continue
         ip = isi.process_json_file(fname, pmid=pmid, add_grounding=False)
         stmts += ip.statements
-
-    # Note, we usually do some grounding here
-    import requests
-    def get_grounding(agent):
-        grounding_url = 'http://34.201.164.108:8001/ground'
-        if 'TEXT' not in agent.db_refs:
-            return None
-        res = requests.post(grounding_url,
-                            json={'text': agent.db_refs['TEXT']})
-        entries = res.json()
-        if entries:
-            return entries[0]['entry']
-        else:
-            return None
-    for stmt in stmts:
-        for agent in stmt.agent_list():
-            if agent is not None:
-                grounding = get_grounding(agent)
-                if grounding:
-                    print(grounding)
-                    agent.db_refs[grounding['db']] = grounding['id']
-                    if grounding['entry_name']:
-                        agent.name = grounding['entry_name']
+    ground_statements(stmts)
     return stmts
 
 
