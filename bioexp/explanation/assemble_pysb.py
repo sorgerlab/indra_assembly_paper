@@ -13,7 +13,7 @@ from bioexp.explanation import process_data
 from bioexp.util import pklload, pkldump, prefixed_file
 
 
-def assemble_pysb(stmts, data_genes):
+def assemble_pysb(stmts, data, ab_file):
     """Return an assembled PySB model."""
     # Save a version of statements with no evidence for faster loading
     #for s in stmts:
@@ -29,13 +29,13 @@ def assemble_pysb(stmts, data_genes):
     # Set context
     set_context(pa)
     # Add observables
-    add_observables(pa.model)
+    add_observables(pa.model, data, ab_file)
     pa.save_model(prefixed_file('pysb', 'py'))
     pkldump(pa.model, 'pysb')
     return pa.model
 
 
-def preprocess_stmts(stmts, data_genes):
+def preprocess_stmts(stmts, data_genes, ab_file):
     """Preprocess Statements specifically for PySB assembly."""
     # Filter the INDRA Statements to be put into the model
     stmts = ac.filter_mutation_status(stmts,
@@ -63,9 +63,9 @@ def preprocess_stmts(stmts, data_genes):
     while True:
         # Remove inconsequential PTMs
         ml.statements = ac.filter_inconsequential_mods(ml.statements,
-                                                       get_mod_whitelist())
+                                                   get_mod_whitelist(ab_file))
         ml.statements = ac.filter_inconsequential_acts(ml.statements,
-                                                       get_mod_whitelist())
+                                                   get_mod_whitelist(ab_file))
         if num_stmts <= len(ml.statements):
             break
         num_stmts = len(ml.statements)
@@ -83,10 +83,9 @@ def set_context(pa):
     #        ic[0].monomer_patterns[0].site_conditions['V600'] = 'E'
 
 
-def add_observables(model):
+def add_observables(model, data, ab_file):
     """Get the antibody targets and add observables for them to the model."""
-    data = process_data.read_data()
-    ab_map = process_data.get_antibody_map(data)
+    ab_map = process_data.get_antibody_map(data, ab_file)
     for ab_name, agents in ab_map.items():
         patterns = []
         for agent in agents:
@@ -166,7 +165,7 @@ def add_observables(model):
     '''
 
 
-def get_mod_whitelist():
+def get_mod_whitelist(ab_file):
     """Return a list of modifications that should not be filtered out
 
     These sites should be preserved in the model so that they can be
@@ -175,7 +174,7 @@ def get_mod_whitelist():
     mod_whitelist = {}
     # Here we take the targets of each antybody to make sure we
     # don't remove these observables from the model
-    ab_map = process_data.get_phospho_antibody_map()
+    ab_map = process_data.get_phospho_antibody_map(ab_file)
     for k, v in ab_map.items():
         for agent in v:
             mod = ('phosphorylation', agent.mods[0].residue,
@@ -193,20 +192,29 @@ def get_mod_whitelist():
 
 
 if __name__ == '__main__':
-    data = process_data.read_data()
-    data_genes = process_data.get_all_gene_names(data)
 
     cmd = sys.argv[1]
     cmds = ('preprocess_stmts', 'assemble_pysb')
-    if cmd in cmds:
-        input_file = sys.argv[2]
-        output_file = sys.argv[3]
+    if cmd not in cmds:
+        print("First argument must be one of preprocess_stmts, assemble_pysb")
+        sys.exit(1)
+
+    input_file = sys.argv[2]
+    output_file = sys.argv[3]
+
     # Break each assembly cmd down into intermediate steps
     if cmd == 'preprocess_stmts':
         stmts_in = pklload(input_file)
-        stmts_out = preprocess_stmts(stmts_in, data_genes)
+        prior_genes_file = sys.argv[4]
+        ab_file = sys.argv[5]
+        with open(prior_genes_file, 'rt') as f:
+            prior_genes = [line.strip() for line in f.readlines()]
+        stmts_out = preprocess_stmts(stmts_in, prior_genes, ab_file)
         pkldump(stmts_out, output_file)
     elif cmd == 'assemble_pysb':
+        data_file = sys.argv[4]
+        ab_file = sys.argv[5]
+        data = process_data.read_data(data_file)
         stmts_in = pklload(input_file)
-        model = assemble_pysb(stmts_in, data_genes)
+        model = assemble_pysb(stmts_in, data, ab_file)
         pkldump(model, output_file)

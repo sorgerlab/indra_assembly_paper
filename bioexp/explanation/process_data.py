@@ -90,7 +90,6 @@ def get_all_gene_names(data, ras_file, drug_file, out_file=None):
     return all_genes
 
 
-"""
 def get_phospho_antibody_map(fname):
     # First gather the annotations for the phosphosites
     df = pandas.read_csv(fname, index_col=None, sep=',', encoding='utf8')
@@ -133,8 +132,8 @@ def get_phospho_antibody_map(fname):
     return antibody_map
 
 
-def get_antibody_map(data):
-    phos_ab_map = get_phospho_antibody_map()
+def get_antibody_map(data, ab_file):
+    phos_ab_map = get_phospho_antibody_map(ab_file)
     ab_map = {}
     for _, row in data['antibody'].iterrows():
         ab_name = row['Protein Data ID']
@@ -152,7 +151,6 @@ def get_antibody_map(data):
                 ab_map[ab_name] = [target]
     ab_map.update(phos_ab_map)
     return ab_map
-"""
 
 
 if __name__ == '__main__':

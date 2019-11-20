@@ -148,15 +148,16 @@ def export_json(results, model, stmts):
 
 
 if __name__ == '__main__':
-    data = process_data.read_data()
-    data_genes = process_data.get_all_gene_names(data)
-    ab_map = process_data.get_antibody_map(data)
 
     input_file = sys.argv[1]
     model = pklload(input_file)
     data_stmts_file = sys.argv[2]
     data_stmts, data_values = pklload(data_stmts_file)
     output_file = sys.argv[3]
+    data_file = sys.argv[4]
+    ab_file = sys.argv[5]
+    data = process_data.read_data(data_file)
+    ab_map = process_data.get_antibody_map(data, ab_file)
 
     print('Loading data statements.')
     #data_stmts, data_values = make_stmts.run(dec_thresh=0.5, inc_thresh=1.5)
