@@ -1,9 +1,10 @@
-from indra.util import _require_python3
 import os
 import json
 import time
 import pickle
+import matplotlib
 from os.path import dirname, abspath, join
+
 
 # CREATE A JSON FILE WITH THIS INFORMATION, E.G., a file consisting of:
 # {"basename": "fallahi_eval", "basedir": "output"}
@@ -17,6 +18,13 @@ basen = config['basename']
 based = config['basedir']
 
 
+fontsize=6
+red = '#e41a1c'
+blue = '#377eb8'
+green = '#4daf4a'
+purple = '#984ea3'
+
+
 # This makes it easier to make standardized pickle file paths
 def prefixed_pkl(suffix):
     """Return full path to a pickle file based on name suffix."""
@@ -26,7 +34,6 @@ def prefixed_pkl(suffix):
 def prefixed_file(suffix, extension):
     """Return full path to a file based on name suffix and extension."""
     return os.path.join(based, basen + '_' + suffix + '.' + extension)
-
 
 
 def pkldump(content, suffix):
@@ -54,3 +61,26 @@ def listify_dict(d):
     for v in d.values():
         ll += v
     return list(set(ll))
+
+
+def set_fig_params():
+    matplotlib.rcParams['font.sans-serif'] = 'Arial'
+    matplotlib.rcParams['text.usetex'] = True
+    matplotlib.rcParams['text.latex.preamble'] = [
+            '\\usepackage{helvet}',
+            '\\usepackage{sansmath}',
+            '\\sansmath',
+            '\\usepackage{underscore}',]
+
+def format_axis(ax, label_padding=2, tick_padding=0, yticks_position='left'):
+    ax.xaxis.set_ticks_position('bottom')
+    ax.yaxis.set_ticks_position(yticks_position)
+    ax.yaxis.set_tick_params(which='both', direction='out', labelsize=fontsize,
+                             pad=tick_padding, length=2, width=0.5)
+    ax.xaxis.set_tick_params(which='both', direction='out', labelsize=fontsize,
+                             pad=tick_padding, length=2, width=0.5)
+    ax.xaxis.labelpad = label_padding
+    ax.yaxis.labelpad = label_padding
+    ax.xaxis.label.set_size(fontsize)
+    ax.yaxis.label.set_size(fontsize)
+
