@@ -54,14 +54,16 @@ $(DATA)/PathwayCommons9.All.hgnc.txt:
 # PREPROCESSING --------------------------------------------------------------
 #
 # The list of prior genes from the data and related sources
-$(OUTPUT)/prior_genes.txt: process_data.py \
-                          $(DATA)/Korkut\ et\ al.\ Data\ 05122017.xlsx \
+$(OUTPUT)/prior_genes.txt: $(DATA)/Korkut\ et\ al.\ Data\ 05122017.xlsx \
                           $(DATA)/ras_pathway_proteins.csv \
                           $(DATA)/drug_grounding.csv
-	python process_data.py
+	python -m bioexp.explanation.process_data \
+        $(DATA)/Korkut\ et\ al.\ Data\ 05122017.xlsx \
+        $(DATA)/ras_pathway_proteins.csv \
+        $(DATA)/drug_grounding.csv \
+        $@
 
-# Pathway Commons network parsed from the extended SIF and pickled as
-# an instance of a networkx MultiDiGraph
+# Pathway Commons network parsed from the extended SIF and pickled as # an instance of a networkx MultiDiGraph
 $(OUTPUT)/pc_multidigraph.pkl: $(DATA)/PathwayCommons9.All.hgnc.txt \
                               $(FIG1)/find_paths.py \
                               $(OUTPUT)/prior_genes.txt

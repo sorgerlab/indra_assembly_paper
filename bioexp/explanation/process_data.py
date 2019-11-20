@@ -1,19 +1,12 @@
+import sys
 import pandas
-from os.path import dirname, join
 from indra.databases import uniprot_client
 from indra.databases import hgnc_client
 from indra.statements import Agent, ModCondition
 
 
-build_dir = join(dirname(__file__), '..', '..', 'build')
-data_dir = join(dirname(__file__), '..', '..', 'data')
-data_file = join(data_dir, 'Korkut et al. Data 05122017.xlsx')
-antibody_map_file = join(data_dir, 'antibody_site_map.csv')
-ras227_file = join(data_dir, 'ras_pathway_proteins.csv')
-drug_grounding_file = join(data_dir, 'drug_grounding.csv')
 
-
-def read_data(fname=data_file):
+def read_data(fname):
     """Returns the data as a dictionary."""
     if fname.endswith('2017.xlsx'):
         skiprows1 = []
@@ -36,16 +29,14 @@ def read_data(fname=data_file):
     return data
 
 
-def get_ras227_genes():
+def get_ras227_genes(ras227_file):
     df = pandas.read_csv(ras227_file, sep='\t', index_col=None, header=None,
                          encoding='utf-8')
     gene_names = [x for x in df[0]]
     return gene_names
 
 
-def get_drug_targets(fname=None):
-    if not fname:
-        fname = drug_grounding_file
+def get_drug_targets(fname):
     df = pandas.read_csv(fname, index_col=None, header=None, encoding='utf-8')
     abbrevs = df[1]
     target_upids = df[6]
@@ -56,7 +47,7 @@ def get_drug_targets(fname=None):
     return targets
 
 
-def get_all_gene_names(data, out_file=None):
+def get_all_gene_names(data, ras_file, drug_file, out_file=None):
     """Return all gene names corresponding to all ABs."""
     filt = pandas.notnull(data['antibody']['Protein Data ID'])
     data_filt = data['antibody'][filt]
@@ -85,11 +76,11 @@ def get_all_gene_names(data, out_file=None):
     # Finally remove the invalid gene names
     all_genes = list(all_genes.difference(invalid_genes))
     # Add drug target genes
-    drug_targets = get_drug_targets()
+    drug_targets = get_drug_targets(drug_file)
     for targets in drug_targets.values():
         all_genes += targets
     # Add other important genes, for now, the RAS pathway
-    all_genes += get_ras227_genes()
+    all_genes += get_ras227_genes(ras_file)
     all_genes = sorted(list(set(all_genes)))
     print('%d genes in total' % len(all_genes))
     if out_file:
@@ -99,7 +90,8 @@ def get_all_gene_names(data, out_file=None):
     return all_genes
 
 
-def get_phospho_antibody_map(fname=antibody_map_file):
+"""
+def get_phospho_antibody_map(fname):
     # First gather the annotations for the phosphosites
     df = pandas.read_csv(fname, index_col=None, sep=',', encoding='utf8')
     antibody_map = {}
@@ -160,10 +152,13 @@ def get_antibody_map(data):
                 ab_map[ab_name] = [target]
     ab_map.update(phos_ab_map)
     return ab_map
+"""
 
 
 if __name__ == '__main__':
+    data_file, ras_file, drug_file, output_file = sys.argv[1:5]
+
     data = read_data(data_file)
-    prior_genes_file = join(build_dir, 'prior_genes.txt')
-    gene_names = get_all_gene_names(data, prior_genes_file)
+    gene_names = get_all_gene_names(data, ras_file, drug_file,
+                                    output_file)
 
