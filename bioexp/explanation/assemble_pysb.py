@@ -1,19 +1,16 @@
 """This script does additional Statement assembly specific to PySB models,
 and then assembles and contextualizes a PySB model from the Statements."""
 
-from indra.util import _require_python3
 import re
+import sys
 from pysb import Observable, ReactionPattern, ComplexPattern
 from indra.statements import *
 from indra.mechlinker import MechLinker
 import indra.tools.assemble_corpus as ac
 from indra.assemblers.pysb import PysbAssembler
-import sys
-sys.path.append('..')
-sys.path.append('../run_assembly')
-import process_data
-from util import *
-from run_assembly.util import pklload, pkldump, prefixed_file
+
+from bioexp.explanation import process_data
+from bioexp.util import pklload, pkldump, prefixed_file
 
 
 def assemble_pysb(stmts, data_genes):

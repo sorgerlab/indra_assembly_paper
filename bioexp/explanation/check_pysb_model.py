@@ -1,14 +1,13 @@
+import sys
 import itertools
 from indra.util import write_unicode_csv
-from indra.assemblers.english import EnglishAssembler
+from indra.tools import assemble_corpus as ac
 from indra.assemblers.cyjs import CyJSAssembler
-from indra.explanation.model_checker import ModelChecker
-import indra.tools.assemble_corpus as ac
-import sys
-sys.path.append('..')
-import process_data
-import make_stmts_for_checking as make_stmts
-from run_assembly.util import pklload, pkldump, prefixed_file
+from indra.assemblers.english import EnglishAssembler
+from indra.explanation.model_checker import PysbModelChecker
+#import make_stmts_for_checking as make_stmts
+from bioexp.explanation import process_data
+from bioexp.util import pklload, pkldump, prefixed_file
 
 
 def get_path_stmts(results, model, stmts):
@@ -155,10 +154,12 @@ if __name__ == '__main__':
 
     input_file = sys.argv[1]
     model = pklload(input_file)
-    output_file = sys.argv[2]
+    data_stmts_file = sys.argv[2]
+    data_stmts, data_values = pklload(data_stmts_file)
+    output_file = sys.argv[3]
 
     print('Loading data statements.')
-    data_stmts, data_values = make_stmts.run(dec_thresh=0.5, inc_thresh=1.5)
+    #data_stmts, data_values = make_stmts.run(dec_thresh=0.5, inc_thresh=1.5)
     all_data_stmts = [values.values() for values in data_stmts.values()]
     all_data_stmts = itertools.chain.from_iterable(all_data_stmts)
     all_data_stmts = list(itertools.chain.from_iterable(all_data_stmts))
@@ -185,7 +186,7 @@ if __name__ == '__main__':
     MAX_PATH_LENGTH = 6
 
     # Preprocess and assemble the pysb model
-    mc = ModelChecker(model, all_data_stmts, agent_obs)
+    mc = PysbModelChecker(model, all_data_stmts, agent_obs)
     mc.prune_influence_map()
 
     # Iterate over each drug/ab statement subset
