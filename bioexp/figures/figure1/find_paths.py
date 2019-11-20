@@ -4,12 +4,10 @@ import pickle
 from os.path import dirname, abspath, join
 import networkx as nx
 from indra.util import read_unicode_csv
-from indra.explanation import paths_graph as pg
+import paths_graph as pg
 
 csv.field_size_limit(150000) # Accommodate a particularly long line
 
-data_dir = join(dirname(abspath(__file__)), '..', '..', '..', 'data')
-build_dir = join(dirname(__file__), '..', '..', '..', 'build')
 
 
 def filter_direct(mdg):
@@ -42,7 +40,7 @@ def flatten_network(mdg):
     return dg
 
 
-def load_pc_network(filter_genes=None):
+def load_pc_network(pc_filename, filter_genes=None):
     """Get Pathway Common network as a networkx MultiDiGraph.
 
     Parameters
@@ -86,18 +84,20 @@ def load_pc_network(filter_genes=None):
 
 
 if __name__ == '__main__':
-    pc_pickle = join(build_dir, 'pc_multidigraph.pkl')
+
     # Script to parse the PC data and cache the network
     if sys.argv[1] == 'parse_pc':
-        pc_filename = join(data_dir, 'PathwayCommons9.All.hgnc.txt')
-        prior_genes_file = join(build_dir, 'prior_genes.txt')
+        pc_file = sys.argv[2]
+        prior_genes_file = sys.argv[3]
+        pc_pickle = sys.argv[4]
         with open(prior_genes_file, 'rt') as f:
             prior_genes = [line.strip() for line in f.readlines()]
-        pc_graph = load_pc_network()
+        pc_graph = load_pc_network(pc_file)
         with open(pc_pickle, 'wb') as f:
             pickle.dump(pc_graph, f)
     # Script to work off of the cached pickle file and generate paths
     elif sys.argv[1] == 'find_paths':
+        pc_pickle = sys.argv[2]
         source = 'RAF1'
         target = 'MAPK1'
         print("Loading pickle")

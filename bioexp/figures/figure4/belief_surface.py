@@ -5,8 +5,9 @@ from indra.belief import BeliefEngine, SimpleScorer
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from indra.util import plot_formatting as pf
+from bioexp.util import based
 
-build_dir = join(dirname(__file__), '..', '..', '..', 'build')
+build_dir = based
 plot_filename = join(build_dir, 'fig4_belief_surface.pdf')
 
 ag1 = Agent('Agent1', db_refs={'HGNC':'1', 'UP':'1'})

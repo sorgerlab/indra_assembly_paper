@@ -1,10 +1,9 @@
-from bioexp.util import set_fig_params, fontsize, format_axis, red
 import pickle
 from collections import Counter
 from os.path import dirname, join
 from matplotlib import pyplot as plt
 from indra.preassembler import render_stmt_graph
-
+from bioexp.util import set_fig_params, fontsize, format_axis, red, based
 
 def plot_frequencies(counts, x_label, y_label, fig_filename, plot_type='dot',
                      log_x=False, log_y=False):
@@ -52,7 +51,7 @@ def render_stmt_support(stmts):
 
 if __name__ == '__main__':
     data_dir = join(dirname(__file__), '..', '..', '..', 'data')
-    build_dir = join(dirname(__file__), '..', '..', '..', 'build')
+    build_dir = based
 
     stmts_file = join(data_dir, 'bioexp_preassembled.pkl')
 

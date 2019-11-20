@@ -7,13 +7,9 @@ FIG2 := bioexp/figures/figure2
 FIG4 := bioexp/figures/figure4
 DEPLOY := ../bioexp_manuscript/figures/figure_panels
 
-all: preprocessing fig2 fig4 fig5 korkut_pysb
+all: fig2 fig4 fig5 korkut_pysb
 
 sample: $(OUTPUT)/reach_sample_uncurated.tsv
-
-preprocessing: \
-        $(OUTPUT)/prior_genes.txt \
-        $(OUTPUT)/pc_multidigraph.pkl
 
 deploy:
 	rsync -av $(OUTPUT)/*.pdf $(DEPLOY)
@@ -21,14 +17,14 @@ deploy:
 clean:
 	cd $(OUTPUT); rm -rf *
 
-fig1: $(OUTPUT)/fig1_pc_egfr_mapk1_paths.txt
+#fig1: $(OUTPUT)/fig1_pc_egfr_mapk1_paths.txt
 
 fig2: $(OUTPUT)/fig2_evidence_distribution.pdf \
       $(OUTPUT)/fig2_stmt_counts_before_pa.pdf
 
 fig4: $(OUTPUT)/fig4_belief_surface.pdf
 
-fig5: $(OUTPUT)/reach_complexes_raw.csv
+fig5: $(OUTPUT)/reach_complexes_raw.tsv
 
 korkut_pysb: $(OUTPUT)/bioexp_test_paths.pkl
 
@@ -67,8 +63,10 @@ $(OUTPUT)/prior_genes.txt: $(DATA)/Korkut\ et\ al.\ Data\ 05122017.xlsx \
 $(OUTPUT)/pc_multidigraph.pkl: $(DATA)/PathwayCommons9.All.hgnc.txt \
                               $(FIG1)/find_paths.py \
                               $(OUTPUT)/prior_genes.txt
-	python $(FIG1)/find_paths.py parse_pc
-
+	python -m bioexp.figures.figure1.find_paths parse_pc \
+        $(DATA)/PathwayCommons9.All.hgnc.txt \
+        $(OUTPUT)/prior_genes.txt \
+        $@
 
 # STMT SAMPLE FOR CURATION --------------------------------------------------
 $(OUTPUT)/reach_sample_uncurated.tsv: $(DATA)/bioexp_asmb_preassembled.pkl
@@ -80,7 +78,7 @@ $(OUTPUT)/reach_sample_uncurated.tsv: $(DATA)/bioexp_asmb_preassembled.pkl
 # Example pathfinding output over Pathway Commons
 $(OUTPUT)/fig1_pc_egfr_mapk1_paths.txt: $(OUTPUT)/pc_multidigraph.pkl \
                                        $(FIG1)/find_paths.py
-	python $(FIG1)/find_paths.py find_paths
+	python $(FIG1)/find_paths.py find_paths 
 
 # FIGURE 2 -------------------------------------------------------------------
 
@@ -102,7 +100,7 @@ $(OUTPUT)/fig4_belief_surface.pdf: \
 
 # FIGURE 5 -------------------------------------------------------------------
 
-$(OUTPUT)/reach_complexes_raw.csv: $(DATA)/bioexp_reach.pkl
+$(OUTPUT)/reach_complexes_raw.tsv: $(DATA)/bioexp_reach.pkl
 	python -m bioexp.figures.figure5.validate_complex \
                              $(DATA)/bioexp_reach.pkl \
                              $(OUTPUT)/reach_complexes_raw.tsv

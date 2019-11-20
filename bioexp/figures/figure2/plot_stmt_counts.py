@@ -115,7 +115,7 @@ def plot_steps_after_preassembly(data):
 
 if __name__ == '__main__':
     data_dir = join(dirname(__file__), '..', '..', '..', 'data')
-    build_dir = join(dirname(__file__), '..', '..', '..', 'build')
+    build_dir = join(dirname(__file__), '..', '..', '..', 'output')
 
     # Read the statement source data from the TSV file
     data = defaultdict(dict)
