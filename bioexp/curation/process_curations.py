@@ -1,3 +1,4 @@
+import sys
 import csv
 import numpy
 import matplotlib.pyplot as plt
@@ -9,13 +10,15 @@ def belief(num_ev, pr, ps):
 
 if __name__ == '__main__':
     # Get a dict of all curations by UUID
+    curation_file = sys.argv[1]
+
     curations = {}
-    with open('rlimsp_sample_curated.tsv', 'r') as fh:
+    with open(curation_file, 'r') as fh:
         reader = csv.reader(fh, delimiter='\t')
         next(reader)
         for row in reader:
-            uuid = row[2]
-            correct = row[16]
+            uuid = row[1]
+            correct = row[15]
             correct = None if correct == '' else int(correct)
             if uuid in curations:
                 curations[uuid].append(correct)
@@ -40,8 +43,14 @@ if __name__ == '__main__':
     # Finally, calculate the mean of correctness by number of evidence
     num_evs = sorted(correct_by_num_ev.keys())
     means = [numpy.mean(correct_by_num_ev[n]) for n in num_evs]
+    # Stderr of proportion is sqrt(pq/n)
+    std = [numpy.sqrt((numpy.mean(correct_by_num_ev[n]) *
+                            (1 - numpy.mean(correct_by_num_ev[n]))) /
+                            len(correct_by_num_ev[n]))
+                for n in num_evs]
     beliefs = [belief(n, 0.4, 0.05) for n in num_evs]
-    plt.plot(num_evs, means, 'bo-', label='Empirical mean correctness')
+    plt.errorbar(num_evs, means, yerr=std, fmt='bo-',
+                 label='Empirical mean correctness')
     plt.plot(num_evs, beliefs, 'ro-', label='INDRA belief score')
     plt.ylim(0, 1)
     plt.grid(True)
