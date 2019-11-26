@@ -22,6 +22,8 @@ def sample_stmts(stmts, source, n, ev_min=1, ev_max=10):
                     if ag is None:
                         continue
                     ag.db_refs = ev.annotations['agents']['raw_grounding'][ix]
+                    ag.db_refs['TEXT'] = \
+                        ev.annotations['agents']['raw_text'][ix]
                 stmts_by_uuid[stmt.uuid].append(new_stmt_flat)
 
     uuid_ctr = Counter(uuids)
@@ -29,6 +31,8 @@ def sample_stmts(stmts, source, n, ev_min=1, ev_max=10):
     for ev_num in range(ev_min, ev_max+1):
         filt_uuids = [uuid for uuid, count in uuid_ctr.items()
                       if count == ev_num]
+        if not filt_uuids:
+            continue
         # Sample from the uuids filtered to the evidence count
         sampled_uuids = list(numpy.random.choice(filt_uuids, size=n,
                              replace=True))
