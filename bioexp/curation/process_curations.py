@@ -1,11 +1,38 @@
 import sys
 import csv
 import numpy
+import scipy.optimize
 import matplotlib.pyplot as plt
 
 
 def belief(num_ev, pr, ps):
     return 1 - (ps + pr ** num_ev)
+
+
+def logl(correct_by_num_ev, pr, ps):
+    """Return log likelihood of belief model parameters given data."""
+    ll = 0
+    for num_ev, corrects in correct_by_num_ev.items():
+        ll += sum((numpy.log(belief(num_ev, pr, ps)) if c else
+                   numpy.log(1-belief(num_ev, pr, ps)))
+                  for c in corrects)
+    return ll
+
+
+def optimize(correct_by_num_ev):
+    """Return maximum likelihood parameters for belief model."""
+    # The function being optimized is the negative log likelihood
+    fun = lambda x: -logl(correct_by_num_ev, x[0], x[1])
+    # Both parameters have to be between 0 and 1
+    bounds = [(0, 1), (0, 1)]
+    # 1 - ps - pr cannot be negative
+    constr = lambda x: (1-x[0]-x[1])
+    res = scipy.optimize.minimize(fun,
+                                  x0=[0.05, 0.3],  # Initial guess: default
+                                  bounds=bounds,
+                                  constraints=[{'type': 'ineq',
+                                                'fun': constr}])
+    return res.x
 
 
 if __name__ == '__main__':
@@ -40,6 +67,10 @@ if __name__ == '__main__':
         else:
             correct_by_num_ev[len(corrects)] = [any_correct]
 
+    opt_r, opt_s = optimize(correct_by_num_ev)
+    print('Maximum likelihood random error: %.3f' % opt_r)
+    print('Maximum likelihood systematic error: %.3f' % opt_s)
+
     # Finally, calculate the mean of correctness by number of evidence
     num_evs = sorted(correct_by_num_ev.keys())
     means = [numpy.mean(correct_by_num_ev[n]) for n in num_evs]
@@ -48,7 +79,7 @@ if __name__ == '__main__':
                             (1 - numpy.mean(correct_by_num_ev[n]))) /
                             len(correct_by_num_ev[n]))
                 for n in num_evs]
-    beliefs = [belief(n, 0.4, 0.05) for n in num_evs]
+    beliefs = [belief(n, opt_r, opt_s) for n in num_evs]
     plt.errorbar(num_evs, means, yerr=std, fmt='bo-',
                  label='Empirical mean correctness')
     plt.plot(num_evs, beliefs, 'ro-', label='INDRA belief score')
