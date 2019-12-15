@@ -3,6 +3,11 @@ import csv
 import numpy
 import scipy.optimize
 import matplotlib.pyplot as plt
+from indra_db.client.principal.curation import get_curations
+from indra_db import get_primary_db
+
+
+db = get_primary_db()
 
 
 def belief(num_ev, pr, ps):
@@ -35,32 +40,33 @@ def optimize(correct_by_num_ev):
     return res.x
 
 
-if __name__ == '__main__':
-    # Get a dict of all curations by UUID
-    curation_file = sys.argv[1]
+def plot_curations(source):
+    db_curations = get_curations(db, source=source)
 
+    # For now, assume that all evidences for each statement have been
+    # curated--otherwise we have to cross-reference back to the original
+    # pickle to determine the number of evidences for the stmt/source
+    # TODO Currently doesn't correctly handle cases of repeated sampling--
+    # should probably use a nested dictionary
     curations = {}
-    with open(curation_file, 'r') as fh:
-        reader = csv.reader(fh, delimiter='\t')
-        next(reader)
-        for row in reader:
-            uuid = row[1]
-            correct = row[15]
-            correct = None if correct == '' else int(correct)
-            if uuid in curations:
-                curations[uuid].append(correct)
-            else:
-                curations[uuid] = [correct]
-
+    for cur in db_curations:
+        pa_hash = cur.pa_hash
+        correct = 1 if cur.tag == 'correct' else 0
+        if pa_hash in curations:
+            curations[pa_hash].append(correct)
+        else:
+            curations[pa_hash] = [correct]
+    print(curations)
+    # TODO: Cross-reference against assembly file to determine if all curated
     # Filter to only curations where every entry for the
     # given UUID was curated
-    full_curations = {k: v for k, v in curations.items()
-                      if all([vv is not None for vv in v])}
-
+    #full_curations = {k: v for k, v in curations.items()
+    #                  if all([vv is not None for vv in v])}
+    full_curations = curations
 
     # Now organize the curations by number of evidence
     correct_by_num_ev = {}
-    for uuid, corrects in full_curations.items():
+    for pa_hash, corrects in full_curations.items():
         any_correct = 1 if any(corrects) else 0
         if len(corrects) in correct_by_num_ev:
             correct_by_num_ev[len(corrects)].append(any_correct)
@@ -79,7 +85,11 @@ if __name__ == '__main__':
                             (1 - numpy.mean(correct_by_num_ev[n]))) /
                             len(correct_by_num_ev[n]))
                 for n in num_evs]
+<<<<<<< HEAD
     beliefs = [belief(n, opt_r, opt_s) for n in num_evs]
+=======
+    beliefs = [belief(n, 0.1, 0.3) for n in num_evs]
+>>>>>>> Update process_curations to get data from DB
     plt.errorbar(num_evs, means, yerr=std, fmt='bo-',
                  label='Empirical mean correctness')
     plt.plot(num_evs, beliefs, 'ro-', label='INDRA belief score')
@@ -89,3 +99,10 @@ if __name__ == '__main__':
     plt.xlabel('Number of evidence per INDRA Statement')
     plt.legend()
     plt.show()
+
+
+if __name__ == '__main__':
+    # Load all curations from the DB
+    curation_sources = ['bioexp_paper_tsv']
+    for source in curation_sources:
+        plot_curations(source)
