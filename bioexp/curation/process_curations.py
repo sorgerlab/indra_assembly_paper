@@ -3,6 +3,7 @@ import csv
 import numpy
 import scipy.optimize
 import matplotlib.pyplot as plt
+from texttable import Texttable
 from indra_db.client.principal.curation import get_curations
 from indra_db import get_primary_db
 
@@ -51,12 +52,12 @@ def plot_curations(sources):
         # should probably use a nested dictionary
         for cur in db_curations:
             pa_hash = cur.pa_hash
-            correct = 1 if cur.tag == 'correct' else 0
+            correct = (1 if cur.tag in ('correct', 'hypothesis', 'act_vs_amt')
+                         else 0)
             if pa_hash in curations:
                 curations[pa_hash].append(correct)
             else:
                 curations[pa_hash] = [correct]
-        print(curations)
         # TODO: Cross-reference against assembly file to determine if all
         # curated
         # Filter to only curations where every entry for the
@@ -89,14 +90,25 @@ def plot_curations(sources):
                             len(correct_by_num_ev[n]))
                 for n in num_evs]
     beliefs = [belief(n, opt_r, opt_s) for n in num_evs]
+
+    # Print table of results before plotting
+    table = Texttable()
+    table_data = [['Num Evs', 'Count', 'Num Correct', 'Pct', 'Std']]
+    for i, num_ev in enumerate(num_evs):
+        table_row = [num_ev, len(correct_by_num_ev[num_ev]),
+                     sum(correct_by_num_ev[num_ev]), means[i], std[i]]
+        table_data.append(table_row)
+    table.add_rows(table_data)
+    print(table.draw())
+
     plt.errorbar(num_evs, means, yerr=std, fmt='bo-',
                  label='Empirical mean correctness')
-    plt.plot(num_evs, beliefs, 'ro-', label='INDRA belief score')
+    plt.plot(num_evs, beliefs, 'ro-', label='Optimized belief')
     plt.ylim(0, 1)
     plt.grid(True)
     plt.xticks(num_evs)
     plt.xlabel('Number of evidence per INDRA Statement')
-    plt.legend()
+    plt.legend(loc='lower right')
     plt.show()
 
 
