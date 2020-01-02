@@ -9,7 +9,7 @@ DEPLOY := ../bioexp_manuscript/figures/figure_panels
 
 all: fig2 fig4 fig5 korkut_pysb
 
-sample: $(OUTPUT)/reach_sample_uncurated.tsv
+sample: $(OUTPUT)/reach_sample_uncurated.pkl
 
 deploy:
 	rsync -av $(OUTPUT)/*.pdf $(DEPLOY)
@@ -69,7 +69,7 @@ $(OUTPUT)/pc_multidigraph.pkl: $(DATA)/PathwayCommons9.All.hgnc.txt \
         $@
 
 # STMT SAMPLE FOR CURATION --------------------------------------------------
-$(OUTPUT)/reach_sample_uncurated.tsv: $(DATA)/bioexp_asmb_preassembled.pkl
+$(OUTPUT)/reach_sample_uncurated.pkl: $(DATA)/bioexp_asmb_preassembled.pkl
 	python -m bioexp.curation.sample $< 40 1 10 $(OUTPUT) \
                              reach sparser rlimsp isi medscan trips
 
