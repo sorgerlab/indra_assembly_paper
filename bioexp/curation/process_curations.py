@@ -1,6 +1,7 @@
 import sys
 import csv
 import numpy
+from collections import defaultdict
 import scipy.optimize
 import matplotlib.pyplot as plt
 from texttable import Texttable
@@ -42,7 +43,7 @@ def optimize(correct_by_num_ev):
 
 
 def plot_curations(sources):
-    curations = {}
+    curations = defaultdict(lambda: defaultdict(list))
     for source in sources:
         db_curations = get_curations(db, source=source)
         # For now, assume that all evidences for each statement have been
@@ -51,13 +52,18 @@ def plot_curations(sources):
         # TODO Currently doesn't correctly handle cases of repeated sampling--
         # should probably use a nested dictionary
         for cur in db_curations:
-            pa_hash = cur.pa_hash
-            correct = (1 if cur.tag in ('correct', 'hypothesis', 'act_vs_amt')
-                         else 0)
-            if pa_hash in curations:
-                curations[pa_hash].append(correct)
-            else:
-                curations[pa_hash] = [correct]
+            curations[cur.pa_hash][cur.source_hash].append(cur.tag)
+
+    full_curations = defaultdict(list)
+    for pa_hash, stmt_curs in curations.items():
+        for source_hash, ev_curs in stmt_curs.items():
+            corrects = [1 if cur in ('correct', 'hypothesis', 'act_vs_amt')
+                        else 0 for cur in ev_curs]
+            if any(corrects) and not all(corrects):
+                print('Suspicious curation: (%s, %s), %s. Assuming overall'
+                      ' incorrect.' % (pa_hash, source_hash, str(ev_curs)))
+            overall_cur = 1 if all(corrects) else 0
+            full_curations[pa_hash].append(overall_cur)
         # TODO: Cross-reference against assembly file to determine if all
         # curated
         # Filter to only curations where every entry for the
@@ -66,7 +72,6 @@ def plot_curations(sources):
         #                  if all([vv is not None for vv in v])}
         # TODO: Cross-reference against sample file to determine if sampled
         # multiple times
-    full_curations = curations
 
     # Now organize the curations by number of evidence
     correct_by_num_ev = {}
