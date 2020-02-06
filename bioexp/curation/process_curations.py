@@ -1,7 +1,6 @@
-import sys
-import csv
 import numpy
-from collections import defaultdict
+import pickle
+from collections import defaultdict, Counter
 import scipy.optimize
 import matplotlib.pyplot as plt
 from texttable import Texttable
@@ -52,10 +51,19 @@ def plot_curations(sources):
         # TODO Currently doesn't correctly handle cases of repeated sampling--
         # should probably use a nested dictionary
         for cur in db_curations:
+            if cur.pa_hash not in stmts_dict:
+                print(cur.pa_hash, cur.source_hash, cur.tag, cur.source)
             curations[cur.pa_hash][cur.source_hash].append(cur.tag)
 
     full_curations = defaultdict(list)
     for pa_hash, stmt_curs in curations.items():
+        if pa_hash not in stmts_dict:
+            print(stmt_curs)
+        ev_hashes = [e.get_source_hash() for e in stmts_dict[pa_hash].evidence]
+        if set(stmt_curs.keys()) != set(ev_hashes):
+            print('Not enough curations for %s from %s: %s' %
+                  (stmts_dict[pa_hash].uuid, source, stmts_dict[pa_hash]))
+            continue
         for source_hash, ev_curs in stmt_curs.items():
             corrects = [1 if cur in ('correct', 'hypothesis', 'act_vs_amt')
                         else 0 for cur in ev_curs]
@@ -74,13 +82,11 @@ def plot_curations(sources):
         # multiple times
 
     # Now organize the curations by number of evidence
-    correct_by_num_ev = {}
+    correct_by_num_ev = defaultdict(list)
     for pa_hash, corrects in full_curations.items():
         any_correct = 1 if any(corrects) else 0
-        if len(corrects) in correct_by_num_ev:
-            correct_by_num_ev[len(corrects)].append(any_correct)
-        else:
-            correct_by_num_ev[len(corrects)] = [any_correct]
+        any_correct_by_num_sampled = [any_correct] * stmt_counts[pa_hash]
+        correct_by_num_ev[len(corrects)] += any_correct_by_num_sampled
 
     opt_r, opt_s = optimize(correct_by_num_ev)
     print('Maximum likelihood random error: %.3f' % opt_r)
@@ -118,6 +124,20 @@ def plot_curations(sources):
 
 
 if __name__ == '__main__':
+    input_source = 'reach'
+    with open('../../data/curation/bioexp_%s_sample_uncurated.pkl'
+              % input_source, 'rb') as fh:
+        stmts = pickle.load(fh)
+    with open('../../data/curation/bioexp_%s_sample_tsv.pkl' % input_source,
+              'rb') as fh:
+        tsv_stmts = pickle.load(fh)
+        for stmt in tsv_stmts:
+            stmt.evidence = [e for e in stmt.evidence
+                             if e.source_api == 'reach']
+            stmts.append(stmt)
+
+    stmts_dict = {stmt.get_hash(): stmt for stmt in stmts}
+    stmt_counts = Counter(stmt.get_hash() for stmt in stmts)
     # Load all curations from the DB
     curation_sources = [('bioexp_paper_tsv', 'bioexp_paper_reach')]
     for source in curation_sources:
