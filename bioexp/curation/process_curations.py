@@ -42,28 +42,37 @@ def optimize(correct_by_num_ev):
 
 
 def plot_curations(sources):
+    # Curations are in a dict keyed by pa_hash and then by evidence source hash
     curations = defaultdict(lambda: defaultdict(list))
+    # Iterate over all the curation sources
     for source in sources:
+        # Get curations from DB from given curation source
         db_curations = get_curations(db, source=source)
-        # For now, assume that all evidences for each statement have been
-        # curated--otherwise we have to cross-reference back to the original
-        # pickle to determine the number of evidences for the stmt/source
-        # TODO Currently doesn't correctly handle cases of repeated sampling--
-        # should probably use a nested dictionary
+        # We populate the curations dict with entries from the DB
         for cur in db_curations:
             if cur.pa_hash not in stmts_dict:
-                print(cur.pa_hash, cur.source_hash, cur.tag, cur.source)
+                print('Curation pa_hash is missing fron list of Statements '
+                      'loaded from pickle: %s' %
+                      str((cur.pa_hash, cur.source_hash, cur.tag, cur.source)))
             curations[cur.pa_hash][cur.source_hash].append(cur.tag)
 
+    # Next we construct a dict of all curations that are "full" in that all
+    # evidences of a given statement were curated, keyed by pa_hash
     full_curations = defaultdict(list)
     for pa_hash, stmt_curs in curations.items():
-        if pa_hash not in stmts_dict:
-            print(stmt_curs)
+        # We need to make sure that all the evidence hashes were covered by the
+        # curations in the DB. Note that we cannot go by number of curations
+        # since two subtly different evidences can have the same hash, and
+        # multiple curations sometimes exist for the same evidence.
         ev_hashes = [e.get_source_hash() for e in stmts_dict[pa_hash].evidence]
         if set(stmt_curs.keys()) != set(ev_hashes):
+            # If not all evidences are covered by curations, we print enough
+            # details to identify the statement to complete its curations.
             print('Not enough curations for %s from %s: %s' %
                   (stmts_dict[pa_hash].uuid, source, stmts_dict[pa_hash]))
             continue
+        # We can now assign 0 or 1 to each evidence's curation(s), resolve
+        # any inconsistencies at the level of a single evidence.
         for source_hash, ev_curs in stmt_curs.items():
             corrects = [1 if cur in ('correct', 'hypothesis', 'act_vs_amt')
                         else 0 for cur in ev_curs]
@@ -72,16 +81,11 @@ def plot_curations(sources):
                       ' incorrect.' % (pa_hash, source_hash, str(ev_curs)))
             overall_cur = 1 if all(corrects) else 0
             full_curations[pa_hash].append(overall_cur)
-        # TODO: Cross-reference against assembly file to determine if all
-        # curated
-        # Filter to only curations where every entry for the
-        # given UUID was curated
-        #full_curations = {k: v for k, v in curations.items()
-        #                  if all([vv is not None for vv in v])}
-        # TODO: Cross-reference against sample file to determine if sampled
-        # multiple times
 
-    # Now organize the curations by number of evidence
+    # Now we aggregate evidence-level correctness at the statement level and
+    # assign 1 or 0 to the statement depending on whether any of its evidences
+    # are correct or not. We also account for the case where the same Statement
+    # was sampled multiple times.
     correct_by_num_ev = defaultdict(list)
     for pa_hash, corrects in full_curations.items():
         any_correct = 1 if any(corrects) else 0
@@ -133,7 +137,7 @@ if __name__ == '__main__':
         tsv_stmts = pickle.load(fh)
         for stmt in tsv_stmts:
             stmt.evidence = [e for e in stmt.evidence
-                             if e.source_api == 'reach']
+                             if e.source_api == input_source]
             stmts.append(stmt)
 
     stmts_dict = {stmt.get_hash(): stmt for stmt in stmts}
