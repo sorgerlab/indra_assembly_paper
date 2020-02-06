@@ -65,6 +65,7 @@ def plot_curations(sources):
         # since two subtly different evidences can have the same hash, and
         # multiple curations sometimes exist for the same evidence.
         ev_hashes = [e.get_source_hash() for e in stmts_dict[pa_hash].evidence]
+        ev_hash_count = Counter(ev_hashes)
         if set(stmt_curs.keys()) != set(ev_hashes):
             # If not all evidences are covered by curations, we print enough
             # details to identify the statement to complete its curations.
@@ -80,7 +81,11 @@ def plot_curations(sources):
                 print('Suspicious curation: (%s, %s), %s. Assuming overall'
                       ' incorrect.' % (pa_hash, source_hash, str(ev_curs)))
             overall_cur = 1 if all(corrects) else 0
-            full_curations[pa_hash].append(overall_cur)
+            # We also need to make sure that if the same evidence hash appears
+            # multiple times, we count it the right number of times
+            overall_cur_by_num_ev_hash = \
+                [overall_cur] * ev_hash_count[source_hash]
+            full_curations[pa_hash] += overall_cur_by_num_ev_hash
 
     # Now we aggregate evidence-level correctness at the statement level and
     # assign 1 or 0 to the statement depending on whether any of its evidences
