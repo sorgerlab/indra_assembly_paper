@@ -41,7 +41,7 @@ def optimize(correct_by_num_ev):
     return res.x
 
 
-def plot_curations(sources):
+def plot_curations(sources, curator):
     # Curations are in a dict keyed by pa_hash and then by evidence source hash
     curations = defaultdict(lambda: defaultdict(list))
     # Iterate over all the curation sources
@@ -54,7 +54,9 @@ def plot_curations(sources):
                 print('Curation pa_hash is missing fron list of Statements '
                       'loaded from pickle: %s' %
                       str((cur.pa_hash, cur.source_hash, cur.tag, cur.source)))
-            curations[cur.pa_hash][cur.source_hash].append(cur.tag)
+            # Apply a curator filter if specified
+            if not curator or cur.curator == curator:
+                curations[cur.pa_hash][cur.source_hash].append(cur)
 
     # Next we construct a dict of all curations that are "full" in that all
     # evidences of a given statement were curated, keyed by pa_hash
@@ -75,11 +77,12 @@ def plot_curations(sources):
         # We can now assign 0 or 1 to each evidence's curation(s), resolve
         # any inconsistencies at the level of a single evidence.
         for source_hash, ev_curs in stmt_curs.items():
-            corrects = [1 if cur in ('correct', 'hypothesis', 'act_vs_amt')
+            corrects = [1 if cur.tag in ('correct', 'hypothesis', 'act_vs_amt')
                         else 0 for cur in ev_curs]
             if any(corrects) and not all(corrects):
                 print('Suspicious curation: (%s, %s), %s. Assuming overall'
-                      ' incorrect.' % (pa_hash, source_hash, str(ev_curs)))
+                      ' incorrect.' % (pa_hash, source_hash,
+                                       str([c.tag for c in ev_curs])))
             overall_cur = 1 if all(corrects) else 0
             # We also need to make sure that if the same evidence hash appears
             # multiple times, we count it the right number of times
@@ -105,10 +108,10 @@ def plot_curations(sources):
     num_evs = sorted(correct_by_num_ev.keys())
     means = [numpy.mean(correct_by_num_ev[n]) for n in num_evs]
     # Stderr of proportion is sqrt(pq/n)
-    std = [numpy.sqrt((numpy.mean(correct_by_num_ev[n]) *
+    std = [2*numpy.sqrt((numpy.mean(correct_by_num_ev[n]) *
                             (1 - numpy.mean(correct_by_num_ev[n]))) /
                             len(correct_by_num_ev[n]))
-                for n in num_evs]
+           for n in num_evs]
     beliefs = [belief(n, opt_r, opt_s) for n in num_evs]
 
     # Print table of results before plotting
@@ -134,6 +137,8 @@ def plot_curations(sources):
 
 if __name__ == '__main__':
     input_source = 'reach'
+    #curator = 'ben.gyori@gmail.com'
+    curator = None
     with open('../../data/curation/bioexp_%s_sample_uncurated.pkl'
               % input_source, 'rb') as fh:
         stmts = pickle.load(fh)
@@ -150,4 +155,4 @@ if __name__ == '__main__':
     # Load all curations from the DB
     curation_sources = [('bioexp_paper_tsv', 'bioexp_paper_reach')]
     for source in curation_sources:
-        plot_curations(source)
+        plot_curations(source, curator)
