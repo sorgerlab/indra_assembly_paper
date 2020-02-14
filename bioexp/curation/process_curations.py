@@ -12,7 +12,8 @@ db = get_primary_db()
 
 
 def belief(num_ev, pr, ps):
-    return 1 - (ps + pr ** num_ev)
+    b = 1 - (ps + (1-ps) * (pr ** num_ev))
+    return b
 
 
 def logl(correct_by_num_ev, pr, ps):
@@ -30,14 +31,10 @@ def optimize(correct_by_num_ev):
     # The function being optimized is the negative log likelihood
     fun = lambda x: -logl(correct_by_num_ev, x[0], x[1])
     # Both parameters have to be between 0 and 1
-    bounds = [(0, 1), (0, 1)]
-    # 1 - ps - pr cannot be negative
-    constr = lambda x: (1-x[0]-x[1])
+    bounds = [(0.01, 0.99), (0.01, 0.99)]
     res = scipy.optimize.minimize(fun,
-                                  x0=[0.05, 0.3],  # Initial guess: default
-                                  bounds=bounds,
-                                  constraints=[{'type': 'ineq',
-                                                'fun': constr}])
+                                  x0=[0.3, 0.05],  # Initial guess: default
+                                  bounds=bounds)
     return res.x
 
 
@@ -82,7 +79,7 @@ def plot_curations(sources, curator):
             if any(corrects) and not all(corrects):
                 print('Suspicious curation: (%s, %s), %s. Assuming overall'
                       ' incorrect.' % (pa_hash, source_hash,
-                                       str([c.tag for c in ev_curs])))
+                                       str([(c.tag, c.curator) for c in ev_curs])))
             overall_cur = 1 if all(corrects) else 0
             # We also need to make sure that if the same evidence hash appears
             # multiple times, we count it the right number of times
@@ -96,6 +93,7 @@ def plot_curations(sources, curator):
     # was sampled multiple times.
     correct_by_num_ev = defaultdict(list)
     for pa_hash, corrects in full_curations.items():
+        npmid = len({ev.pmid for ev in stmts_dict[pa_hash].evidence})
         any_correct = 1 if any(corrects) else 0
         any_correct_by_num_sampled = [any_correct] * stmt_counts[pa_hash]
         correct_by_num_ev[len(corrects)] += any_correct_by_num_sampled
@@ -138,6 +136,7 @@ def plot_curations(sources, curator):
 if __name__ == '__main__':
     input_source = 'reach'
     #curator = 'ben.gyori@gmail.com'
+    #curator = 'bachmanjohn@gmail.com'
     curator = None
     with open('../../data/curation/bioexp_%s_sample_uncurated.pkl'
               % input_source, 'rb') as fh:
@@ -154,5 +153,6 @@ if __name__ == '__main__':
     stmt_counts = Counter(stmt.get_hash() for stmt in stmts)
     # Load all curations from the DB
     curation_sources = [('bioexp_paper_tsv', 'bioexp_paper_reach')]
-    for source in curation_sources:
-        plot_curations(source, curator)
+    #curation_sources = [('bioexp_paper_reach',)]
+    for source_list in curation_sources:
+        plot_curations(source_list, curator)
