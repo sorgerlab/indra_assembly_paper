@@ -1,8 +1,10 @@
-import numpy
+import corner
+import numpy as np
 import pickle
 from collections import defaultdict, Counter
 import scipy.optimize
 import matplotlib.pyplot as plt
+import emcee
 from texttable import Texttable
 from indra_db.client.principal.curation import get_curations
 from indra_db import get_primary_db
@@ -20,8 +22,8 @@ def logl(correct_by_num_ev, pr, ps):
     """Return log likelihood of belief model parameters given data."""
     ll = 0
     for num_ev, corrects in correct_by_num_ev.items():
-        ll += sum((numpy.log(belief(num_ev, pr, ps)) if c else
-                   numpy.log(1-belief(num_ev, pr, ps)))
+        ll += sum((np.log(belief(num_ev, pr, ps)) if c else
+                   np.log(1-belief(num_ev, pr, ps)))
                   for c in corrects)
     return ll
 
@@ -104,10 +106,10 @@ def plot_curations(sources, curator):
 
     # Finally, calculate the mean of correctness by number of evidence
     num_evs = sorted(correct_by_num_ev.keys())
-    means = [numpy.mean(correct_by_num_ev[n]) for n in num_evs]
+    means = [np.mean(correct_by_num_ev[n]) for n in num_evs]
     # Stderr of proportion is sqrt(pq/n)
-    std = [2*numpy.sqrt((numpy.mean(correct_by_num_ev[n]) *
-                            (1 - numpy.mean(correct_by_num_ev[n]))) /
+    std = [2*np.sqrt((np.mean(correct_by_num_ev[n]) *
+                            (1 - np.mean(correct_by_num_ev[n]))) /
                             len(correct_by_num_ev[n]))
            for n in num_evs]
     beliefs = [belief(n, opt_r, opt_s) for n in num_evs]
@@ -130,8 +132,7 @@ def plot_curations(sources, curator):
     plt.xticks(num_evs)
     plt.xlabel('Number of evidence per INDRA Statement')
     plt.legend(loc='lower right')
-    plt.show()
-
+    return correct_by_num_ev
 
 if __name__ == '__main__':
     input_source = 'reach'
@@ -149,10 +150,39 @@ if __name__ == '__main__':
                              if e.source_api == input_source]
             stmts.append(stmt)
 
+    plt.ion()
+
     stmts_dict = {stmt.get_hash(): stmt for stmt in stmts}
     stmt_counts = Counter(stmt.get_hash() for stmt in stmts)
     # Load all curations from the DB
     curation_sources = [('bioexp_paper_tsv', 'bioexp_paper_reach')]
     #curation_sources = [('bioexp_paper_reach',)]
-    for source_list in curation_sources:
-        plot_curations(source_list, curator)
+    #for source_list in curation_sources:
+    source_list = curation_sources[0]
+    correct_by_num_ev = plot_curations(source_list, curator)
+
+    ndim, nwalkers = 2, 100
+    # Initialize walkers across the interval [0, 1)
+    p0 = np.random.rand(nwalkers, ndim)
+
+    def log_prob(p, correct_by_num_ev):
+        pr, ps = p
+        # Uniform prior over [0, 1]
+        if pr < 0 or ps < 0 or pr > 1 or ps > 1:
+            return -np.inf
+        else:
+            return logl(correct_by_num_ev, pr, ps)
+
+    sampler = emcee.EnsembleSampler(nwalkers, ndim, log_prob,
+                                    args=[correct_by_num_ev])
+    sampler.run_mcmc(p0, 1000)
+
+    # Take last 100 steps
+    num_evs = sorted(correct_by_num_ev.keys())
+    for pr, ps in sampler.flatchain[-1000:, :]:
+        beliefs = [belief(n, pr, ps) for n in num_evs]
+        plt.plot(num_evs, beliefs, 'g-', alpha=0.1)
+
+    plt.figure()
+    corner.corner(sampler.flatchain, labels=['Rand.', 'Syst'])
+    
