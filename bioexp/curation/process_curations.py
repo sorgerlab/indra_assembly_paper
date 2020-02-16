@@ -1,13 +1,13 @@
+import emcee
+import pickle
 import corner
 import numpy as np
-import pickle
-from collections import defaultdict, Counter
 import scipy.optimize
-import matplotlib.pyplot as plt
-import emcee
 from texttable import Texttable
-from indra_db.client.principal.curation import get_curations
+import matplotlib.pyplot as plt
+from collections import defaultdict, Counter
 from indra_db import get_primary_db
+from indra_db.client.principal.curation import get_curations
 
 
 db = get_primary_db()
@@ -28,6 +28,15 @@ def logl(correct_by_num_ev, pr, ps):
     return ll
 
 
+def log_prob(p, correct_by_num_ev):
+    pr, ps = p
+    # Uniform prior over [0, 1]
+    if pr < 0 or ps < 0 or pr > 1 or ps > 1:
+        return -np.inf
+    else:
+        return logl(correct_by_num_ev, pr, ps)
+
+
 def optimize(correct_by_num_ev):
     """Return maximum likelihood parameters for belief model."""
     # The function being optimized is the negative log likelihood
@@ -40,7 +49,9 @@ def optimize(correct_by_num_ev):
     return res.x
 
 
-def plot_curations(sources, curator):
+def preprocess_data(sources, stmts):
+    stmts_dict = {stmt.get_hash(): stmt for stmt in stmts}
+    stmt_counts = Counter(stmt.get_hash() for stmt in stmts)
     # Curations are in a dict keyed by pa_hash and then by evidence source hash
     curations = defaultdict(lambda: defaultdict(list))
     # Iterate over all the curation sources
@@ -53,9 +64,7 @@ def plot_curations(sources, curator):
                 print('Curation pa_hash is missing fron list of Statements '
                       'loaded from pickle: %s' %
                       str((cur.pa_hash, cur.source_hash, cur.tag, cur.source)))
-            # Apply a curator filter if specified
-            if not curator or cur.curator == curator:
-                curations[cur.pa_hash][cur.source_hash].append(cur)
+            curations[cur.pa_hash][cur.source_hash].append(cur)
 
     # Next we construct a dict of all curations that are "full" in that all
     # evidences of a given statement were curated, keyed by pa_hash
@@ -99,18 +108,24 @@ def plot_curations(sources, curator):
         any_correct = 1 if any(corrects) else 0
         any_correct_by_num_sampled = [any_correct] * stmt_counts[pa_hash]
         correct_by_num_ev[len(corrects)] += any_correct_by_num_sampled
+    return correct_by_num_ev
 
+
+def optimize_params(correct_by_num_ev):
     opt_r, opt_s = optimize(correct_by_num_ev)
     print('Maximum likelihood random error: %.3f' % opt_r)
     print('Maximum likelihood systematic error: %.3f' % opt_s)
+    return opt_r, opt_s
 
+
+def plot_curations(correct_by_num_ev, opt_r, opt_s):
     # Finally, calculate the mean of correctness by number of evidence
     num_evs = sorted(correct_by_num_ev.keys())
     means = [np.mean(correct_by_num_ev[n]) for n in num_evs]
     # Stderr of proportion is sqrt(pq/n)
     std = [2*np.sqrt((np.mean(correct_by_num_ev[n]) *
-                            (1 - np.mean(correct_by_num_ev[n]))) /
-                            len(correct_by_num_ev[n]))
+                      (1 - np.mean(correct_by_num_ev[n]))) /
+                       len(correct_by_num_ev[n]))
            for n in num_evs]
     beliefs = [belief(n, opt_r, opt_s) for n in num_evs]
 
@@ -132,13 +147,11 @@ def plot_curations(sources, curator):
     plt.xticks(num_evs)
     plt.xlabel('Number of evidence per INDRA Statement')
     plt.legend(loc='lower right')
-    return correct_by_num_ev
+    plt.show()
 
-if __name__ == '__main__':
+
+def load_reach_curated_stmts():
     input_source = 'reach'
-    #curator = 'ben.gyori@gmail.com'
-    #curator = 'bachmanjohn@gmail.com'
-    curator = None
     with open('../../data/curation/bioexp_%s_sample_uncurated.pkl'
               % input_source, 'rb') as fh:
         stmts = pickle.load(fh)
@@ -149,40 +162,41 @@ if __name__ == '__main__':
             stmt.evidence = [e for e in stmt.evidence
                              if e.source_api == input_source]
             stmts.append(stmt)
+    return stmts
 
-    plt.ion()
 
-    stmts_dict = {stmt.get_hash(): stmt for stmt in stmts}
-    stmt_counts = Counter(stmt.get_hash() for stmt in stmts)
-    # Load all curations from the DB
-    curation_sources = [('bioexp_paper_tsv', 'bioexp_paper_reach')]
-    #curation_sources = [('bioexp_paper_reach',)]
-    #for source_list in curation_sources:
-    source_list = curation_sources[0]
-    correct_by_num_ev = plot_curations(source_list, curator)
-
-    ndim, nwalkers = 2, 100
+def get_posterior_samples(correct_by_num_ev, ndim=2, nwalkers=100, nsteps=1000,
+                          nburn=100):
     # Initialize walkers across the interval [0, 1)
     p0 = np.random.rand(nwalkers, ndim)
 
-    def log_prob(p, correct_by_num_ev):
-        pr, ps = p
-        # Uniform prior over [0, 1]
-        if pr < 0 or ps < 0 or pr > 1 or ps > 1:
-            return -np.inf
-        else:
-            return logl(correct_by_num_ev, pr, ps)
-
     sampler = emcee.EnsembleSampler(nwalkers, ndim, log_prob,
                                     args=[correct_by_num_ev])
-    sampler.run_mcmc(p0, 1000)
+    sampler.run_mcmc(p0, nsteps)
+    return sampler.flatchain[nburn*nwalkers:]
 
-    # Take last 100 steps
+
+if __name__ == '__main__':
+    plt.ion()
+    stmts = load_reach_curated_stmts()
+    source_list = ('bioexp_paper_tsv', 'bioexp_paper_reach')
+    correct_by_num_ev = preprocess_data(source_list, stmts)
+
+    # Basic optimization and max-likelihood estimates
+    opt_r, opt_s = optimize_params(correct_by_num_ev)
+    plot_curations(correct_by_num_ev, opt_r, opt_s)
+
+    # Bayesian parameter inference
+    samples = get_posterior_samples(correct_by_num_ev,
+                                    ndim=2, nwalkers=10,
+                                    nsteps=10000, nburn=100)
+
+    # Plot the posterior parameter distribution
+    plt.figure()
+    corner.corner(samples, labels=['Rand.', 'Syst'])
+
+    # Plot a few representative belief curves from the posterior
     num_evs = sorted(correct_by_num_ev.keys())
-    for pr, ps in sampler.flatchain[-1000:, :]:
+    for pr, ps in samples[:100]:
         beliefs = [belief(n, pr, ps) for n in num_evs]
         plt.plot(num_evs, beliefs, 'g-', alpha=0.1)
-
-    plt.figure()
-    corner.corner(sampler.flatchain, labels=['Rand.', 'Syst'])
-    
