@@ -1,6 +1,7 @@
 import emcee
 import pickle
 import corner
+import logging
 import numpy as np
 import scipy.optimize
 from texttable import Texttable
@@ -8,6 +9,9 @@ import matplotlib.pyplot as plt
 from collections import defaultdict, Counter
 from indra_db import get_primary_db
 from indra_db.client.principal.curation import get_curations
+
+
+logger = logging.getLogger('process_curations')
 
 
 db = get_primary_db()
@@ -167,12 +171,14 @@ def load_reach_curated_stmts():
 
 def get_posterior_samples(correct_by_num_ev, ndim=2, nwalkers=100, nsteps=1000,
                           nburn=100):
+    logger.info('Sampling with %d walkers for %d steps' % (nwalkers, nsteps))
     # Initialize walkers across the interval [0, 1)
     p0 = np.random.rand(nwalkers, ndim)
 
     sampler = emcee.EnsembleSampler(nwalkers, ndim, log_prob,
                                     args=[correct_by_num_ev])
     sampler.run_mcmc(p0, nsteps)
+    logger.info('Finished sampling')
     return sampler.flatchain[nburn*nwalkers:]
 
 
