@@ -175,9 +175,12 @@ def get_posterior_samples(correct_by_num_ev, ndim=2, nwalkers=100, nsteps=1000,
     # Initialize walkers across the interval [0, 1)
     p0 = np.random.rand(nwalkers, ndim)
 
-    sampler = emcee.EnsembleSampler(nwalkers, ndim, log_prob,
-                                    args=[correct_by_num_ev])
-    sampler.run_mcmc(p0, nsteps)
+    from multiprocessing import Pool
+    with Pool() as pool:
+        sampler = emcee.EnsembleSampler(nwalkers, ndim, log_prob,
+                                        args=[correct_by_num_ev],
+                                        pool=pool)
+        sampler.run_mcmc(p0, nsteps)
     logger.info('Finished sampling')
     return sampler.flatchain[nburn*nwalkers:]
 
