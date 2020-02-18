@@ -169,8 +169,8 @@ def load_reach_curated_stmts():
     return stmts
 
 
-def get_posterior_samples(correct_by_num_ev, ndim=2, nwalkers=100, nsteps=1000,
-                          nburn=100):
+def get_posterior_samples(correct_by_num_ev, ndim=2, nwalkers=50,
+                          nsteps=2000, nburn=100):
     logger.info('Sampling with %d walkers for %d steps' % (nwalkers, nsteps))
     # Initialize walkers across the interval [0, 1)
     p0 = np.random.rand(nwalkers, ndim)
@@ -183,6 +183,18 @@ def get_posterior_samples(correct_by_num_ev, ndim=2, nwalkers=100, nsteps=1000,
         sampler.run_mcmc(p0, nsteps)
     logger.info('Finished sampling')
     return sampler.flatchain[nburn*nwalkers:]
+
+
+def plot_posterior_samples(samples):
+    # Plot the posterior parameter distribution
+    plt.figure()
+    corner.corner(samples, labels=['Rand.', 'Syst'])
+
+    # Plot a few representative belief curves from the posterior
+    num_evs = sorted(correct_by_num_ev.keys())
+    for pr, ps in samples[:100]:
+        beliefs = [belief(n, pr, ps) for n in num_evs]
+        plt.plot(num_evs, beliefs, 'g-', alpha=0.1)
 
 
 if __name__ == '__main__':
@@ -200,12 +212,4 @@ if __name__ == '__main__':
                                     ndim=2, nwalkers=10,
                                     nsteps=10000, nburn=100)
 
-    # Plot the posterior parameter distribution
-    plt.figure()
-    corner.corner(samples, labels=['Rand.', 'Syst'])
-
-    # Plot a few representative belief curves from the posterior
-    num_evs = sorted(correct_by_num_ev.keys())
-    for pr, ps in samples[:100]:
-        beliefs = [belief(n, pr, ps) for n in num_evs]
-        plt.plot(num_evs, beliefs, 'g-', alpha=0.1)
+    plot_posterior_samples(samples)

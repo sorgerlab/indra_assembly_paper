@@ -68,9 +68,11 @@ def optimize_proposal_uncertainty_anneal(cost=100):
 def find_next_best(cost=10):
     samples = get_posterior_samples(correct_by_num_ev)
     ref_pred_unc = pred_uncertainty(belief, samples, range(1, 11))
+    ref_param_unc = np.var(samples, 0)
     deltas = {}
+    def ncur_for_i(ix): return int(np.floor(cost/ix))
     for i in range(1, 11):
-        exp_by_num_ev = {i: int(np.floor(cost/i))}
+        exp_by_num_ev = {i: ncur_for_i(i)}
         proposed_correct_by_num_ev = \
             add_proposed_data(correct_by_num_ev, exp_by_num_ev,
                               (0.3, 0.3))
@@ -81,9 +83,15 @@ def find_next_best(cost=10):
         print('Curating %d statements with %d evidences '
               'will decrease belief uncertainty by %.2E.' %
               (exp_by_num_ev[i], i, delta_pred_unc))
+        param_unc = np.var(samples, 0)
+        delta_param_unc = ref_param_unc - param_unc
+        print('It will also decrease parameter uncertainty by %.2E and %.2E'
+              % tuple(delta_param_unc))
     opt_i = sorted(deltas.items(), key=lambda x: x[1],
                    reverse=True)[0][0]
-    return opt_i, int(np.floor(cost/opt_i))
+    print('You should next curate %d statements with %d evidences.' %
+          (ncur_for_i(opt_i), opt_i))
+    return opt_i, ncur_for_i(opt_i)
 
 
 if __name__ == '__main__':
