@@ -29,10 +29,11 @@ def add_proposed_data(correct_by_num_ev, exp_by_num_ev, p):
     return proposed_correct_by_num_ev
 
 
-def proposal_uncertainty(exp_by_num_ev, maxev=10, ev_probs=None):
+def proposal_uncertainty(exp_by_num_ev, assumed_params,
+                         maxev=10, ev_probs=None):
     proposed_correct_by_num_ev = add_proposed_data(correct_by_num_ev,
                                                    exp_by_num_ev,
-                                                   (0.3, 0.3))
+                                                   assumed_params)
     samples = get_posterior_samples(proposed_correct_by_num_ev,
                                     nsteps=10000)
     pred_unc = pred_uncertainty(belief, samples, range(1, maxev+1),
@@ -46,11 +47,19 @@ def optimize_proposal_uncertainty_simple(cost=100, maxev=10):
     # NOTE: due to the discrete nature of the optimization problem,
     # this mode of optimization, which relies on Jacobian evaluations
     # does not work well in practice.
+
+    # Establish a baseline based on current data
+    samples = get_posterior_samples(correct_by_num_ev,
+                                    nsteps=10000)
+    ref_params = np.mean(samples, 0)
+
     bounds = [(0, cost)] * maxev
     cost_constraint = {'type': 'ineq',
                        'fun': lambda x: (sum(x * range(1, len(x)+1)) - cost)}
     fun = lambda x: proposal_uncertainty({i+1: int(np.floor(x[i]))
-                                          for i in range(maxev)})
+                                          for i in range(maxev)},
+                                         ref_params, maxev=10,
+                                         ev_probs=ev_probs)
     res = scipy.optimize.minimize(fun,
                                   bounds=bounds,
                                   constraints=[cost_constraint],
@@ -59,12 +68,19 @@ def optimize_proposal_uncertainty_simple(cost=100, maxev=10):
 
 
 def optimize_proposal_uncertainty_anneal(cost=100, maxev=10):
+    # Establish a baseline based on current data
+    samples = get_posterior_samples(correct_by_num_ev,
+                                    nsteps=10000)
+    ref_params = np.mean(samples, 0)
+
     # Both parameters have to be between 0 and 1
     cost_constraint = lambda x: sum(x * range(1, len(x)+1)) < cost
     positive_constraint = lambda x: all(x >= 0)
     accept_test = lambda x: positive_constraint(x) and cost_constraint(x)
     fun = lambda x: proposal_uncertainty({i+1: int(np.floor(x[i]))
-                                          for i in range(maxev)})
+                                          for i in range(maxev)},
+                                         ref_params, maxev=10,
+                                         ev_probs=ev_probs)
     res = scipy.optimize.basinhopping(fun,
                                       accept_test=accept_test,
                                       x0=([cost] + [0]*maxev))
@@ -72,35 +88,51 @@ def optimize_proposal_uncertainty_anneal(cost=100, maxev=10):
 
 
 def find_next_best(cost=10, maxev=10, ev_probs=None):
+    # First, establish reference values based on current curations
     samples = get_posterior_samples(correct_by_num_ev, nsteps=10000)
     ref_pred_unc = pred_uncertainty(belief, samples, range(1, maxev+1),
                                     x_probs=ev_probs)
     ref_param_unc = np.var(samples, 0)
+    ref_params = np.mean(samples, 0)
+
     deltas = {}
-    def ncur_for_i(ix): return int(np.floor(cost/ix))
-    for i in range(1, maxev+1):
-        exp_by_num_ev = {i: ncur_for_i(i)}
+
+    def cur_for_num_ev(cost, num_ev):
+        """Return the number of curations that can be done at a given cost"""
+        return int(np.floor(cost/num_ev))
+
+    for num_ev in range(1, maxev+1):
+        # Propose experiments with i evidences
+        proposed_curations_by_num_ev = {num_ev: cur_for_num_ev(cost, num_ev)}
         proposed_correct_by_num_ev = \
-            add_proposed_data(correct_by_num_ev, exp_by_num_ev,
-                              np.mean(samples, 0))
+            add_proposed_data(correct_by_num_ev, proposed_curations_by_num_ev,
+                              ref_params)
         samples = get_posterior_samples(proposed_correct_by_num_ev,
                                         nsteps=10000)
         pred_unc = pred_uncertainty(belief, samples, range(1, maxev+1),
                                     x_probs=ev_probs)
+        logger.info('Predicted overall uncertainty with %s: %.2E' %
+                    (str(proposed_curations_by_num_ev), pred_unc))
+
+        # Calculate decrease in prediction uncertainty
         delta_pred_unc = ref_pred_unc - pred_unc
-        deltas[i] = delta_pred_unc
+        deltas[num_ev] = delta_pred_unc
         logger.info('Curating %d statements with %d evidences '
                     'will decrease belief uncertainty by %.2E.' %
-                    (exp_by_num_ev[i], i, delta_pred_unc))
+                    (proposed_curations_by_num_ev[num_ev], num_ev,
+                     delta_pred_unc))
+        # Calculate delta in parameter uncertainty
         param_unc = np.var(samples, 0)
         delta_param_unc = ref_param_unc - param_unc
         logger.info('It will also decrease parameter uncertainty by '
                     'er: %.2E and es: %.2E' % tuple(delta_param_unc))
-    opt_i = sorted(deltas.items(), key=lambda x: x[1],
-                   reverse=True)[0][0]
+    deltas_sorted = sorted(deltas.items(), key=lambda x: x[1],
+                           reverse=True)
+    logger.info('Deltas per num evidence: %s' % str(deltas_sorted))
+    opt_num_ev = deltas_sorted[0][0]
     logger.info('You should next curate %d statements with %d evidences.' %
-                (ncur_for_i(opt_i), opt_i))
-    return opt_i, ncur_for_i(opt_i)
+                (cur_for_num_ev(cost, opt_num_ev), opt_num_ev))
+    return opt_num_ev, cur_for_num_ev(cost, opt_num_ev)
 
 
 if __name__ == '__main__':
