@@ -57,14 +57,14 @@ def optimize_proposal_uncertainty_simple(cost=100, maxev=10):
 
 def optimize_proposal_uncertainty_anneal(cost=100, maxev=10):
     # Both parameters have to be between 0 and 1
-    cost_constraint = lambda x: all(sum(x * range(1, len(x)+1)) < cost)
+    cost_constraint = lambda x: sum(x * range(1, len(x)+1)) < cost
     positive_constraint = lambda x: all(x >= 0)
     accept_test = lambda x: positive_constraint(x) and cost_constraint(x)
     fun = lambda x: proposal_uncertainty({i+1: int(np.floor(x[i]))
                                           for i in range(maxev)})
     res = scipy.optimize.basinhopping(fun,
                                       accept_test=accept_test,
-                                      x0=([cost] + [0]*9))
+                                      x0=([cost] + [0]*maxev))
     return res.x
 
 
