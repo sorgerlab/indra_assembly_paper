@@ -30,7 +30,8 @@ def proposal_uncertainty(exp_by_num_ev, maxev=10, ev_probs=None):
     proposed_correct_by_num_ev = add_proposed_data(correct_by_num_ev,
                                                    exp_by_num_ev,
                                                    (0.3, 0.3))
-    samples = get_posterior_samples(proposed_correct_by_num_ev)
+    samples = get_posterior_samples(proposed_correct_by_num_ev,
+                                    nsteps=10000)
     pred_unc = pred_uncertainty(belief, samples, range(1, maxev+1),
                                 x_probs=ev_probs)
     print('Predicted overall uncertainty with %s: %.2E' %
@@ -68,7 +69,7 @@ def optimize_proposal_uncertainty_anneal(cost=100, maxev=10):
 
 
 def find_next_best(cost=10, maxev=10, ev_probs=None):
-    samples = get_posterior_samples(correct_by_num_ev)
+    samples = get_posterior_samples(correct_by_num_ev, nsteps=10000)
     ref_pred_unc = pred_uncertainty(belief, samples, range(1, maxev+1),
                                     x_probs=ev_probs)
     ref_param_unc = np.var(samples, 0)
@@ -79,7 +80,8 @@ def find_next_best(cost=10, maxev=10, ev_probs=None):
         proposed_correct_by_num_ev = \
             add_proposed_data(correct_by_num_ev, exp_by_num_ev,
                               (0.3, 0.3))
-        samples = get_posterior_samples(proposed_correct_by_num_ev)
+        samples = get_posterior_samples(proposed_correct_by_num_ev,
+                                        nsteps=10000)
         pred_unc = pred_uncertainty(belief, samples, range(1, maxev+1),
                                     x_probs=ev_probs)
         delta_pred_unc = ref_pred_unc - pred_unc
