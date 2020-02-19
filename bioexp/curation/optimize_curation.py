@@ -14,6 +14,7 @@ def pred_uncertainty(fun, param_samples, x_values, x_probs=None):
         var = np.var([fun(xv, *p) for p in param_samples])
         logger.info('Variance at %d evidences: %.2E' % (xv, var))
         sum_var += xp * var
+    logger.info('Overall uncertainty: %.2E' % sum_var)
     return sum_var
 
 
@@ -35,11 +36,9 @@ def proposal_uncertainty(exp_by_num_ev, assumed_params,
                                                    exp_by_num_ev,
                                                    assumed_params)
     samples = get_posterior_samples(proposed_correct_by_num_ev,
-                                    nsteps=10000)
+                                    nsteps=default_nsteps)
     pred_unc = pred_uncertainty(belief, samples, range(1, maxev+1),
                                 x_probs=ev_probs)
-    logger.info('Predicted overall uncertainty with %s: %.2E' %
-                (str(exp_by_num_ev), pred_unc))
     return pred_unc
 
 
@@ -50,7 +49,7 @@ def optimize_proposal_uncertainty_simple(cost=100, maxev=10):
 
     # Establish a baseline based on current data
     samples = get_posterior_samples(correct_by_num_ev,
-                                    nsteps=10000)
+                                    nsteps=default_nsteps)
     ref_params = np.mean(samples, 0)
 
     bounds = [(0, cost)] * maxev
@@ -70,7 +69,7 @@ def optimize_proposal_uncertainty_simple(cost=100, maxev=10):
 def optimize_proposal_uncertainty_anneal(cost=100, maxev=10):
     # Establish a baseline based on current data
     samples = get_posterior_samples(correct_by_num_ev,
-                                    nsteps=10000)
+                                    nsteps=default_nsteps)
     ref_params = np.mean(samples, 0)
 
     # Both parameters have to be between 0 and 1
@@ -89,11 +88,16 @@ def optimize_proposal_uncertainty_anneal(cost=100, maxev=10):
 
 def find_next_best(cost=10, maxev=10, ev_probs=None):
     # First, establish reference values based on current curations
-    samples = get_posterior_samples(correct_by_num_ev, nsteps=10000)
-    ref_pred_unc = pred_uncertainty(belief, samples, range(1, maxev+1),
+    ref_samples = get_posterior_samples(correct_by_num_ev, nsteps=default_nsteps)
+    ref_pred_unc = pred_uncertainty(belief, ref_samples, range(1, maxev+1),
                                     x_probs=ev_probs)
-    ref_param_unc = np.var(samples, 0)
-    ref_params = np.mean(samples, 0)
+    logger.info('Baseline prediction uncertainty: %.2E' % ref_pred_unc)
+    ref_param_unc = np.var(ref_samples, 0)
+    logger.info('Baseline parameter variance: er: %.2E es: %.2E' %
+                tuple(ref_param_unc))
+    ref_params = np.mean(ref_samples, 0)
+    logger.info('Baseline parameter means: er: %.2E es: %.2E' %
+                tuple(ref_params))
 
     deltas = {}
 
@@ -102,13 +106,15 @@ def find_next_best(cost=10, maxev=10, ev_probs=None):
         return int(np.floor(cost/num_ev))
 
     for num_ev in range(1, maxev+1):
-        # Propose experiments with i evidences
+        # Propose experiments with num_ev evidences
         proposed_curations_by_num_ev = {num_ev: cur_for_num_ev(cost, num_ev)}
         proposed_correct_by_num_ev = \
             add_proposed_data(correct_by_num_ev, proposed_curations_by_num_ev,
                               ref_params)
         samples = get_posterior_samples(proposed_correct_by_num_ev,
-                                        nsteps=10000)
+                                        nsteps=default_nsteps,
+                                        nwalkers=default_nwalkers,
+                                        p0=ref_samples[-default_nwalkers:])
         pred_unc = pred_uncertainty(belief, samples, range(1, maxev+1),
                                     x_probs=ev_probs)
         logger.info('Predicted overall uncertainty with %s: %.2E' %
@@ -128,7 +134,9 @@ def find_next_best(cost=10, maxev=10, ev_probs=None):
                     'er: %.2E and es: %.2E' % tuple(delta_param_unc))
     deltas_sorted = sorted(deltas.items(), key=lambda x: x[1],
                            reverse=True)
-    logger.info('Deltas per num evidence: %s' % str(deltas_sorted))
+    logger.info('Delta summary:')
+    for num_ev, delta in deltas_sorted:
+        logger.info('%s: %.2E' % (num_ev, delta))
     opt_num_ev = deltas_sorted[0][0]
     logger.info('You should next curate %d statements with %d evidences.' %
                 (cur_for_num_ev(cost, opt_num_ev), opt_num_ev))
@@ -136,6 +144,8 @@ def find_next_best(cost=10, maxev=10, ev_probs=None):
 
 
 if __name__ == '__main__':
+    default_nsteps = 10000
+    default_nwalkers = 50
     with open('stmt_evidence_distribution.json', 'r') as fh:
         ev_probs = json.load(fh)
         ev_probs = {int(k): v for k, v in ev_probs.items()}

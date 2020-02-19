@@ -170,10 +170,11 @@ def load_reach_curated_stmts():
 
 
 def get_posterior_samples(correct_by_num_ev, ndim=2, nwalkers=50,
-                          nsteps=2000, nburn=100):
+                          nsteps=2000, nburn=100, p0=None):
     logger.info('Sampling with %d walkers for %d steps' % (nwalkers, nsteps))
     # Initialize walkers across the interval [0, 1)
-    p0 = np.random.rand(nwalkers, ndim)
+    if p0 is None:
+        p0 = np.random.rand(nwalkers, ndim)
 
     from multiprocessing import Pool
     with Pool() as pool:
