@@ -1,6 +1,9 @@
 import json
+import logging
 from copy import deepcopy
 from bioexp.curation.process_curations import *
+
+logger = logging.getLogger('optimize_curations')
 
 
 def pred_uncertainty(fun, param_samples, x_values, x_probs=None):
@@ -8,9 +11,9 @@ def pred_uncertainty(fun, param_samples, x_values, x_probs=None):
         x_probs = np.ones((len(x_values), )) / len(x_values)
     sum_var = 0
     for xv, xp in zip(x_values, x_probs):
-        var = xp * np.var([fun(xv, *p) for p in param_samples])
-        print('%d: %.2E' % (xv, var))
-        sum_var += var
+        var = np.var([fun(xv, *p) for p in param_samples])
+        logger.info('Variance at %d evidences: %.2E' % (xv, var))
+        sum_var += xp * var
     return sum_var
 
 
@@ -34,8 +37,8 @@ def proposal_uncertainty(exp_by_num_ev, maxev=10, ev_probs=None):
                                     nsteps=10000)
     pred_unc = pred_uncertainty(belief, samples, range(1, maxev+1),
                                 x_probs=ev_probs)
-    print('Predicted overall uncertainty with %s: %.2E' %
-          (str(exp_by_num_ev), pred_unc))
+    logger.info('Predicted overall uncertainty with %s: %.2E' %
+                (str(exp_by_num_ev), pred_unc))
     return pred_unc
 
 
@@ -79,24 +82,24 @@ def find_next_best(cost=10, maxev=10, ev_probs=None):
         exp_by_num_ev = {i: ncur_for_i(i)}
         proposed_correct_by_num_ev = \
             add_proposed_data(correct_by_num_ev, exp_by_num_ev,
-                              (0.3, 0.3))
+                              np.mean(samples, 0))
         samples = get_posterior_samples(proposed_correct_by_num_ev,
                                         nsteps=10000)
         pred_unc = pred_uncertainty(belief, samples, range(1, maxev+1),
                                     x_probs=ev_probs)
         delta_pred_unc = ref_pred_unc - pred_unc
         deltas[i] = delta_pred_unc
-        print('Curating %d statements with %d evidences '
-              'will decrease belief uncertainty by %.2E.' %
-              (exp_by_num_ev[i], i, delta_pred_unc))
+        logger.info('Curating %d statements with %d evidences '
+                    'will decrease belief uncertainty by %.2E.' %
+                    (exp_by_num_ev[i], i, delta_pred_unc))
         param_unc = np.var(samples, 0)
         delta_param_unc = ref_param_unc - param_unc
-        print('It will also decrease parameter uncertainty by %.2E and %.2E'
-              % tuple(delta_param_unc))
+        logger.info('It will also decrease parameter uncertainty by '
+                    'er: %.2E and es: %.2E' % tuple(delta_param_unc))
     opt_i = sorted(deltas.items(), key=lambda x: x[1],
                    reverse=True)[0][0]
-    print('You should next curate %d statements with %d evidences.' %
-          (ncur_for_i(opt_i), opt_i))
+    logger.info('You should next curate %d statements with %d evidences.' %
+                (ncur_for_i(opt_i), opt_i))
     return opt_i, ncur_for_i(opt_i)
 
 
