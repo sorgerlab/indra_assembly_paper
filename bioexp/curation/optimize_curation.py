@@ -54,7 +54,10 @@ def optimize_proposal_uncertainty_simple(cost=100, maxev=10):
 
     bounds = [(0, cost)] * maxev
     cost_constraint = {'type': 'ineq',
-                       'fun': lambda x: (sum(x * range(1, len(x)+1)) - cost)}
+                       'fun':
+                           lambda x: (sum(xx * curation_cost(i+1,
+                                                             default_cost_type)
+                                          for i, xx in enumerate(x)) - cost)}
     fun = lambda x: proposal_uncertainty({i+1: int(np.floor(x[i]))
                                           for i in range(maxev)},
                                          ref_params, maxev=10,
@@ -73,7 +76,8 @@ def optimize_proposal_uncertainty_anneal(cost=100, maxev=10):
     ref_params = np.mean(samples, 0)
 
     # Both parameters have to be between 0 and 1
-    cost_constraint = lambda x: sum(x * range(1, len(x)+1)) < cost
+    cost_constraint = lambda x: sum(xx * curation_cost(i+1, default_cost_type)
+                                    for i, xx in enumerate(x)) < cost
     positive_constraint = lambda x: all(x >= 0)
     accept_test = lambda x: positive_constraint(x) and cost_constraint(x)
     fun = lambda x: proposal_uncertainty({i+1: int(np.floor(x[i]))
@@ -86,9 +90,26 @@ def optimize_proposal_uncertainty_anneal(cost=100, maxev=10):
     return res.x
 
 
+def curation_cost(num_ev, type='linear'):
+    """Return an estimate of the cost of curation for a statement with given
+    number of evidences."""
+    if type == 'linear':
+        return num_ev
+    elif type == 'log':
+        return 1 + np.log(num_ev)
+    elif type == 'log2':
+        return 1 + np.log2(num_ev)
+
+
+def cur_for_cost(cost, num_ev, cost_type):
+    """Return the number of curations that can be done at a given cost limit."""
+    return int(np.floor(cost/curation_cost(num_ev, cost_type)))
+
+
 def find_next_best(cost=10, maxev=10, ev_probs=None):
     # First, establish reference values based on current curations
-    ref_samples = get_posterior_samples(correct_by_num_ev, nsteps=default_nsteps)
+    ref_samples = get_posterior_samples(correct_by_num_ev,
+                                        nsteps=default_nsteps)
     ref_pred_unc = pred_uncertainty(belief, ref_samples, range(1, maxev+1),
                                     x_probs=ev_probs)
     logger.info('Baseline prediction uncertainty: %.2E' % ref_pred_unc)
@@ -101,13 +122,10 @@ def find_next_best(cost=10, maxev=10, ev_probs=None):
 
     deltas = {}
 
-    def cur_for_num_ev(cost, num_ev):
-        """Return the number of curations that can be done at a given cost"""
-        return int(np.floor(cost/num_ev))
-
     for num_ev in range(1, maxev+1):
         # Propose experiments with num_ev evidences
-        proposed_curations_by_num_ev = {num_ev: cur_for_num_ev(cost, num_ev)}
+        proposed_curations_by_num_ev = {num_ev: cur_for_cost(cost, num_ev,
+                                                             default_cost_type)}
         proposed_correct_by_num_ev = \
             add_proposed_data(correct_by_num_ev, proposed_curations_by_num_ev,
                               ref_params)
@@ -139,13 +157,15 @@ def find_next_best(cost=10, maxev=10, ev_probs=None):
         logger.info('%s: %.2E' % (num_ev, delta))
     opt_num_ev = deltas_sorted[0][0]
     logger.info('You should next curate %d statements with %d evidences.' %
-                (cur_for_num_ev(cost, opt_num_ev), opt_num_ev))
-    return opt_num_ev, cur_for_num_ev(cost, opt_num_ev)
+                (cur_for_cost(cost, opt_num_ev, default_cost_type),
+                 opt_num_ev))
+    return opt_num_ev, cur_for_cost(cost, opt_num_ev, default_cost_type)
 
 
 if __name__ == '__main__':
     default_nsteps = 10000
     default_nwalkers = 50
+    default_cost_type = 'log2'
     with open('stmt_evidence_distribution.json', 'r') as fh:
         ev_probs = json.load(fh)
         ev_probs = {int(k): v for k, v in ev_probs.items()}
