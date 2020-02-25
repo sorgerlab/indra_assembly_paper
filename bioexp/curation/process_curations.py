@@ -143,7 +143,7 @@ def plot_curations(correct_by_num_ev, opt_r, opt_s):
     table.add_rows(table_data)
     print(table.draw())
 
-    plt.errorbar(num_evs, means, yerr=std, fmt='bo-',
+    plt.errorbar(num_evs, means, yerr=std, fmt='bo-', ls='none',
                  label='Empirical mean correctness')
     plt.plot(num_evs, beliefs, 'ro-', label='Optimized belief')
     plt.ylim(0, 1)
@@ -155,16 +155,18 @@ def plot_curations(correct_by_num_ev, opt_r, opt_s):
 
 
 def load_reach_curated_stmts():
-    input_source = 'reach'
-    with open('../../data/curation/bioexp_%s_sample_uncurated.pkl'
-              % input_source, 'rb') as fh:
+    with open('../../data/curation/bioexp_reach_sample_uncurated_19-12-14.pkl',
+              'rb') as fh:
         stmts = pickle.load(fh)
-    with open('../../data/curation/bioexp_%s_sample_tsv.pkl' % input_source,
+    with open('../../data/curation/bioexp_reach_sample_uncurated_20-02-19.pkl',
+              'rb') as fh:
+        stmts += pickle.load(fh)
+    with open('../../data/curation/bioexp_reach_sample_tsv.pkl',
               'rb') as fh:
         tsv_stmts = pickle.load(fh)
         for stmt in tsv_stmts:
             stmt.evidence = [e for e in stmt.evidence
-                             if e.source_api == input_source]
+                             if e.source_api == 'reach']
             stmts.append(stmt)
     return stmts
 
