@@ -54,8 +54,25 @@ def optimize(correct_by_num_ev):
 
 
 def preprocess_data(sources, stmts):
+    logger.info('Preprocessing curations')
     stmts_dict = {stmt.get_hash(): stmt for stmt in stmts}
     stmt_counts = Counter(stmt.get_hash() for stmt in stmts)
+    full_curations = get_full_curations(stmts_dict, sources)
+
+    # Now we aggregate evidence-level correctness at the statement level and
+    # assign 1 or 0 to the statement depending on whether any of its evidences
+    # are correct or not. We also account for the case where the same Statement
+    # was sampled multiple times.
+    correct_by_num_ev = defaultdict(list)
+    for pa_hash, corrects in full_curations.items():
+        npmid = len({ev.pmid for ev in stmts_dict[pa_hash].evidence})
+        any_correct = 1 if any(corrects) else 0
+        any_correct_by_num_sampled = [any_correct] * stmt_counts[pa_hash]
+        correct_by_num_ev[len(corrects)] += any_correct_by_num_sampled
+    return correct_by_num_ev
+
+
+def get_full_curations(sources, stmts_dict):
     # Curations are in a dict keyed by pa_hash and then by evidence source hash
     curations = defaultdict(lambda: defaultdict(list))
     # Iterate over all the curation sources
@@ -101,18 +118,7 @@ def preprocess_data(sources, stmts):
             overall_cur_by_num_ev_hash = \
                 [overall_cur] * ev_hash_count[source_hash]
             full_curations[pa_hash] += overall_cur_by_num_ev_hash
-
-    # Now we aggregate evidence-level correctness at the statement level and
-    # assign 1 or 0 to the statement depending on whether any of its evidences
-    # are correct or not. We also account for the case where the same Statement
-    # was sampled multiple times.
-    correct_by_num_ev = defaultdict(list)
-    for pa_hash, corrects in full_curations.items():
-        npmid = len({ev.pmid for ev in stmts_dict[pa_hash].evidence})
-        any_correct = 1 if any(corrects) else 0
-        any_correct_by_num_sampled = [any_correct] * stmt_counts[pa_hash]
-        correct_by_num_ev[len(corrects)] += any_correct_by_num_sampled
-    return correct_by_num_ev
+    return full_curations
 
 
 def optimize_params(correct_by_num_ev):
@@ -155,6 +161,7 @@ def plot_curations(correct_by_num_ev, opt_r, opt_s):
 
 
 def load_reach_curated_stmts():
+    logger.info('Loading REACH statement pickles')
     with open('../../data/curation/bioexp_reach_sample_uncurated_19-12-14.pkl',
               'rb') as fh:
         stmts = pickle.load(fh)
