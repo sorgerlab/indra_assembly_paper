@@ -38,6 +38,9 @@ korkut_pysb: $(OUTPUT)/bioexp_db_only_paths.pkl
 
 belief_fitting: $(OUTPUT)/bioexp_multi_src_results.pkl
 
+# Change this later to point to the right stmt pickles
+depmap: $(OUTPUT)/bioexp_signor_indranet.pkl
+
 # MAKEFILE GRAPH
 graph: makegraph.pdf
 
@@ -205,4 +208,8 @@ $(OUTPUT)/bioexp_db_only_paths.pkl: \
 #    $(OUTPUT)/bioexp_db_only_preassembled.pkl \
 #    $(OUTPUT)/bioexp_db_only_pysb_model.pkl \
 #    $(OUTPUT)/bioexp_db_only_paths.pkl
+
+# DEPMAP ----------------------------------------------------------------------
+$(OUTPUT)/bioexp_signor_indranet.pkl: $(OUTPUT)/bioexp_signor.pkl
+	python -m bioexp.depmap.stmts_to_indranet.py signor
 
