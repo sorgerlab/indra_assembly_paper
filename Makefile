@@ -211,5 +211,5 @@ $(OUTPUT)/bioexp_db_only_paths.pkl: \
 
 # DEPMAP ----------------------------------------------------------------------
 $(OUTPUT)/bioexp_signor_indranet.pkl: $(OUTPUT)/bioexp_signor.pkl
-	python -m bioexp.depmap.stmts_to_indranet.py signor
+	python -m bioexp.depmap.stmts_to_indranet signor
 

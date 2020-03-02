@@ -1,6 +1,6 @@
 import sys
 from indra.assemblers.indranet import IndraNetAssembler
-from bioexp.util import pklload
+from bioexp.util import pklload, pkldump
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
@@ -12,4 +12,4 @@ if __name__ == '__main__':
     stmts =  pklload(pkl_basename)
     ina = IndraNetAssembler(stmts)
     inet = ina.make_model()
-    pkldump(f"{pkl_basename}_indranet")
+    pkldump(inet, f"{pkl_basename}_indranet")
