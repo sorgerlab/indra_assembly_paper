@@ -4,6 +4,8 @@ import corner
 import logging
 import numpy as np
 import scipy.optimize
+from scipy.stats import binom
+from scipy.special import betaln
 from texttable import Texttable
 import matplotlib.pyplot as plt
 from collections import defaultdict, Counter
@@ -21,7 +23,7 @@ def belief(num_ev, pr, ps):
     b = 1 - (ps + (1-ps) * (pr ** num_ev))
     return b
 
-
+'''
 def logl(correct_by_num_ev, pr, ps):
     """Return log likelihood of belief model parameters given data."""
     ll = 0
@@ -29,6 +31,32 @@ def logl(correct_by_num_ev, pr, ps):
         ll += sum((np.log(belief(num_ev, pr, ps)) if c else
                    np.log(1-belief(num_ev, pr, ps)))
                   for c in corrects)
+    return ll
+
+def logl(correct_by_num_ev, pr, ps):
+    """Return log likelihood of belief model parameters given data."""
+    ll = 0
+    for num_ev, num_corrects in correct_by_num_ev.items():
+        for num_correct in num_corrects:
+            if num_correct == 0:
+                ll += np.log(ps + (1-ps)*binom.pmf(0, n=num_ev, p=1-pr))
+            else:
+                ll += np.log((1-ps) * binom.pmf(num_correct, n=num_ev, p=1-pr))
+    return ll
+'''
+
+
+def logl(correct_by_num_ev, alpha, beta):
+    """Return log likelihood of belief model parameters given data."""
+    ll = 0
+    for num_ev, num_corrects in correct_by_num_ev.items():
+        n = num_ev
+        for num_correct in num_corrects:
+            k = num_correct
+            b1 = betaln(k + alpha, n - k + beta)
+            b2 = betaln(alpha, beta)
+            nck = -betaln(1 + n - k, 1 + k) - np.log(n + 1)
+            ll += nck + b1 - b2
     return ll
 
 
@@ -53,11 +81,10 @@ def optimize(correct_by_num_ev):
     return res.x
 
 
-def preprocess_data(sources, stmts):
-    logger.info('Preprocessing curations')
+def get_statement_correctness_data(sources, stmts):
     stmts_dict = {stmt.get_hash(): stmt for stmt in stmts}
     stmt_counts = Counter(stmt.get_hash() for stmt in stmts)
-    full_curations = get_full_curations(stmts_dict, sources)
+    full_curations = get_full_curations(sources, stmts_dict)
 
     # Now we aggregate evidence-level correctness at the statement level and
     # assign 1 or 0 to the statement depending on whether any of its evidences
@@ -65,10 +92,21 @@ def preprocess_data(sources, stmts):
     # was sampled multiple times.
     correct_by_num_ev = defaultdict(list)
     for pa_hash, corrects in full_curations.items():
-        npmid = len({ev.pmid for ev in stmts_dict[pa_hash].evidence})
         any_correct = 1 if any(corrects) else 0
         any_correct_by_num_sampled = [any_correct] * stmt_counts[pa_hash]
         correct_by_num_ev[len(corrects)] += any_correct_by_num_sampled
+    return correct_by_num_ev
+
+
+def get_evidence_correctness_data(sources, stmts):
+    stmts_dict = {stmt.get_hash(): stmt for stmt in stmts}
+    stmt_counts = Counter(stmt.get_hash() for stmt in stmts)
+    full_curations = get_full_curations(sources, stmts_dict)
+    correct_by_num_ev = defaultdict(list)
+    for pa_hash, corrects in full_curations.items():
+        num_correct = sum(corrects)
+        num_correct_by_num_sampled = [num_correct] * stmt_counts[pa_hash]
+        correct_by_num_ev[len(corrects)] += num_correct_by_num_sampled
     return correct_by_num_ev
 
 
@@ -201,7 +239,7 @@ def plot_posterior_samples(samples):
     corner.corner(samples, labels=['Rand.', 'Syst'])
 
     # Plot a few representative belief curves from the posterior
-    num_evs = sorted(correct_by_num_ev.keys())
+    num_evs = sorted(ev_correct_by_num_ev.keys())
     for pr, ps in samples[:100]:
         beliefs = [belief(n, pr, ps) for n in num_evs]
         plt.plot(num_evs, beliefs, 'g-', alpha=0.1)
@@ -211,14 +249,17 @@ if __name__ == '__main__':
     plt.ion()
     stmts = load_reach_curated_stmts()
     source_list = ('bioexp_paper_tsv', 'bioexp_paper_reach')
-    correct_by_num_ev = preprocess_data(source_list, stmts)
+    stmt_correct_by_num_ev = \
+        get_statement_correctness_data(source_list, stmts)
+    ev_correct_by_num_ev = \
+        get_evidence_correctness_data(source_list, stmts)
 
     # Basic optimization and max-likelihood estimates
-    opt_r, opt_s = optimize_params(correct_by_num_ev)
-    plot_curations(correct_by_num_ev, opt_r, opt_s)
+    opt_r, opt_s = optimize_params(ev_correct_by_num_ev)
+    plot_curations(ev_correct_by_num_ev, opt_r, opt_s)
 
     # Bayesian parameter inference
-    samples = get_posterior_samples(correct_by_num_ev,
+    samples = get_posterior_samples(ev_correct_by_num_ev,
                                     ndim=2, nwalkers=10,
                                     nsteps=10000, nburn=100)
 

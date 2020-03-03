@@ -32,7 +32,7 @@ def add_proposed_data(correct_by_num_ev, exp_by_num_ev, p):
 
 def proposal_uncertainty(exp_by_num_ev, assumed_params,
                          maxev=10, ev_probs=None):
-    proposed_correct_by_num_ev = add_proposed_data(correct_by_num_ev,
+    proposed_correct_by_num_ev = add_proposed_data(stmt_correct_by_num_ev,
                                                    exp_by_num_ev,
                                                    assumed_params)
     samples = get_posterior_samples(proposed_correct_by_num_ev,
@@ -48,7 +48,7 @@ def optimize_proposal_uncertainty_simple(cost=100, maxev=10):
     # does not work well in practice.
 
     # Establish a baseline based on current data
-    samples = get_posterior_samples(correct_by_num_ev,
+    samples = get_posterior_samples(stmt_correct_by_num_ev,
                                     nsteps=default_nsteps)
     ref_params = np.mean(samples, 0)
 
@@ -71,7 +71,7 @@ def optimize_proposal_uncertainty_simple(cost=100, maxev=10):
 
 def optimize_proposal_uncertainty_anneal(cost=100, maxev=10):
     # Establish a baseline based on current data
-    samples = get_posterior_samples(correct_by_num_ev,
+    samples = get_posterior_samples(stmt_correct_by_num_ev,
                                     nsteps=default_nsteps)
     ref_params = np.mean(samples, 0)
 
@@ -108,7 +108,7 @@ def cur_for_cost(cost, num_ev, cost_type):
 
 def find_next_best(cost=10, maxev=10, ev_probs=None):
     # First, establish reference values based on current curations
-    ref_samples = get_posterior_samples(correct_by_num_ev,
+    ref_samples = get_posterior_samples(stmt_correct_by_num_ev,
                                         nsteps=default_nsteps)
     ref_pred_unc = pred_uncertainty(belief, ref_samples, range(1, maxev+1),
                                     x_probs=ev_probs)
@@ -127,7 +127,8 @@ def find_next_best(cost=10, maxev=10, ev_probs=None):
         proposed_curations_by_num_ev = {num_ev: cur_for_cost(cost, num_ev,
                                                              default_cost_type)}
         proposed_correct_by_num_ev = \
-            add_proposed_data(correct_by_num_ev, proposed_curations_by_num_ev,
+            add_proposed_data(stmt_correct_by_num_ev,
+                              proposed_curations_by_num_ev,
                               ref_params)
         samples = get_posterior_samples(proposed_correct_by_num_ev,
                                         nsteps=default_nsteps,
@@ -171,5 +172,5 @@ if __name__ == '__main__':
         ev_probs = {int(k): v for k, v in ev_probs.items()}
     stmts = load_reach_curated_stmts()
     source_list = ('bioexp_paper_tsv', 'bioexp_paper_reach')
-    correct_by_num_ev = preprocess_data(source_list, stmts)
+    stmt_correct_by_num_ev = stmt_correct_by_num_ev(source_list, stmts)
     opt_i, num_i = find_next_best(20, ev_probs=ev_probs)
