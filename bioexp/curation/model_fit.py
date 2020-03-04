@@ -1,5 +1,8 @@
 import numpy as np
+from matplotlib import pyplot as plt
 import emcee
+from texttable import Texttable
+
 
 def posterior(position, mf):
     """A generic log posterior function."""
@@ -11,20 +14,20 @@ def posterior(position, mf):
 
 def prior(position, mf):
     """A generic prior function."""
-    return mf.model.log_prior(position)
+    return mf.model.log_prior(position, mf)
 
 def likelihood(position, mf):
-    return mf.model.log_likelihood(position, mf.data)
+    return mf.model.log_likelihood(position, mf.data, None)
 
 
 class BeliefModel(object):
     def __init__(self, param_names):
         self.param_names = param_names
 
-    def log_prior(self, params):
+    def log_prior(self, params, args):
         raise NotImplementedError()
 
-    def log_likelihood(self, params, data):
+    def log_likelihood(self, params, data, args):
         raise NotImplementedError()
 
     def sample_prior(self):
@@ -35,17 +38,71 @@ class ModelFit(object):
     def __init__(self, model, data):
         self.model = model
         self.data = data
+        self.data_stmt = {}
+        # Convert at the evidence level to data at the stmt level and store
+        for num_ev in data.keys():
+            stmt_corrects = list(np.array(np.array(data[num_ev]) >= 1,
+                                          dtype=int))
+            self.data_stmt[num_ev] = stmt_corrects
 
-    def plot_map_fit(self, sampler):
+    def plot_fit(self, sampler):
         # FIXME: Plotting function specific to belief data here
         plt.figure()
-        plt.plot(range(len(data)), self.data)
-        ml_ix = np.argmax(sampler.flatlnprobability)
-        ml_p = sampler.flatchain[ml_ix]
-        plt.plot(range(len(data)), posterior(
+        map_ix = np.argmax(sampler.flatlnprobability)
+        map_p = sampler.flatchain[map_ix]
+        for n in range(1, 11):
+            # First, plot the data
+            plt.subplot(3, 4, n)
+            plt.hist(self.data[n], bins=range(0,n+2), density=True)
+            plt.title(n)
+            # Then plot the model predictions
+            ev_lks = self.model.ev_predictions(map_p, n)
+            bin_centers = 0.5 + np.array(range(0, n+1))
+            print(bin_centers)
+            plt.plot(bin_centers, ev_lks, color='r', marker='.')
+        plt.tight_layout()
+        plt.show()
+
+    def plot_stmt_fit(self, sampler):
+        # Calculate the mean of correctness by number of evidence
+        num_evs = sorted(self.data.keys())
+        means = [np.mean(self.data_stmt[n]) for n in num_evs]
+        # Stderr of proportion is sqrt(pq/n)
+        std = [2*np.sqrt((np.mean(self.data_stmt[n]) *
+                          (1 - np.mean(self.data_stmt[n]))) /
+                           len(self.data_stmt[n]))
+               for n in num_evs]
+        #beliefs = [belief(n, opt_r, opt_s) for n in num_evs]
+
+        # Print table of results before plotting
+        table = Texttable()
+        table_data = [['Num Evs', 'Count', 'Num Correct', 'Pct', 'Std']]
+        for i, num_ev in enumerate(num_evs):
+            table_row = [num_ev, len(self.data_stmt[num_ev]),
+                         sum(self.data_stmt[num_ev]), means[i], std[i]]
+            table_data.append(table_row)
+        table.add_rows(table_data)
+        print(table.draw())
+
+        # Plot the data
+        plt.errorbar(num_evs, means, yerr=std, fmt='bo-', ls='none',
+                     label='Empirical mean correctness')
+        # Plot the MAP predictions
+        map_ix = np.argmax(sampler.flatlnprobability)
+        map_p = sampler.flatchain[map_ix]
+        stmt_probs = self.model.stmt_predictions(map_p, num_evs)
+        plt.plot(num_evs, stmt_probs, 'ro-', label='MAP belief')
+        # Legends, labels, etc.
+        plt.ylim(0, 1)
+        plt.grid(True)
+        plt.xticks(num_evs)
+        plt.xlabel('Number of evidence per INDRA Statement')
+        plt.legend(loc='lower right')
+        plt.show()
+
 
 def ens_sample(mf, nwalkers, burn_steps, sample_steps, threads=1,
-               pos=None, random_state=None):
+               pos=None, random_state=None, pool=None):
     """Samples from the posterior function using emcee.EnsembleSampler.
 
     The EnsembleSampler containing the chain is stored in gf.sampler.
@@ -92,7 +149,7 @@ def ens_sample(mf, nwalkers, burn_steps, sample_steps, threads=1,
     # Create the sampler object
     sampler = emcee.EnsembleSampler(nwalkers, ndim, posterior,
                                          args=[mf],
-                                         threads=threads)
+                                         threads=threads, pool=pool)
     if random_state is not None:
         sampler.random_state = random_state
 
