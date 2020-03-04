@@ -2,6 +2,7 @@ import emcee
 import pickle
 import corner
 import logging
+from multiprocessing import Pool
 import numpy as np
 import scipy.optimize
 from scipy.stats import binom
@@ -11,6 +12,10 @@ import matplotlib.pyplot as plt
 from collections import defaultdict, Counter
 from indra_db import get_primary_db
 from indra_db.client.principal.curation import get_curations
+from bioexp.curation.belief_models import BinomialModelEv, \
+                                BetaBinomialModelEv, OrigBeliefModelStmt, \
+                                BetaBinomialModelStmt
+from bioexp.curation.model_fit import ModelFit, ens_sample
 
 
 logger = logging.getLogger('process_curations')
@@ -19,9 +24,6 @@ logger = logging.getLogger('process_curations')
 db = get_primary_db()
 
 
-def belief(num_ev, pr, ps):
-    b = 1 - (ps + (1-ps) * (pr ** num_ev))
-    return b
 
 '''
 def logl(correct_by_num_ev, pr, ps):
@@ -60,13 +62,6 @@ def logl(correct_by_num_ev, alpha, beta):
     return ll
 
 
-def log_prob(p, correct_by_num_ev):
-    pr, ps = p
-    # Uniform prior over [0, 1]
-    if pr < 0 or ps < 0 or pr > 1 or ps > 1:
-        return -np.inf
-    else:
-        return logl(correct_by_num_ev, pr, ps)
 
 
 def optimize(correct_by_num_ev):
@@ -216,6 +211,7 @@ def load_reach_curated_stmts():
     return stmts
 
 
+"""
 def get_posterior_samples(correct_by_num_ev, ndim=2, nwalkers=50,
                           nsteps=2000, nburn=100, p0=None):
     logger.info('Sampling with %d walkers for %d steps' % (nwalkers, nsteps))
@@ -231,7 +227,7 @@ def get_posterior_samples(correct_by_num_ev, ndim=2, nwalkers=50,
         sampler.run_mcmc(p0, nsteps)
     logger.info('Finished sampling')
     return sampler.flatchain[nburn*nwalkers:]
-
+"""
 
 def plot_posterior_samples(samples):
     # Plot the posterior parameter distribution
@@ -246,21 +242,46 @@ def plot_posterior_samples(samples):
 
 
 if __name__ == '__main__':
+    #with open('orig_belief_stmt_sampler.pkl', 'rb') as f:
+    #    (mf, sampler) = pickle.load(f)
+
     plt.ion()
     stmts = load_reach_curated_stmts()
     source_list = ('bioexp_paper_tsv', 'bioexp_paper_reach')
-    stmt_correct_by_num_ev = \
-        get_statement_correctness_data(source_list, stmts)
-    ev_correct_by_num_ev = \
-        get_evidence_correctness_data(source_list, stmts)
+    stmt_correct_by_num_ev = get_statement_correctness_data(source_list, stmts)
+    ev_correct_by_num_ev = get_evidence_correctness_data(source_list, stmts)
 
     # Basic optimization and max-likelihood estimates
-    opt_r, opt_s = optimize_params(ev_correct_by_num_ev)
-    plot_curations(ev_correct_by_num_ev, opt_r, opt_s)
+    #opt_r, opt_s = optimize_params(ev_correct_by_num_ev)
+    #plot_curations(ev_correct_by_num_ev, opt_r, opt_s)
 
     # Bayesian parameter inference
-    samples = get_posterior_samples(ev_correct_by_num_ev,
-                                    ndim=2, nwalkers=10,
-                                    nsteps=10000, nburn=100)
+    #samples = get_posterior_samples(ev_correct_by_num_ev,
+    #                                ndim=2, nwalkers=10,
+    #                                nsteps=10000, nburn=100)
+    #plot_posterior_samples(samples)
 
-    plot_posterior_samples(samples)
+    #bme = BinomialModelEv()
+    bbme = BetaBinomialModelEv()
+    bbms = BetaBinomialModelStmt()
+    obms = OrigBeliefModelStmt()
+    models = [('beta_binom_stmt', bbms)]
+    #models = [('beta_binom_ev', bbme), ('orig_belief_stmt', obms)]
+    #models = [('binom_ev', bme), ('beta_binom_ev', bbme)]
+    results = []
+    for model_name, model in models:
+        print(f"Fitting {model_name}")
+        mf = ModelFit(model, ev_correct_by_num_ev)
+        nwalkers, burn_steps, sample_steps = (100, 100, 100)
+        with Pool() as pool:
+            sampler = ens_sample(mf, nwalkers, burn_steps, sample_steps,
+                                 pool=pool)
+        filename = f'{model_name}_sampler.pkl'
+        print(f'Saving to {filename}')
+        with open(filename, 'wb') as f:
+            sampler.pool = None
+            pickle.dump((mf, sampler), f)
+        results.append((model_name, mf, sampler))
+        mf.plot_ev_fit(sampler)
+        mf.plot_stmt_fit(sampler)
+

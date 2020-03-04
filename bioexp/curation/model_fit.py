@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 import emcee
 from texttable import Texttable
-
+import corner
 
 def posterior(position, mf):
     """A generic log posterior function."""
@@ -20,19 +20,6 @@ def likelihood(position, mf):
     return mf.model.log_likelihood(position, mf.data, None)
 
 
-class BeliefModel(object):
-    def __init__(self, param_names):
-        self.param_names = param_names
-
-    def log_prior(self, params, args):
-        raise NotImplementedError()
-
-    def log_likelihood(self, params, data, args):
-        raise NotImplementedError()
-
-    def sample_prior(self):
-        raise NotImplementedError()
-
 
 class ModelFit(object):
     def __init__(self, model, data):
@@ -45,7 +32,7 @@ class ModelFit(object):
                                           dtype=int))
             self.data_stmt[num_ev] = stmt_corrects
 
-    def plot_fit(self, sampler):
+    def plot_ev_fit(self, sampler):
         # FIXME: Plotting function specific to belief data here
         plt.figure()
         map_ix = np.argmax(sampler.flatlnprobability)
@@ -85,6 +72,7 @@ class ModelFit(object):
         print(table.draw())
 
         # Plot the data
+        plt.figure()
         plt.errorbar(num_evs, means, yerr=std, fmt='bo-', ls='none',
                      label='Empirical mean correctness')
         # Plot the MAP predictions
@@ -100,6 +88,18 @@ class ModelFit(object):
         plt.legend(loc='lower right')
         plt.show()
 
+    def plot_corner(self, sampler):
+        # Plot the posterior parameter distribution
+        plt.figure()
+        corner.corner(sampler.flatchain, labels=self.model.param_names)
+        plt.show()
+        """
+        # Plot a few representative belief curves from the posterior
+        num_evs = sorted(ev_correct_by_num_ev.keys())
+        for pr, ps in samples[:100]:
+            beliefs = [belief(n, pr, ps) for n in num_evs]
+            plt.plot(num_evs, beliefs, 'g-', alpha=0.1)
+        """
 
 def ens_sample(mf, nwalkers, burn_steps, sample_steps, threads=1,
                pos=None, random_state=None, pool=None):
@@ -142,7 +142,7 @@ def ens_sample(mf, nwalkers, burn_steps, sample_steps, threads=1,
         p0 = np.zeros((nwalkers, ndim))
         for walk_ix in range(nwalkers):
             for p_ix in range(ndim):
-                p0[walk_ix, p_ix] = mf.model.sample_prior()
+                p0[walk_ix, :] = mf.model.sample_prior()
     else:
         p0 = pos
 
