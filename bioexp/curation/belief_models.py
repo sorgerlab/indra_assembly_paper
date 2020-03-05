@@ -82,14 +82,24 @@ class BetaBinomialModelEv(BeliefModel):
         alpha, beta = params
         if alpha < 0 or beta < 0:
             return -np.inf
+        # FIXME: Restricting to < 1 due to NaN
+        elif alpha > 1 or beta > 1:
+            return -np.inf
         else:
             return 0
 
     def _log_lkl_k_ev(self, k, n, alpha, beta):
+        """Log version of the likelihood."""
         b1 = betaln(k + alpha, n - k + beta)
         b2 = betaln(alpha, beta)
         nck = -betaln(1 + n - k, 1 + k) - np.log(n + 1)
         return nck + b1 - b2
+
+    def _lkl_k_ev(self, k, n, alpha, beta):
+        """Likelihood."""
+        b1 = beta_func(k + alpha, n - k + beta)
+        b2 = beta_func(alpha, beta)
+        return comb(n, k) * b1 / b2
 
     def log_likelihood(self, params, correct_by_num_ev, args):
         ll = 0
@@ -110,9 +120,10 @@ class BetaBinomialModelEv(BeliefModel):
         alpha, beta = params
         probs = []
         for k in range(0, n+1):
-            probs.append(np.exp(self._log_lkl_k_ev(k, n, alpha, beta)))
+            probs.append(self._lkl_k_ev(k, n, alpha, beta))
         return probs
 
+    """
     @staticmethod
     def _cdf(k, n, alpha, beta):
         # n choose k
@@ -123,6 +134,7 @@ class BetaBinomialModelEv(BeliefModel):
         else:
             return (comb(n, k) * beta_func(k + alpha, n - k + beta) /
                                                     beta_func(alpha, beta))
+    """
 
     def stmt_predictions(self, params, num_evs):
         # Return the vector of probabilities correctness for statements with
@@ -130,7 +142,8 @@ class BetaBinomialModelEv(BeliefModel):
         alpha, beta = params
         probs = []
         for num_ev in num_evs:
-            probs.append(betabinom.sf(0, num_ev, alpha, beta))
+            prob_zero = self._lkl_k_ev(0, num_ev, alpha, beta)
+            probs.append(1 - prob_zero)
         return probs
 
 
@@ -141,7 +154,12 @@ class BetaBinomialModelStmt(BetaBinomialModelEv):
         alpha, beta = params
         for num_ev, num_corrects in correct_by_num_ev.items():
             for num_correct in num_corrects:
-                ll += betabinom.sf(0, num_ev, alpha, beta)
+                prob_zero = self._lkl_k_ev(0, num_ev, alpha, beta)
+                if prob_zero == 1:
+                    import ipdb; ipdb.set_trace()
+                ll += np.log(1 - prob_zero)
+        if ll == np.nan:
+            import ipdb; ipdb.set_trace()
         return ll
 
 

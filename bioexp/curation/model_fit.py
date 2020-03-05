@@ -33,7 +33,6 @@ class ModelFit(object):
             self.data_stmt[num_ev] = stmt_corrects
 
     def plot_ev_fit(self, sampler):
-        # FIXME: Plotting function specific to belief data here
         plt.figure()
         map_ix = np.argmax(sampler.flatlnprobability)
         map_p = sampler.flatchain[map_ix]

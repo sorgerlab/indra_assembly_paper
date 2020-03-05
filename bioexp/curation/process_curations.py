@@ -261,12 +261,13 @@ if __name__ == '__main__':
     #                                nsteps=10000, nburn=100)
     #plot_posterior_samples(samples)
 
-    #bme = BinomialModelEv()
+    bme = BinomialModelEv()
     bbme = BetaBinomialModelEv()
     bbms = BetaBinomialModelStmt()
     obms = OrigBeliefModelStmt()
     models = [('beta_binom_stmt', bbms)]
-    #models = [('beta_binom_ev', bbme), ('orig_belief_stmt', obms)]
+    #models = [('binom_ev', bme), ('beta_binom_ev', bbme),
+    #          ('orig_belief_stmt', obms)]
     #models = [('binom_ev', bme), ('beta_binom_ev', bbme)]
     results = []
     for model_name, model in models:
