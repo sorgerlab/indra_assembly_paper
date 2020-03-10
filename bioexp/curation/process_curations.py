@@ -13,8 +13,8 @@ from collections import defaultdict, Counter
 from indra_db import get_primary_db
 from indra_db.client.principal.curation import get_curations
 from bioexp.curation.belief_models import BinomialModelEv, \
-                                BetaBinomialModelEv, OrigBeliefModelStmt, \
-                                BetaBinomialModelStmt
+                                BetaBinomialModelEv, BetaBinomialModelStmt, \
+                                OrigBeliefModelEv, OrigBeliefModelStmt
 from bioexp.curation.model_fit import ModelFit, ens_sample
 
 
@@ -265,7 +265,9 @@ if __name__ == '__main__':
     bbme = BetaBinomialModelEv()
     bbms = BetaBinomialModelStmt()
     obms = OrigBeliefModelStmt()
-    models = [('beta_binom_stmt', bbms)]
+    obme = OrigBeliefModelEv()
+    models = [('orig_belief_stmt', obms), ('orig_belief_ev', obme)]
+    #models = [('beta_binom_stmt', bbms)]
     #models = [('binom_ev', bme), ('beta_binom_ev', bbme),
     #          ('orig_belief_stmt', obms)]
     #models = [('binom_ev', bme), ('beta_binom_ev', bbme)]

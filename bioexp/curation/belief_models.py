@@ -39,6 +39,8 @@ class BinomialModelEv(BeliefModel):
         qnmk = (n - k) * np.log(1 - p)
         return nck + pk + qnmk
 
+    def _lkl_k
+
     def log_likelihood(self, params, correct_by_num_ev, args):
         p = params[0]
         ll = 0
@@ -217,3 +219,23 @@ class OrigBeliefModelStmt(BeliefModel):
             probs.append(self.belief(num_ev, pr, ps))
         return probs
 
+# ORIGINAL BELIEF MODEL by evidence -------------------------------------
+
+class OrigBeliefModelEv(OrigBeliefModelStmt):
+    @staticmethod
+    def belief(num_ev, pr, ps):
+        b = 1 - (ps + (1-ps) * (pr ** num_ev))
+        return b
+
+    def log_likelihood(self, params, correct_by_num_ev, args):
+        """Return log likelihood of belief model parameters given data."""
+        pr, ps = params
+        ll = 0
+        for num_ev, num_corrects in correct_by_num_ev.items():
+            for num_correct in num_corrects:
+                if num_correct == 0:
+                    ll += np.log(ps + (1-ps)*binom.pmf(0, n=num_ev, p=1-pr))
+                else:
+                    ll += np.log((1-ps) *
+                                 binom.pmf(num_correct, n=num_ev, p=1-pr))
+        return ll
