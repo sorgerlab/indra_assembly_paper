@@ -12,9 +12,10 @@ import matplotlib.pyplot as plt
 from collections import defaultdict, Counter
 from indra_db import get_primary_db
 from indra_db.client.principal.curation import get_curations
-from bioexp.curation.belief_models import BinomialModelEv, \
-                                BetaBinomialModelEv, BetaBinomialModelStmt, \
-                                OrigBeliefModelEv, OrigBeliefModelStmt
+from bioexp.curation.belief_models import (
+                                BinomialModelEv, BinomialModelStmt,
+                                BetaBinomialModelEv, BetaBinomialModelStmt,
+                                OrigBeliefModelEv, OrigBeliefModelStmt)
 from bioexp.curation.model_fit import ModelFit, ens_sample
 
 
@@ -246,10 +247,14 @@ if __name__ == '__main__':
     #    (mf, sampler) = pickle.load(f)
 
     plt.ion()
+    """
     stmts = load_reach_curated_stmts()
     source_list = ('bioexp_paper_tsv', 'bioexp_paper_reach')
     stmt_correct_by_num_ev = get_statement_correctness_data(source_list, stmts)
     ev_correct_by_num_ev = get_evidence_correctness_data(source_list, stmts)
+    """
+    with open('correct_by_num_ev.pkl', 'rb') as f:
+        ev_correct_by_num_ev = pickle.load(f)
 
     # Basic optimization and max-likelihood estimates
     #opt_r, opt_s = optimize_params(ev_correct_by_num_ev)
@@ -262,11 +267,13 @@ if __name__ == '__main__':
     #plot_posterior_samples(samples)
 
     bme = BinomialModelEv()
+    bms = BinomialModelStmt()
     bbme = BetaBinomialModelEv()
     bbms = BetaBinomialModelStmt()
     obms = OrigBeliefModelStmt()
     obme = OrigBeliefModelEv()
-    models = [('orig_belief_stmt', obms), ('orig_belief_ev', obme)]
+    models = [('binom_stmt', bms)]
+    #models = [('orig_belief_stmt', obms), ('orig_belief_ev', obme)]
     #models = [('beta_binom_stmt', bbms)]
     #models = [('binom_ev', bme), ('beta_binom_ev', bbme),
     #          ('orig_belief_stmt', obms)]
