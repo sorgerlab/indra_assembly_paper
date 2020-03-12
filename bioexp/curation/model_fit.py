@@ -32,8 +32,8 @@ class ModelFit(object):
                                           dtype=int))
             self.data_stmt[num_ev] = stmt_corrects
 
-    def plot_ev_fit(self, sampler):
-        plt.figure()
+    def plot_ev_fit(self, sampler, title):
+        fig = plt.figure()
         map_ix = np.argmax(sampler.flatlnprobability)
         map_p = sampler.flatchain[map_ix]
         for n in range(1, 11):
@@ -44,12 +44,12 @@ class ModelFit(object):
             # Then plot the model predictions
             ev_lks = self.model.ev_predictions(map_p, n)
             bin_centers = 0.5 + np.array(range(0, n+1))
-            print(bin_centers)
             plt.plot(bin_centers, ev_lks, color='r', marker='.')
+        fig.suptitle(title)
         plt.tight_layout()
         plt.show()
 
-    def plot_stmt_fit(self, sampler):
+    def plot_stmt_fit(self, sampler, title):
         # Calculate the mean of correctness by number of evidence
         num_evs = sorted(self.data.keys())
         means = [np.mean(self.data_stmt[n]) for n in num_evs]
@@ -85,6 +85,7 @@ class ModelFit(object):
         plt.xticks(num_evs)
         plt.xlabel('Number of evidence per INDRA Statement')
         plt.legend(loc='lower right')
+        plt.title(title)
         plt.show()
 
     def plot_corner(self, sampler):

@@ -272,7 +272,7 @@ if __name__ == '__main__':
     bbms = BetaBinomialModelStmt()
     obms = OrigBeliefModelStmt()
     obme = OrigBeliefModelEv()
-    models = [('binom_stmt', bms)]
+    models = [('binom_stmt', bms), ('binom_ev', bme)]
     #models = [('orig_belief_stmt', obms), ('orig_belief_ev', obme)]
     #models = [('beta_binom_stmt', bbms)]
     #models = [('binom_ev', bme), ('beta_binom_ev', bbme),
@@ -292,6 +292,6 @@ if __name__ == '__main__':
             sampler.pool = None
             pickle.dump((mf, sampler), f)
         results.append((model_name, mf, sampler))
-        mf.plot_ev_fit(sampler)
-        mf.plot_stmt_fit(sampler)
+        mf.plot_ev_fit(sampler, model_name)
+        mf.plot_stmt_fit(sampler, model_name)
 
