@@ -1,8 +1,12 @@
 import numpy as np
 #from scipy.stats import binom, betabinom
-#from scipy.special import betaln, comb, beta as beta_func
+from scipy.special import betaln, comb, beta as beta_func
 from .binom_funcs import binom_pmf, binom_log_pmf, \
                          betabinom_pmf, betabinom_log_pmf
+
+
+__all__ = ['BinomialEv', 'BinomialStmt', 'BetaBinomialEv', 'BetaBinomialStmt',
+           'OrigBeliefEv', 'OrigBeliefStmt']
 
 class BeliefModel(object):
     def __init__(self, param_names):
@@ -18,10 +22,22 @@ class BeliefModel(object):
         raise NotImplementedError()
 
 
+def bernoulli_lkl(p_by_num_ev, correct_by_num_ev):
+    ll = 0
+    for num_ev, num_corrects in correct_by_num_ev.items():
+        p = p_by_num_ev[num_ev]
+        for num_correct in num_corrects:
+            if num_correct == 0:
+                ll += np.log(1 - p)
+            else:
+                ll += np.log(p)
+    return ll
+
+
 # BASIC BINOMIAL MODEL ---------------------------------------------------
-class BinomialModelEv(BeliefModel):
+class Binomial(BeliefModel):
     def __init__(self):
-        super(BinomialModelEv, self).__init__('p')
+        super(Binomial, self).__init__('p')
 
     def log_prior(self, params, args):
         p = params[0]
@@ -32,57 +48,17 @@ class BinomialModelEv(BeliefModel):
         else:
             return 0
 
-    """
-    def _log_lkl_k_ev(k, n, p):
-        nck = -betaln(1 + n - k, 1 + k) - np.log(n + 1)
-        pk = k * np.log(p)
-        qnmk = (n - k) * np.log(1 - p)
-        return nck + pk + qnmk
-
-    def _lkl_k_ev(k, n, p):
-        return comb(n, k) * (p ** k) * ((1 - p) ** (n - k))
-    """
-
-    def log_likelihood(self, params, correct_by_num_ev, args):
+    def log_likelihood_ev(self, params, correct_by_num_ev, args):
         p = params[0]
         ll = 0
         for num_ev, num_corrects in correct_by_num_ev.items():
             n = num_ev
             for num_correct in num_corrects:
                 k = num_correct
-                #ll += np.log(binom.pmf(k, n, p))
                 ll += binom_log_pmf(k, n, p)
-                #self._log_lkl_k_ev(k, n, p)
         return ll
 
-    def sample_prior(self):
-        return np.random.random(size=1)
-
-    def ev_predictions(self, params, n):
-        # Return the vector of probabilities of exactly 0 <= k <= n evidences
-        # correct
-        p = params[0]
-        probs = []
-        for k in range(0, n+1):
-            #probs.append(binom.pmf(k, n, p))
-            probs.append(binom_pmf(k, n, p))
-            #np.exp(self._log_lkl_k_ev(k, n, p)))
-        return probs
-
-    def stmt_predictions(self, params, num_evs):
-        # Return the vector of probabilities correctness for statements with
-        # different numbers of evidences
-        p = params[0]
-        probs = []
-        for num_ev in num_evs:
-            #probs.append(binom.sf(0, num_ev, p))
-            probs.append(1 - binom_pmf(0, num_ev, p))
-        return probs
-
-
-# BINOMIAL by statement ---------------------------------------------
-class BinomialModelStmt(BinomialModelEv):
-    def log_likelihood(self, params, correct_by_num_ev, args):
+    def log_likelihood_stmt(self, params, correct_by_num_ev, args):
         p = params[0]
         ll = 0
         for num_ev, num_corrects in correct_by_num_ev.items():
@@ -96,11 +72,42 @@ class BinomialModelStmt(BinomialModelEv):
                     ll += np.log(prob_non_zero)
         return ll
 
+    def sample_prior(self):
+        return np.random.random(size=1)
+
+    def ev_predictions(self, params, n):
+        # Return the vector of probabilities of exactly 0 <= k <= n evidences
+        # correct
+        p = params[0]
+        probs = []
+        for k in range(0, n+1):
+            probs.append(binom_pmf(k, n, p))
+        return probs
+
+    def stmt_predictions(self, params, num_evs):
+        # Return the vector of probabilities correctness for statements with
+        # different numbers of evidences
+        p = params[0]
+        probs = []
+        for num_ev in num_evs:
+            probs.append(1 - binom_pmf(0, num_ev, p))
+        return probs
+
+
+class BinomialStmt(Binomial):
+    def log_likelihood(self, *args):
+        return self.log_likelihood_stmt(*args)
+
+
+class BinomialEv(Binomial):
+    def log_likelihood(self, *args):
+        return self.log_likelihood_ev(*args)
+
 
 # BETA-BINOMIAL MODEL ---------------------------------------------------
-class BetaBinomialModelEv(BeliefModel):
+class BetaBinomial(BeliefModel):
     def __init__(self):
-        super(BetaBinomialModelEv, self).__init__(['Alpha', 'Beta'])
+        super(BetaBinomial, self).__init__(['Alpha', 'Beta'])
 
     def log_prior(self, params, args):
         # alpha and beta are positive real numbers
@@ -114,24 +121,36 @@ class BetaBinomialModelEv(BeliefModel):
             return 0
 
     def _log_lkl_k_ev(self, k, n, alpha, beta):
-        """Log version of the likelihood."""
         b1 = betaln(k + alpha, n - k + beta)
         b2 = betaln(alpha, beta)
         nck = -betaln(1 + n - k, 1 + k) - np.log(n + 1)
         return nck + b1 - b2
 
     def _lkl_k_ev(self, k, n, alpha, beta):
-        """Likelihood."""
         b1 = beta_func(k + alpha, n - k + beta)
         b2 = beta_func(alpha, beta)
         return comb(n, k) * b1 / b2
 
-    def log_likelihood(self, params, correct_by_num_ev, args):
+    def log_likelihood_ev(self, params, correct_by_num_ev, args):
         ll = 0
         alpha, beta = params
         for num_ev, num_corrects in correct_by_num_ev.items():
             for num_correct in num_corrects:
-                ll += self._log_lkl_k_ev(num_correct, num_ev, alpha, beta)
+                #ll += self._log_lkl_k_ev(num_correct, num_ev, alpha, beta)
+                ll += betabinom_log_pmf(num_correct, num_ev, alpha, beta)
+        return ll
+
+    def log_likelihood_stmt(self, params, correct_by_num_ev, args):
+        ll = 0
+        alpha, beta = params
+        for num_ev, num_corrects in correct_by_num_ev.items():
+            for num_correct in num_corrects:
+                #prob_zero = self._lkl_k_ev(0, num_ev, alpha, beta)
+                prob_zero = betabinom_pmf(0, num_ev, alpha, beta)
+                if num_correct == 0:
+                    ll += np.log(prob_zero)
+                else:
+                    ll += np.log(1 - prob_zero)
         return ll
 
     def sample_prior(self):
@@ -145,7 +164,8 @@ class BetaBinomialModelEv(BeliefModel):
         alpha, beta = params
         probs = []
         for k in range(0, n+1):
-            probs.append(self._lkl_k_ev(k, n, alpha, beta))
+            #probs.append(self._lkl_k_ev(k, n, alpha, beta))
+            probs.append(betabinom_pmf(k, n, alpha, beta))
         return probs
 
     def stmt_predictions(self, params, num_evs):
@@ -154,32 +174,26 @@ class BetaBinomialModelEv(BeliefModel):
         alpha, beta = params
         probs = []
         for num_ev in num_evs:
-            prob_zero = self._lkl_k_ev(0, num_ev, alpha, beta)
+            #prob_zero = self._lkl_k_ev(0, num_ev, alpha, beta)
+            prob_zero = betabinom_pmf(0, num_ev, alpha, beta)
             probs.append(1 - prob_zero)
         return probs
 
 
-# BETA-BINOMIAL by statement ---------------------------------------------
-class BetaBinomialModelStmt(BetaBinomialModelEv):
-    def log_likelihood(self, params, correct_by_num_ev, args):
-        ll = 0
-        alpha, beta = params
-        for num_ev, num_corrects in correct_by_num_ev.items():
-            for num_correct in num_corrects:
-                prob_zero = self._lkl_k_ev(0, num_ev, alpha, beta)
-                if prob_zero == 1:
-                    import ipdb; ipdb.set_trace()
-                ll += np.log(1 - prob_zero)
-        if ll == np.nan:
-            import ipdb; ipdb.set_trace()
-        return ll
+class BetaBinomialStmt(BetaBinomial):
+    def log_likelihood(self, *args):
+        return self.log_likelihood_stmt(*args)
 
 
+class BetaBinomialEv(BetaBinomial):
+    def log_likelihood(self, *args):
+        return self.log_likelihood_ev(*args)
 
-# ORIGINAL BELIEF MODEL by statement -------------------------------------
-class OrigBeliefModelStmt(BeliefModel):
+
+# ORIGINAL BELIEF MODEL -------------------------------------
+class OrigBelief(BeliefModel):
     def __init__(self):
-        super(OrigBeliefModelStmt, self).__init__(['Rand', 'Syst'])
+        super(OrigBelief, self).__init__(['Rand', 'Syst'])
 
     def log_prior(self, params, args):
         pr, ps = params
@@ -194,8 +208,18 @@ class OrigBeliefModelStmt(BeliefModel):
         b = 1 - (ps + (1-ps) * (pr ** num_ev))
         return b
 
-    def log_likelihood(self, params, correct_by_num_ev, args):
-        """Return log likelihood of belief model parameters given data."""
+    def log_likelihood_ev(self, params, correct_by_num_ev, args):
+        pr, ps = params
+        ll = 0
+        for num_ev, num_corrects in correct_by_num_ev.items():
+            for num_correct in num_corrects:
+                if num_correct == 0:
+                    ll += np.log(ps + (1-ps) * binom_pmf(0, num_ev, 1-pr))
+                else:
+                    ll += np.log((1-ps) * binom_pmf(num_correct, num_ev, 1-pr))
+        return ll
+
+    def log_likelihood_stmt(self, params, correct_by_num_ev, args):
         pr, ps = params
         ll = 0
         for num_ev, corrects in correct_by_num_ev.items():
@@ -214,9 +238,9 @@ class OrigBeliefModelStmt(BeliefModel):
         probs = []
         for k in range(0, n+1):
             if k == 0:
-                ll = ps + (1-ps)*binom.pmf(0, n=n, p=1-pr)
+                ll = ps + (1-ps) * binom_pmf(0, n, 1-pr)
             else:
-                ll = (1-ps) * binom.pmf(k, n=n, p=1-pr)
+                ll = (1-ps) * binom_pmf(k, n, 1-pr)
             probs.append(ll)
         return probs
 
@@ -231,25 +255,10 @@ class OrigBeliefModelStmt(BeliefModel):
 
 # ORIGINAL BELIEF MODEL by evidence -------------------------------------
 
-class OrigBeliefModelEv(OrigBeliefModelStmt):
-    @staticmethod
-    def belief(num_ev, pr, ps):
-        b = 1 - (ps + (1-ps) * (pr ** num_ev))
-        return b
+class OrigBeliefStmt(OrigBelief):
+    def log_likelihood(self, *args):
+        return self.log_likelihood_stmt(*args)
 
-    def binom_pmf(k, n, p):
-        return comb(n, k) * p**k * (1-p)**(n-k)
-
-    def log_likelihood(self, params, correct_by_num_ev, args):
-        """Return log likelihood of belief model parameters given data."""
-        pr, ps = params
-        ll = 0
-        for num_ev, num_corrects in correct_by_num_ev.items():
-            for num_correct in num_corrects:
-                if num_correct == 0:
-                    ll += np.log(ps + (1-ps) *
-                                        self.binom_pmf(0, n, p=1-pr))
-                else:
-                    ll += np.log((1-ps) *
-                               self.binom_pmf(num_correct, num_ev, 1-pr))
-        return ll
+class OrigBeliefEv(OrigBelief):
+    def log_likelihood(self, *args):
+        return self.log_likelihood_ev(*args)

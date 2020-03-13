@@ -12,10 +12,7 @@ import matplotlib.pyplot as plt
 from collections import defaultdict, Counter
 from indra_db import get_primary_db
 from indra_db.client.principal.curation import get_curations
-from bioexp.curation.belief_models import (
-                                BinomialModelEv, BinomialModelStmt,
-                                BetaBinomialModelEv, BetaBinomialModelStmt,
-                                OrigBeliefModelEv, OrigBeliefModelStmt)
+from bioexp.curation.belief_models import *
 from bioexp.curation.model_fit import ModelFit, ens_sample
 
 
@@ -266,18 +263,18 @@ if __name__ == '__main__':
     #                                nsteps=10000, nburn=100)
     #plot_posterior_samples(samples)
 
-    bme = BinomialModelEv()
-    bms = BinomialModelStmt()
-    bbme = BetaBinomialModelEv()
-    bbms = BetaBinomialModelStmt()
-    obms = OrigBeliefModelStmt()
-    obme = OrigBeliefModelEv()
-    models = [('binom_stmt', bms), ('binom_ev', bme)]
-    #models = [('orig_belief_stmt', obms), ('orig_belief_ev', obme)]
-    #models = [('beta_binom_stmt', bbms)]
-    #models = [('binom_ev', bme), ('beta_binom_ev', bbme),
-    #          ('orig_belief_stmt', obms)]
-    #models = [('binom_ev', bme), ('beta_binom_ev', bbme)]
+    be = BinomialEv()
+    bs = BinomialStmt()
+    bbe = BetaBinomialEv()
+    bbs = BetaBinomialStmt()
+    obe = OrigBeliefEv()
+    obs = OrigBeliefStmt()
+    models = [('orig_belief_ev', obe), ('orig_belief_stmt', obs),
+              ('binom_ev', be), ('binom_stmt', bs),
+              ('betabinom_ev', be), ('betabinom_stmt', bbs)]
+    #models = [('orig_belief_ev', obe), ('orig_belief_stmt', obs)]
+              #('betabinom_ev', bbe), ('betabinom_stmt', bbs)]
+
     results = []
     for model_name, model in models:
         print(f"Fitting {model_name}")
@@ -294,4 +291,20 @@ if __name__ == '__main__':
         results.append((model_name, mf, sampler))
         mf.plot_ev_fit(sampler, model_name)
         mf.plot_stmt_fit(sampler, model_name)
+
+    stmt_lkl_values = []
+    labels = []
+    for model_name, mf, sampler in results:
+        labels.append(model_name)
+        stmt_lkl_values.append(mf.stmt_err(sampler))
+    plt.figure()
+    plt.bar(range(len(stmt_lkl_values)), stmt_lkl_values, tick_label=labels)
+    plt.ylim(bottom=250)
+
+    # Print table of results before plotting
+    table = Texttable()
+    table_data = [('Model', '-log(Max Lkl) (Stmt)')]
+    table_data.extend(zip(labels, stmt_lkl_values))
+    table.add_rows(table_data)
+    print(table.draw())
 

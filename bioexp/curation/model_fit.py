@@ -32,6 +32,31 @@ class ModelFit(object):
                                           dtype=int))
             self.data_stmt[num_ev] = stmt_corrects
 
+    def data_table(self):
+        # Print table of results before plotting
+        table = Texttable()
+        table_data = [['Num Evs', 'Count', 'Num Correct', 'Pct', 'Std']]
+        for i, num_ev in enumerate(num_evs):
+            table_row = [num_ev, len(self.data_stmt[num_ev]),
+                         sum(self.data_stmt[num_ev]), means[i], std[i]]
+            table_data.append(table_row)
+        table.add_rows(table_data)
+        print(table.draw())
+
+    def stmt_err(self, sampler):
+        map_ix = np.argmax(sampler.flatlnprobability)
+        map_p = sampler.flatchain[map_ix]
+        stmt_preds = self.model.stmt_predictions(map_p, self.data.keys())
+        ll = 0
+        for i, (num_ev, num_corrects) in enumerate(self.data.items()):
+            p = stmt_preds[i]
+            for num_correct in num_corrects:
+                if num_correct == 0:
+                    ll += np.log(1 - p)
+                else:
+                    ll += np.log(p)
+        return -ll
+
     def plot_ev_fit(self, sampler, title):
         fig = plt.figure()
         map_ix = np.argmax(sampler.flatlnprobability)
@@ -58,17 +83,6 @@ class ModelFit(object):
                           (1 - np.mean(self.data_stmt[n]))) /
                            len(self.data_stmt[n]))
                for n in num_evs]
-        #beliefs = [belief(n, opt_r, opt_s) for n in num_evs]
-
-        # Print table of results before plotting
-        table = Texttable()
-        table_data = [['Num Evs', 'Count', 'Num Correct', 'Pct', 'Std']]
-        for i, num_ev in enumerate(num_evs):
-            table_row = [num_ev, len(self.data_stmt[num_ev]),
-                         sum(self.data_stmt[num_ev]), means[i], std[i]]
-            table_data.append(table_row)
-        table.add_rows(table_data)
-        print(table.draw())
 
         # Plot the data
         plt.figure()
