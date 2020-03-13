@@ -43,18 +43,23 @@ class ModelFit(object):
         table.add_rows(table_data)
         print(table.draw())
 
-    def stmt_err(self, sampler):
+    def stmt_err(self, sampler, weights=None):
         map_ix = np.argmax(sampler.flatlnprobability)
         map_p = sampler.flatchain[map_ix]
         stmt_preds = self.model.stmt_predictions(map_p, self.data.keys())
         ll = 0
         for i, (num_ev, num_corrects) in enumerate(self.data.items()):
             p = stmt_preds[i]
+            ll_n = 0
             for num_correct in num_corrects:
                 if num_correct == 0:
-                    ll += np.log(1 - p)
+                    ll_n += np.log(1 - p)
                 else:
-                    ll += np.log(p)
+                    ll_n += np.log(p)
+            if weights:
+                ll += weights[num_ev] * ll_n * len(self.data)
+            else:
+                ll += ll_n
         return -ll
 
     def plot_ev_fit(self, sampler, title):
@@ -104,7 +109,6 @@ class ModelFit(object):
 
     def plot_corner(self, sampler):
         # Plot the posterior parameter distribution
-        plt.figure()
         corner.corner(sampler.flatchain, labels=self.model.param_names)
         plt.show()
         """

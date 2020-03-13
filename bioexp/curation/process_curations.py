@@ -1,8 +1,10 @@
-import emcee
+import json
 import pickle
-import corner
 import logging
 from multiprocessing import Pool
+from os.path import dirname, abspath, join
+import emcee
+import corner
 import numpy as np
 import scipy.optimize
 from scipy.stats import binom
@@ -240,18 +242,12 @@ def plot_posterior_samples(samples):
 
 
 if __name__ == '__main__':
-    #with open('orig_belief_stmt_sampler.pkl', 'rb') as f:
-    #    (mf, sampler) = pickle.load(f)
-
     plt.ion()
-    """
+
     stmts = load_reach_curated_stmts()
     source_list = ('bioexp_paper_tsv', 'bioexp_paper_reach')
     stmt_correct_by_num_ev = get_statement_correctness_data(source_list, stmts)
     ev_correct_by_num_ev = get_evidence_correctness_data(source_list, stmts)
-    """
-    with open('correct_by_num_ev.pkl', 'rb') as f:
-        ev_correct_by_num_ev = pickle.load(f)
 
     # Basic optimization and max-likelihood estimates
     #opt_r, opt_s = optimize_params(ev_correct_by_num_ev)
@@ -263,17 +259,23 @@ if __name__ == '__main__':
     #                                nsteps=10000, nburn=100)
     #plot_posterior_samples(samples)
 
-    be = BinomialEv()
-    bs = BinomialStmt()
-    bbe = BetaBinomialEv()
-    bbs = BetaBinomialStmt()
-    obe = OrigBeliefEv()
-    obs = OrigBeliefStmt()
+    # Load evidence frequency data
+    ev_dist_path = join(dirname(abspath(__file__)),
+                        'stmt_evidence_distribution.json')
+    with open(ev_dist_path, 'rt') as f:
+        ev_dist = json.load(f)
+        # Convert string keys to integer keys
+        ev_dist = {int(k): v for k, v in ev_dist.items()}
+
+    be = BinomialEv(weights=ev_dist)
+    bs = BinomialStmt(weights=ev_dist)
+    bbe = BetaBinomialEv(weights=ev_dist)
+    bbs = BetaBinomialStmt(weights=ev_dist)
+    obe = OrigBeliefEv(weights=ev_dist)
+    obs = OrigBeliefStmt(weights=ev_dist)
     models = [('orig_belief_ev', obe), ('orig_belief_stmt', obs),
               ('binom_ev', be), ('binom_stmt', bs),
               ('betabinom_ev', be), ('betabinom_stmt', bbs)]
-    #models = [('orig_belief_ev', obe), ('orig_belief_stmt', obs)]
-              #('betabinom_ev', bbe), ('betabinom_stmt', bbs)]
 
     results = []
     for model_name, model in models:
@@ -292,19 +294,23 @@ if __name__ == '__main__':
         mf.plot_ev_fit(sampler, model_name)
         mf.plot_stmt_fit(sampler, model_name)
 
-    stmt_lkl_values = []
+    stmt_lkls = []
+    stmt_lkls_wt = []
     labels = []
     for model_name, mf, sampler in results:
         labels.append(model_name)
-        stmt_lkl_values.append(mf.stmt_err(sampler))
+        stmt_lkls.append(mf.stmt_err(sampler))
+        stmt_lkls_wt.append(mf.stmt_err(sampler, ev_dist))
     plt.figure()
-    plt.bar(range(len(stmt_lkl_values)), stmt_lkl_values, tick_label=labels)
+    plt.bar(range(len(stmt_lkls)), stmt_lkls, tick_label=labels)
+    plt.bar(range(len(stmt_lkls_wt)), stmt_lkls_wt,
+            tick_label=[f'{l}_wts' for l in labels])
     plt.ylim(bottom=250)
 
-    # Print table of results before plotting
+    # Print table of results
     table = Texttable()
-    table_data = [('Model', '-log(Max Lkl) (Stmt)')]
-    table_data.extend(zip(labels, stmt_lkl_values))
+    table_data = [('Model', '-log(Max Lkl)', '-log(Max Lkl) Wtd.')]
+    table_data.extend(zip(labels, stmt_lkls, stmt_lkls_wt))
     table.add_rows(table_data)
     print(table.draw())
 

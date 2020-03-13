@@ -9,7 +9,7 @@ __all__ = ['BinomialEv', 'BinomialStmt', 'BetaBinomialEv', 'BetaBinomialStmt',
            'OrigBeliefEv', 'OrigBeliefStmt']
 
 class BeliefModel(object):
-    def __init__(self, param_names, weights=None):
+    def __init__(self, param_names, weights):
         self.param_names = param_names
         self.weights = weights
 
@@ -37,8 +37,8 @@ def bernoulli_lkl(p_by_num_ev, correct_by_num_ev):
 
 # BASIC BINOMIAL MODEL ---------------------------------------------------
 class Binomial(BeliefModel):
-    def __init__(self):
-        super(Binomial, self).__init__('p')
+    def __init__(self, weights=None):
+        super(Binomial, self).__init__('p', weights)
 
     def log_prior(self, params, args):
         p = params[0]
@@ -59,7 +59,7 @@ class Binomial(BeliefModel):
                 k = num_correct
                 ll_n += binom_log_pmf(k, n, p)
             if self.weights:
-                ll += self.weights[num_ev] * ll_n
+                ll += self.weights[num_ev] * ll_n * len(correct_by_num_ev)
             else:
                 ll += ll_n
         return ll
@@ -78,7 +78,7 @@ class Binomial(BeliefModel):
                 else:
                     ll_n += np.log(prob_non_zero)
             if self.weights:
-                ll += self.weights[num_ev] * ll_n
+                ll += self.weights[num_ev] * ll_n * len(correct_by_num_ev)
             else:
                 ll += ll_n
         return ll
@@ -117,8 +117,8 @@ class BinomialEv(Binomial):
 
 # BETA-BINOMIAL MODEL ---------------------------------------------------
 class BetaBinomial(BeliefModel):
-    def __init__(self):
-        super(BetaBinomial, self).__init__(['Alpha', 'Beta'])
+    def __init__(self, weights=None):
+        super(BetaBinomial, self).__init__(['Alpha', 'Beta'], weights)
 
     def log_prior(self, params, args):
         # alpha and beta are positive real numbers
@@ -126,8 +126,8 @@ class BetaBinomial(BeliefModel):
         if alpha < 0 or beta < 0:
             return -np.inf
         # FIXME: Restricting to < 1 due to NaN
-        elif alpha > 1 or beta > 1:
-            return -np.inf
+        #elif alpha > 1 or beta > 1:
+        #    return -np.inf
         else:
             return 0
 
@@ -151,7 +151,7 @@ class BetaBinomial(BeliefModel):
                 #ll += self._log_lkl_k_ev(num_correct, num_ev, alpha, beta)
                 ll_n += betabinom_log_pmf(num_correct, num_ev, alpha, beta)
             if self.weights:
-                ll += self.weights[num_ev] * ll_n
+                ll += self.weights[num_ev] * ll_n * len(correct_by_num_ev)
             else:
                 ll += ll_n
         return ll
@@ -169,7 +169,7 @@ class BetaBinomial(BeliefModel):
                 else:
                     ll_n += np.log(1 - prob_zero)
             if self.weights:
-                ll += self.weights[num_ev] * ll_n
+                ll += self.weights[num_ev] * ll_n * len(correct_by_num_ev)
             else:
                 ll += ll_n
         return ll
@@ -213,8 +213,8 @@ class BetaBinomialEv(BetaBinomial):
 
 # ORIGINAL BELIEF MODEL -------------------------------------
 class OrigBelief(BeliefModel):
-    def __init__(self):
-        super(OrigBelief, self).__init__(['Rand', 'Syst'])
+    def __init__(self, weights=None):
+        super(OrigBelief, self).__init__(['Rand', 'Syst'], weights)
 
     def log_prior(self, params, args):
         pr, ps = params
@@ -241,7 +241,7 @@ class OrigBelief(BeliefModel):
                     ll_n += np.log((1-ps) * binom_pmf(num_correct,
                                                       num_ev, 1-pr))
             if self.weights:
-                ll += self.weights[num_ev] * ll_n
+                ll += self.weights[num_ev] * ll_n * len(correct_by_num_ev)
             else:
                 ll += ll_n
         return ll
@@ -253,11 +253,11 @@ class OrigBelief(BeliefModel):
             ll_n = 0
             for num_correct in num_corrects:
                 if num_correct == 0:
-                    ll_n = np.log(1 - self.belief(num_ev, pr, ps)))
+                    ll_n += np.log(1 - self.belief(num_ev, pr, ps))
                 else:
-                    ll_n = np.log(self.belief(num_ev, pr, ps))
+                    ll_n += np.log(self.belief(num_ev, pr, ps))
             if self.weights:
-                ll += self.weights[num_ev] * ll_n
+                ll += self.weights[num_ev] * ll_n * len(correct_by_num_ev)
             else:
                 ll += ll_n
         return ll
