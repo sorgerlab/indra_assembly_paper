@@ -9,8 +9,9 @@ __all__ = ['BinomialEv', 'BinomialStmt', 'BetaBinomialEv', 'BetaBinomialStmt',
            'OrigBeliefEv', 'OrigBeliefStmt']
 
 class BeliefModel(object):
-    def __init__(self, param_names):
+    def __init__(self, param_names, weights=None):
         self.param_names = param_names
+        self.weights = weights
 
     def log_prior(self, params, args):
         raise NotImplementedError()
@@ -53,9 +54,14 @@ class Binomial(BeliefModel):
         ll = 0
         for num_ev, num_corrects in correct_by_num_ev.items():
             n = num_ev
+            ll_n = 0
             for num_correct in num_corrects:
                 k = num_correct
-                ll += binom_log_pmf(k, n, p)
+                ll_n += binom_log_pmf(k, n, p)
+            if self.weights:
+                ll += self.weights[num_ev] * ll_n
+            else:
+                ll += ll_n
         return ll
 
     def log_likelihood_stmt(self, params, correct_by_num_ev, args):
@@ -63,13 +69,18 @@ class Binomial(BeliefModel):
         ll = 0
         for num_ev, num_corrects in correct_by_num_ev.items():
             n = num_ev
+            ll_n = 0
             for num_correct in num_corrects:
                 prob_zero = binom_pmf(0, num_ev, p)
                 prob_non_zero = 1 - prob_zero
                 if num_correct == 0:
-                    ll += np.log(prob_zero)
+                    ll_n += np.log(prob_zero)
                 else:
-                    ll += np.log(prob_non_zero)
+                    ll_n += np.log(prob_non_zero)
+            if self.weights:
+                ll += self.weights[num_ev] * ll_n
+            else:
+                ll += ll_n
         return ll
 
     def sample_prior(self):
@@ -135,22 +146,32 @@ class BetaBinomial(BeliefModel):
         ll = 0
         alpha, beta = params
         for num_ev, num_corrects in correct_by_num_ev.items():
+            ll_n = 0
             for num_correct in num_corrects:
                 #ll += self._log_lkl_k_ev(num_correct, num_ev, alpha, beta)
-                ll += betabinom_log_pmf(num_correct, num_ev, alpha, beta)
+                ll_n += betabinom_log_pmf(num_correct, num_ev, alpha, beta)
+            if self.weights:
+                ll += self.weights[num_ev] * ll_n
+            else:
+                ll += ll_n
         return ll
 
     def log_likelihood_stmt(self, params, correct_by_num_ev, args):
         ll = 0
         alpha, beta = params
         for num_ev, num_corrects in correct_by_num_ev.items():
+            ll_n = 0
             for num_correct in num_corrects:
                 #prob_zero = self._lkl_k_ev(0, num_ev, alpha, beta)
                 prob_zero = betabinom_pmf(0, num_ev, alpha, beta)
                 if num_correct == 0:
-                    ll += np.log(prob_zero)
+                    ll_n += np.log(prob_zero)
                 else:
-                    ll += np.log(1 - prob_zero)
+                    ll_n += np.log(1 - prob_zero)
+            if self.weights:
+                ll += self.weights[num_ev] * ll_n
+            else:
+                ll += ll_n
         return ll
 
     def sample_prior(self):
@@ -212,20 +233,33 @@ class OrigBelief(BeliefModel):
         pr, ps = params
         ll = 0
         for num_ev, num_corrects in correct_by_num_ev.items():
+            ll_n = 0
             for num_correct in num_corrects:
                 if num_correct == 0:
-                    ll += np.log(ps + (1-ps) * binom_pmf(0, num_ev, 1-pr))
+                    ll_n += np.log(ps + (1-ps) * binom_pmf(0, num_ev, 1-pr))
                 else:
-                    ll += np.log((1-ps) * binom_pmf(num_correct, num_ev, 1-pr))
+                    ll_n += np.log((1-ps) * binom_pmf(num_correct,
+                                                      num_ev, 1-pr))
+            if self.weights:
+                ll += self.weights[num_ev] * ll_n
+            else:
+                ll += ll_n
         return ll
 
     def log_likelihood_stmt(self, params, correct_by_num_ev, args):
         pr, ps = params
         ll = 0
-        for num_ev, corrects in correct_by_num_ev.items():
-            ll += sum((np.log(self.belief(num_ev, pr, ps)) if c else
-                       np.log(1-self.belief(num_ev, pr, ps)))
-                       for c in corrects)
+        for num_ev, num_corrects in correct_by_num_ev.items():
+            ll_n = 0
+            for num_correct in num_corrects:
+                if num_correct == 0:
+                    ll_n = np.log(1 - self.belief(num_ev, pr, ps)))
+                else:
+                    ll_n = np.log(self.belief(num_ev, pr, ps))
+            if self.weights:
+                ll += self.weights[num_ev] * ll_n
+            else:
+                ll += ll_n
         return ll
 
     def sample_prior(self):
