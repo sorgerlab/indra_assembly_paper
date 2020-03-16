@@ -68,10 +68,10 @@ class ModelFit(object):
         fig = plt.figure()
         map_ix = np.argmax(sampler.flatlnprobability)
         map_p = sampler.flatchain[map_ix]
-        for n in range(1, 11):
+        for n in range(1, max(self.data.keys())+1):
             # First, plot the data
             plt.subplot(3, 4, n)
-            plt.hist(self.data[n], bins=range(0,n+2), density=True)
+            plt.hist(self.data[n], bins=range(0, n+2), density=True)
             plt.title(n)
             # Then plot the model predictions
             ev_lks = self.model.ev_predictions(map_p, n)

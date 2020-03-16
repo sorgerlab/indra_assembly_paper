@@ -164,8 +164,8 @@ if __name__ == '__main__':
         # Convert string keys to integer keys
         ev_dist = {int(k): v for k, v in ev_dist.items()}
 
-    aggregations = {'pmid': None,
-                    'evidence': ev_dist}
+    aggregations = {'pmid': (ev_correct_by_num_pmid, None),
+                    'evidence': (ev_correct_by_num_ev, ev_dist)}
     models = {
         'orig_belief_ev': OrigBeliefEv,
         'orig_belief_stmt': OrigBeliefStmt,
@@ -175,12 +175,12 @@ if __name__ == '__main__':
         'betabinom_stmt': BetaBinomialStmt
         }
     results = []
-    for aggregation_type, ev_dist_weights in aggregations.items():
+    for aggregation_type, (data, ev_dist_weights) in aggregations.items():
         for model_name, model_class in models.items():
             model_name = f'{model_name}_{aggregation_type}'
             model = model_class(weights=ev_dist_weights)
             print(f'Fitting {model_name}')
-            mf = ModelFit(model, ev_correct_by_num_ev)
+            mf = ModelFit(model, data)
             nwalkers, burn_steps, sample_steps = (100, 100, 100)
             with Pool() as pool:
                 sampler = ens_sample(mf, nwalkers, burn_steps, sample_steps,
