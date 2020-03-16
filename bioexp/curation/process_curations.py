@@ -1,14 +1,11 @@
 import json
 import pickle
 import logging
+import itertools
 from multiprocessing import Pool
 from os.path import dirname, abspath, join
-import emcee
 import corner
-import numpy as np
 import scipy.optimize
-from scipy.stats import binom
-from scipy.special import betaln
 from texttable import Texttable
 import matplotlib.pyplot as plt
 from collections import defaultdict, Counter
@@ -36,46 +33,17 @@ def optimize(correct_by_num_ev):
     return res.x
 
 
-def get_statement_correctness_data(sources, stmts):
+def get_correctness_data(sources, stmts, aggregation='evidence'):
     stmts_dict = {stmt.get_hash(): stmt for stmt in stmts}
     stmt_counts = Counter(stmt.get_hash() for stmt in stmts)
-    full_curations = get_full_curations(sources, stmts_dict)
-
-    # Now we aggregate evidence-level correctness at the statement level and
-    # assign 1 or 0 to the statement depending on whether any of its evidences
-    # are correct or not. We also account for the case where the same Statement
-    # was sampled multiple times.
-    correct_by_num_ev = defaultdict(list)
-    for pa_hash, corrects in full_curations.items():
-        any_correct = 1 if any(corrects) else 0
-        any_correct_by_num_sampled = [any_correct] * stmt_counts[pa_hash]
-        correct_by_num_ev[len(corrects)] += any_correct_by_num_sampled
-    return correct_by_num_ev
-
-
-def get_evidence_correctness_data(sources, stmts):
-    stmts_dict = {stmt.get_hash(): stmt for stmt in stmts}
-    stmt_counts = Counter(stmt.get_hash() for stmt in stmts)
-    full_curations = get_full_curations(sources, stmts_dict)
+    full_curations = get_full_curations(sources, stmts_dict,
+                                        aggregation=aggregation)
     correct_by_num_ev = defaultdict(list)
     for pa_hash, corrects in full_curations.items():
         num_correct = sum(corrects)
         num_correct_by_num_sampled = [num_correct] * stmt_counts[pa_hash]
         correct_by_num_ev[len(corrects)] += num_correct_by_num_sampled
     return correct_by_num_ev
-
-
-def get_pmid_correctness_data(sources, stmts):
-    stmts_dict = {stmt.get_hash(): stmt for stmt in stmts}
-    stmt_counts = Counter(stmt.get_hash() for stmt in stmts)
-    full_curations = get_full_curations(sources, stmts_dict)
-    correct_by_num_pmid = defaultdict(list)
-    for pa_hash, corrects in full_curations.items():
-        npmids = len({ev.pmid for ev in stmts_dict[pa_hash].evidence})
-        any_correct = 1 if any(corrects) else 0
-        any_correct_by_num_sampled = [any_correct] * stmt_counts[pa_hash]
-        correct_by_num_pmid[npmids] += any_correct_by_num_sampled
-    return correct_by_num_pmid
 
 
 def get_raw_curations(sources, stmts_dict):
@@ -95,7 +63,7 @@ def get_raw_curations(sources, stmts_dict):
     return curations
 
 
-def get_full_curations(sources, stmts_dict):
+def get_full_curations(sources, stmts_dict, aggregation='evidence'):
     curations = get_raw_curations(sources, stmts_dict)
     # Next we construct a dict of all curations that are "full" in that all
     # evidences of a given statement were curated, keyed by pa_hash
@@ -115,7 +83,9 @@ def get_full_curations(sources, stmts_dict):
             continue
         # We can now assign 0 or 1 to each evidence's curation(s), resolve
         # any inconsistencies at the level of a single evidence.
+        pmid_curations = defaultdict(list)
         for source_hash, ev_curs in stmt_curs.items():
+            ev = _find_evidence_by_hash(stmts_dict[pa_hash], source_hash)
             corrects = [1 if cur.tag in ('correct', 'hypothesis', 'act_vs_amt')
                         else 0 for cur in ev_curs]
             if any(corrects) and not all(corrects):
@@ -128,8 +98,27 @@ def get_full_curations(sources, stmts_dict):
             # multiple times, we count it the right number of times
             overall_cur_by_num_ev_hash = \
                 [overall_cur] * ev_hash_count[source_hash]
-            full_curations[pa_hash] += overall_cur_by_num_ev_hash
+            pmid_curations[ev.pmid] += overall_cur_by_num_ev_hash
+        # If we aggregate at the pmid level, we determine correctness at the
+        # level of each PMID to create the list of curations (whose number
+        # will be equal to the number of PMIDs)
+        if aggregation == 'pmid':
+            full_curations[pa_hash] = \
+                [1 if any(pmid_curs) else 0 for pmid_curs
+                 in pmid_curations.values()]
+        # Otherwise we simply take the list of evidence-level curations
+        # i.e., we flatten the PMID-based curations into a single flat list.
+        else:
+            full_curations[pa_hash] = \
+                list(itertools.chain(*pmid_curations.values()))
+
     return full_curations
+
+
+def _find_evidence_by_hash(stmt, source_hash):
+    for ev in stmt.evidence:
+        if ev.get_source_hash() == source_hash:
+            return ev
 
 
 def optimize_params(correct_by_num_ev):
@@ -157,35 +146,15 @@ def load_reach_curated_stmts():
     return stmts
 
 
-def plot_posterior_samples(samples):
-    # Plot the posterior parameter distribution
-    plt.figure()
-    corner.corner(samples, labels=['Rand.', 'Syst'])
-
-    # Plot a few representative belief curves from the posterior
-    num_evs = sorted(ev_correct_by_num_ev.keys())
-    for pr, ps in samples[:100]:
-        beliefs = [belief(n, pr, ps) for n in num_evs]
-        plt.plot(num_evs, beliefs, 'g-', alpha=0.1)
-
-
 if __name__ == '__main__':
     plt.ion()
 
     stmts = load_reach_curated_stmts()
     source_list = ('bioexp_paper_tsv', 'bioexp_paper_reach')
-    stmt_correct_by_num_ev = get_statement_correctness_data(source_list, stmts)
-    ev_correct_by_num_ev = get_evidence_correctness_data(source_list, stmts)
-
-    # Basic optimization and max-likelihood estimates
-    #opt_r, opt_s = optimize_params(ev_correct_by_num_ev)
-    #plot_curations(ev_correct_by_num_ev, opt_r, opt_s)
-
-    # Bayesian parameter inference
-    #samples = get_posterior_samples(ev_correct_by_num_ev,
-    #                                ndim=2, nwalkers=10,
-    #                                nsteps=10000, nburn=100)
-    #plot_posterior_samples(samples)
+    ev_correct_by_num_ev = get_correctness_data(source_list, stmts,
+                                                aggregation='evidence')
+    ev_correct_by_num_pmid = get_correctness_data(source_list, stmts,
+                                                aggregation='pmid')
 
     # Load evidence frequency data
     ev_dist_path = join(dirname(abspath(__file__)),
