@@ -24,46 +24,6 @@ logger = logging.getLogger('process_curations')
 db = get_primary_db()
 
 
-
-'''
-def logl(correct_by_num_ev, pr, ps):
-    """Return log likelihood of belief model parameters given data."""
-    ll = 0
-    for num_ev, corrects in correct_by_num_ev.items():
-        ll += sum((np.log(belief(num_ev, pr, ps)) if c else
-                   np.log(1-belief(num_ev, pr, ps)))
-                  for c in corrects)
-    return ll
-
-def logl(correct_by_num_ev, pr, ps):
-    """Return log likelihood of belief model parameters given data."""
-    ll = 0
-    for num_ev, num_corrects in correct_by_num_ev.items():
-        for num_correct in num_corrects:
-            if num_correct == 0:
-                ll += np.log(ps + (1-ps)*binom.pmf(0, n=num_ev, p=1-pr))
-            else:
-                ll += np.log((1-ps) * binom.pmf(num_correct, n=num_ev, p=1-pr))
-    return ll
-'''
-
-
-def logl(correct_by_num_ev, alpha, beta):
-    """Return log likelihood of belief model parameters given data."""
-    ll = 0
-    for num_ev, num_corrects in correct_by_num_ev.items():
-        n = num_ev
-        for num_correct in num_corrects:
-            k = num_correct
-            b1 = betaln(k + alpha, n - k + beta)
-            b2 = betaln(alpha, beta)
-            nck = -betaln(1 + n - k, 1 + k) - np.log(n + 1)
-            ll += nck + b1 - b2
-    return ll
-
-
-
-
 def optimize(correct_by_num_ev):
     """Return maximum likelihood parameters for belief model."""
     # The function being optimized is the negative log likelihood
@@ -105,7 +65,20 @@ def get_evidence_correctness_data(sources, stmts):
     return correct_by_num_ev
 
 
-def get_full_curations(sources, stmts_dict):
+def get_pmid_correctness_data(sources, stmts):
+    stmts_dict = {stmt.get_hash(): stmt for stmt in stmts}
+    stmt_counts = Counter(stmt.get_hash() for stmt in stmts)
+    full_curations = get_full_curations(sources, stmts_dict)
+    correct_by_num_pmid = defaultdict(list)
+    for pa_hash, corrects in full_curations.items():
+        npmids = len({ev.pmid for ev in stmts_dict[pa_hash].evidence})
+        any_correct = 1 if any(corrects) else 0
+        any_correct_by_num_sampled = [any_correct] * stmt_counts[pa_hash]
+        correct_by_num_pmid[npmids] += any_correct_by_num_sampled
+    return correct_by_num_pmid
+
+
+def get_raw_curations(sources, stmts_dict):
     # Curations are in a dict keyed by pa_hash and then by evidence source hash
     curations = defaultdict(lambda: defaultdict(list))
     # Iterate over all the curation sources
@@ -119,7 +92,11 @@ def get_full_curations(sources, stmts_dict):
                       'loaded from pickle: %s' %
                       str((cur.pa_hash, cur.source_hash, cur.tag, cur.source)))
             curations[cur.pa_hash][cur.source_hash].append(cur)
+    return curations
 
+
+def get_full_curations(sources, stmts_dict):
+    curations = get_raw_curations(sources, stmts_dict)
     # Next we construct a dict of all curations that are "full" in that all
     # evidences of a given statement were curated, keyed by pa_hash
     full_curations = defaultdict(list)
@@ -133,8 +110,8 @@ def get_full_curations(sources, stmts_dict):
         if set(stmt_curs.keys()) != set(ev_hashes):
             # If not all evidences are covered by curations, we print enough
             # details to identify the statement to complete its curations.
-            print('Not enough curations for %s from %s: %s' %
-                  (stmts_dict[pa_hash].uuid, source, stmts_dict[pa_hash]))
+            print('Not enough curations for %s: %s' %
+                  (stmts_dict[pa_hash].uuid, stmts_dict[pa_hash]))
             continue
         # We can now assign 0 or 1 to each evidence's curation(s), resolve
         # any inconsistencies at the level of a single evidence.
@@ -144,7 +121,8 @@ def get_full_curations(sources, stmts_dict):
             if any(corrects) and not all(corrects):
                 print('Suspicious curation: (%s, %s), %s. Assuming overall'
                       ' incorrect.' % (pa_hash, source_hash,
-                                       str([(c.tag, c.curator) for c in ev_curs])))
+                                       str([(c.tag, c.curator)
+                                            for c in ev_curs])))
             overall_cur = 1 if all(corrects) else 0
             # We also need to make sure that if the same evidence hash appears
             # multiple times, we count it the right number of times
@@ -159,38 +137,6 @@ def optimize_params(correct_by_num_ev):
     print('Maximum likelihood random error: %.3f' % opt_r)
     print('Maximum likelihood systematic error: %.3f' % opt_s)
     return opt_r, opt_s
-
-
-def plot_curations(correct_by_num_ev, opt_r, opt_s):
-    # Finally, calculate the mean of correctness by number of evidence
-    num_evs = sorted(correct_by_num_ev.keys())
-    means = [np.mean(correct_by_num_ev[n]) for n in num_evs]
-    # Stderr of proportion is sqrt(pq/n)
-    std = [2*np.sqrt((np.mean(correct_by_num_ev[n]) *
-                      (1 - np.mean(correct_by_num_ev[n]))) /
-                       len(correct_by_num_ev[n]))
-           for n in num_evs]
-    beliefs = [belief(n, opt_r, opt_s) for n in num_evs]
-
-    # Print table of results before plotting
-    table = Texttable()
-    table_data = [['Num Evs', 'Count', 'Num Correct', 'Pct', 'Std']]
-    for i, num_ev in enumerate(num_evs):
-        table_row = [num_ev, len(correct_by_num_ev[num_ev]),
-                     sum(correct_by_num_ev[num_ev]), means[i], std[i]]
-        table_data.append(table_row)
-    table.add_rows(table_data)
-    print(table.draw())
-
-    plt.errorbar(num_evs, means, yerr=std, fmt='bo-', ls='none',
-                 label='Empirical mean correctness')
-    plt.plot(num_evs, beliefs, 'ro-', label='Optimized belief')
-    plt.ylim(0, 1)
-    plt.grid(True)
-    plt.xticks(num_evs)
-    plt.xlabel('Number of evidence per INDRA Statement')
-    plt.legend(loc='lower right')
-    plt.show()
 
 
 def load_reach_curated_stmts():
@@ -210,24 +156,6 @@ def load_reach_curated_stmts():
             stmts.append(stmt)
     return stmts
 
-
-"""
-def get_posterior_samples(correct_by_num_ev, ndim=2, nwalkers=50,
-                          nsteps=2000, nburn=100, p0=None):
-    logger.info('Sampling with %d walkers for %d steps' % (nwalkers, nsteps))
-    # Initialize walkers across the interval [0, 1)
-    if p0 is None:
-        p0 = np.random.rand(nwalkers, ndim)
-
-    from multiprocessing import Pool
-    with Pool() as pool:
-        sampler = emcee.EnsembleSampler(nwalkers, ndim, log_prob,
-                                        args=[correct_by_num_ev],
-                                        pool=pool)
-        sampler.run_mcmc(p0, nsteps)
-    logger.info('Finished sampling')
-    return sampler.flatchain[nburn*nwalkers:]
-"""
 
 def plot_posterior_samples(samples):
     # Plot the posterior parameter distribution

@@ -4,6 +4,7 @@ import emcee
 from texttable import Texttable
 import corner
 
+
 def posterior(position, mf):
     """A generic log posterior function."""
     pr = prior(position, mf)
@@ -12,13 +13,14 @@ def posterior(position, mf):
     else:
         return pr + likelihood(position, mf)
 
+
 def prior(position, mf):
     """A generic prior function."""
     return mf.model.log_prior(position, mf)
 
+
 def likelihood(position, mf):
     return mf.model.log_likelihood(position, mf.data, None)
-
 
 
 class ModelFit(object):
@@ -119,6 +121,7 @@ class ModelFit(object):
             plt.plot(num_evs, beliefs, 'g-', alpha=0.1)
         """
 
+
 def ens_sample(mf, nwalkers, burn_steps, sample_steps, threads=1,
                pos=None, random_state=None, pool=None):
     """Samples from the posterior function using emcee.EnsembleSampler.
@@ -180,33 +183,4 @@ def ens_sample(mf, nwalkers, burn_steps, sample_steps, threads=1,
 
     print("Done sampling.")
     return sampler
-
-if __name__ == '__main__':
-    data = np.random.randint(2, size=1000)
-
-    class BernoulliModel(BeliefModel):
-        def log_prior(self, params):
-            p = params[0]
-            if p < 0:
-                return -np.inf
-            elif p > 1:
-                return - np.inf
-            else:
-                return 0
-
-        def log_likelihood(self, params, data):
-            p = params[0]
-            ll = sum(np.log(p) if d == 0 else np.log(1 - p)
-                     for d in data)
-            return ll
-
-        def sample_prior(self):
-            return np.random.random()
-
-
-    bm = BernoulliModel(['p'])
-    mf = ModelFit(bm, data)
-
-    nwalkers, burn_steps, sample_steps = (100, 1000, 100)
-    sampler = ens_sample(mf, nwalkers, burn_steps, sample_steps)
 

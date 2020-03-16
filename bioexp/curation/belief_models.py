@@ -1,5 +1,4 @@
 import numpy as np
-#from scipy.stats import binom, betabinom
 from scipy.special import betaln, comb, beta as beta_func
 from .binom_funcs import binom_pmf, binom_log_pmf, \
                          betabinom_pmf, betabinom_log_pmf
@@ -7,6 +6,7 @@ from .binom_funcs import binom_pmf, binom_log_pmf, \
 
 __all__ = ['BinomialEv', 'BinomialStmt', 'BetaBinomialEv', 'BetaBinomialStmt',
            'OrigBeliefEv', 'OrigBeliefStmt']
+
 
 class BeliefModel(object):
     def __init__(self, param_names, weights):
