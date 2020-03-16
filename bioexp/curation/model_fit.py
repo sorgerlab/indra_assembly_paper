@@ -175,7 +175,7 @@ def ens_sample(mf, nwalkers, burn_steps, sample_steps, threads=1,
         sampler.random_state = random_state
 
     print("Burn in sampling...")
-    pos, prob, state = sampler.run_mcmc(p0, burn_steps, storechain=False)
+    pos, prob, state = sampler.run_mcmc(p0, burn_steps, store=False)
     sampler.reset()
 
     print("Main sampling...")
