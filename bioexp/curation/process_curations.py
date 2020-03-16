@@ -164,32 +164,35 @@ if __name__ == '__main__':
         # Convert string keys to integer keys
         ev_dist = {int(k): v for k, v in ev_dist.items()}
 
-    be = BinomialEv(weights=ev_dist)
-    bs = BinomialStmt(weights=ev_dist)
-    bbe = BetaBinomialEv(weights=ev_dist)
-    bbs = BetaBinomialStmt(weights=ev_dist)
-    obe = OrigBeliefEv(weights=ev_dist)
-    obs = OrigBeliefStmt(weights=ev_dist)
-    models = [('orig_belief_ev', obe), ('orig_belief_stmt', obs),
-              ('binom_ev', be), ('binom_stmt', bs),
-              ('betabinom_ev', be), ('betabinom_stmt', bbs)]
-
+    aggregations = {'pmid': None,
+                    'evidence': ev_dist}
+    models = {
+        'orig_belief_ev': OrigBeliefEv,
+        'orig_belief_stmt': OrigBeliefStmt,
+        'binom_ev': BinomialEv,
+        'binom_stmt': BinomialStmt,
+        'betabinom_ev': BetaBinomialEv,
+        'betabinom_stmt': BetaBinomialStmt
+        }
     results = []
-    for model_name, model in models:
-        print(f"Fitting {model_name}")
-        mf = ModelFit(model, ev_correct_by_num_ev)
-        nwalkers, burn_steps, sample_steps = (100, 100, 100)
-        with Pool() as pool:
-            sampler = ens_sample(mf, nwalkers, burn_steps, sample_steps,
-                                 pool=pool)
-        filename = f'{model_name}_sampler.pkl'
-        print(f'Saving to {filename}')
-        with open(filename, 'wb') as f:
-            sampler.pool = None
-            pickle.dump((mf, sampler), f)
-        results.append((model_name, mf, sampler))
-        mf.plot_ev_fit(sampler, model_name)
-        mf.plot_stmt_fit(sampler, model_name)
+    for aggregation_type, ev_dist_weights in aggregations.items():
+        for model_name, model_class in models.items():
+            model_name = f'{model_name}_{aggregation_type}'
+            model = model_class(weights=ev_dist_weights)
+            print(f'Fitting {model_name}')
+            mf = ModelFit(model, ev_correct_by_num_ev)
+            nwalkers, burn_steps, sample_steps = (100, 100, 100)
+            with Pool() as pool:
+                sampler = ens_sample(mf, nwalkers, burn_steps, sample_steps,
+                                     pool=pool)
+            filename = f'{model_name}_sampler.pkl'
+            print(f'Saving to {filename}')
+            with open(filename, 'wb') as f:
+                sampler.pool = None
+                pickle.dump((mf, sampler), f)
+            results.append((model_name, mf, sampler))
+            mf.plot_ev_fit(sampler, model_name)
+            mf.plot_stmt_fit(sampler, model_name)
 
     stmt_lkls = []
     stmt_lkls_wt = []
