@@ -158,13 +158,21 @@ if __name__ == '__main__':
 
     # Load evidence frequency data
     ev_dist_path = join(dirname(abspath(__file__)),
-                        'stmt_evidence_distribution.json')
+                        'reach_stmt_evidence_distribution.json')
     with open(ev_dist_path, 'rt') as f:
         ev_dist = json.load(f)
         # Convert string keys to integer keys
         ev_dist = {int(k): v for k, v in ev_dist.items()}
 
-    aggregations = {'pmid': (ev_correct_by_num_pmid, None),
+    # Load PMID frequency data
+    pmid_dist_path = join(dirname(abspath(__file__)),
+                          'reach_stmt_pmid_distribution.json')
+    with open(pmid_dist_path, 'rt') as f:
+        pmid_dist = json.load(f)
+        # Convert string keys to integer keys
+        pmid_dist = {int(k): v for k, v in ev_dist.items()}
+
+    aggregations = {'pmid': (ev_correct_by_num_pmid, pmid_dist),
                     'evidence': (ev_correct_by_num_ev, ev_dist)}
     models = {
         'orig_belief_ev': OrigBeliefEv,
