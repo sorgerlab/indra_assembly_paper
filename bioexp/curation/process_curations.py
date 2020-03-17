@@ -170,7 +170,7 @@ if __name__ == '__main__':
     with open(pmid_dist_path, 'rt') as f:
         pmid_dist = json.load(f)
         # Convert string keys to integer keys
-        pmid_dist = {int(k): v for k, v in ev_dist.items()}
+        pmid_dist = {int(k): v for k, v in pmid_dist.items()}
 
     aggregations = {'pmid': (ev_correct_by_num_pmid, pmid_dist),
                     'evidence': (ev_correct_by_num_ev, ev_dist)}
