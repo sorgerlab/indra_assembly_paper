@@ -3,8 +3,8 @@ import pickle
 import logging
 import itertools
 from multiprocessing import Pool
+from os import pardir
 from os.path import dirname, abspath, join
-import corner
 import scipy.optimize
 from texttable import Texttable
 import matplotlib.pyplot as plt
@@ -16,21 +16,11 @@ from bioexp.curation.model_fit import ModelFit, ens_sample
 
 
 logger = logging.getLogger('process_curations')
+here = dirname(abspath(__file__))
+curation_data = join(here, pardir, pardir, 'data', 'curation')
 
 
 db = get_primary_db()
-
-
-def optimize(correct_by_num_ev):
-    """Return maximum likelihood parameters for belief model."""
-    # The function being optimized is the negative log likelihood
-    fun = lambda x: -logl(correct_by_num_ev, x[0], x[1])
-    # Both parameters have to be between 0 and 1
-    bounds = [(0.01, 0.99), (0.01, 0.99)]
-    res = scipy.optimize.minimize(fun,
-                                  x0=[0.3, 0.05],  # Initial guess: default
-                                  bounds=bounds)
-    return res.x
 
 
 def get_correctness_data(sources, stmts, aggregation='evidence'):
@@ -121,22 +111,18 @@ def _find_evidence_by_hash(stmt, source_hash):
             return ev
 
 
-def optimize_params(correct_by_num_ev):
-    opt_r, opt_s = optimize(correct_by_num_ev)
-    print('Maximum likelihood random error: %.3f' % opt_r)
-    print('Maximum likelihood systematic error: %.3f' % opt_s)
-    return opt_r, opt_s
-
-
 def load_reach_curated_stmts():
     logger.info('Loading REACH statement pickles')
-    with open('../../data/curation/bioexp_reach_sample_uncurated_19-12-14.pkl',
+    with open(join(curation_data,
+                   'bioexp_reach_sample_uncurated_19-12-14.pkl'),
               'rb') as fh:
         stmts = pickle.load(fh)
-    with open('../../data/curation/bioexp_reach_sample_uncurated_20-02-19.pkl',
+    with open(join(curation_data,
+                   'bioexp_reach_sample_uncurated_20-02-19.pkl'),
               'rb') as fh:
         stmts += pickle.load(fh)
-    with open('../../data/curation/bioexp_reach_sample_tsv.pkl',
+    with open(join(curation_data,
+                   'bioexp_reach_sample_tsv.pkl'),
               'rb') as fh:
         tsv_stmts = pickle.load(fh)
         for stmt in tsv_stmts:
@@ -148,8 +134,8 @@ def load_reach_curated_stmts():
 
 def load_reader_curated_stmts(reader):
     logger.info('Loading RLIMS-P statement pickles')
-    with open('../../data/curation/bioexp_%s_sample_uncurated.pkl' % reader,
-              'rb') as fh:
+    fname = 'bioexp_%s_sample_uncurated.pkl' % reader
+    with open(join(curation_data, fname), 'rb') as fh:
         stmts = pickle.load(fh)
     return stmts
 
@@ -165,16 +151,14 @@ if __name__ == '__main__':
                                                   aggregation='pmid')
 
     # Load evidence frequency data
-    ev_dist_path = join(dirname(abspath(__file__)),
-                        'reach_stmt_evidence_distribution.json')
+    ev_dist_path = join(here, 'reach_stmt_evidence_distribution.json')
     with open(ev_dist_path, 'rt') as f:
         ev_dist = json.load(f)
         # Convert string keys to integer keys
         ev_dist = {int(k): v for k, v in ev_dist.items()}
 
     # Load PMID frequency data
-    pmid_dist_path = join(dirname(abspath(__file__)),
-                          'reach_stmt_pmid_distribution.json')
+    pmid_dist_path = join(here, 'reach_stmt_pmid_distribution.json')
     with open(pmid_dist_path, 'rt') as f:
         pmid_dist = json.load(f)
         # Convert string keys to integer keys
