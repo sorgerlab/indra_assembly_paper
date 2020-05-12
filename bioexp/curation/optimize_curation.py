@@ -124,10 +124,7 @@ if __name__ == '__main__':
     default_nwalkers = 50
     default_cost_type = 'log2'
     stmts = load_reader_curated_stmts(reader='rlimsp')
-    with open('stmt_evidence_distribution.json', 'r') as fh:
-        ev_probs = json.load(fh)
-        ev_probs = {int(k): v for k, v in ev_probs.items()}
-    stmts = []
+    ev_probs = load_stmt_evidence_distribution()
     source_list = ['bioexp_paper_rlimsp']
     model = OrigBeliefStmt()
     stmt_correct_by_num_ev = get_correctness_data(source_list, stmts,

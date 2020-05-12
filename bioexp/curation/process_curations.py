@@ -140,6 +140,15 @@ def load_reader_curated_stmts(reader):
     return stmts
 
 
+def load_stmt_evidence_distribution():
+    """Return a dict of empirical evidence count distributions in the corpus."""
+    fname = join(here, 'stmt_evidence_distribution.json')
+    with open(fname, 'r') as fh:
+        ev_probs = json.load(fh)
+        ev_probs = {int(k): v for k, v in ev_probs.items()}
+    return ev_probs
+
+
 if __name__ == '__main__':
     plt.ion()
 
