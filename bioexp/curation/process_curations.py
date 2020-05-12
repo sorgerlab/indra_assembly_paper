@@ -146,6 +146,14 @@ def load_reach_curated_stmts():
     return stmts
 
 
+def load_reader_curated_stmts(reader):
+    logger.info('Loading RLIMS-P statement pickles')
+    with open('../../data/curation/bioexp_%s_sample_uncurated.pkl' % reader,
+              'rb') as fh:
+        stmts = pickle.load(fh)
+    return stmts
+
+
 if __name__ == '__main__':
     plt.ion()
 
@@ -154,7 +162,7 @@ if __name__ == '__main__':
     ev_correct_by_num_ev = get_correctness_data(source_list, stmts,
                                                 aggregation='evidence')
     ev_correct_by_num_pmid = get_correctness_data(source_list, stmts,
-                                                aggregation='pmid')
+                                                  aggregation='pmid')
 
     # Load evidence frequency data
     ev_dist_path = join(dirname(abspath(__file__)),
