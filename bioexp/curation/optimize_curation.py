@@ -1,7 +1,10 @@
 import json
 import logging
+import numpy as np
 from copy import deepcopy
 from bioexp.curation.process_curations import *
+from bioexp.curation.belief_models import OrigBeliefStmt
+from bioexp.curation.model_fit import ModelFit, ens_sample
 
 logger = logging.getLogger('optimize_curations')
 
@@ -9,9 +12,11 @@ logger = logging.getLogger('optimize_curations')
 def pred_uncertainty(fun, param_samples, x_values, x_probs=None):
     if x_probs is None:
         x_probs = np.ones((len(x_values), )) / len(x_values)
+    preds = [fun(p, x_values) for p in param_samples]
     sum_var = 0
-    for xv, xp in zip(x_values, x_probs):
-        var = np.var([fun(xv, *p) for p in param_samples])
+    for idx, xv in enumerate(x_values):
+        xp = x_probs.get(xv, 0)
+        var = np.var([p[idx] for p in preds])
         logger.info('Variance at %d evidences: %.2E' % (xv, var))
         sum_var += xp * var
     logger.info('Overall uncertainty: %.2E' % sum_var)
@@ -20,74 +25,14 @@ def pred_uncertainty(fun, param_samples, x_values, x_probs=None):
 
 def add_proposed_data(correct_by_num_ev, exp_by_num_ev, p):
     proposed_correct_by_num_ev = deepcopy(correct_by_num_ev)
-    for num_ev, nexp in exp_by_num_ev.items():
+    pexps = model.stmt_predictions(p, exp_by_num_ev)
+    for idx, (num_ev, nexp) in enumerate(exp_by_num_ev.items()):
         if num_ev not in correct_by_num_ev:
             proposed_correct_by_num_ev[num_ev] = []
-        pexp = belief(num_ev, *p)
-        nexpcorr = int(np.round(pexp * nexp))
+        nexpcorr = int(np.round(pexps[idx] * nexp))
         proposed_correct_by_num_ev[num_ev] += \
             (nexpcorr*[1] + (nexp-nexpcorr)*[0])
     return proposed_correct_by_num_ev
-
-
-def proposal_uncertainty(exp_by_num_ev, assumed_params,
-                         maxev=10, ev_probs=None):
-    proposed_correct_by_num_ev = add_proposed_data(stmt_correct_by_num_ev,
-                                                   exp_by_num_ev,
-                                                   assumed_params)
-    samples = get_posterior_samples(proposed_correct_by_num_ev,
-                                    nsteps=default_nsteps)
-    pred_unc = pred_uncertainty(belief, samples, range(1, maxev+1),
-                                x_probs=ev_probs)
-    return pred_unc
-
-
-def optimize_proposal_uncertainty_simple(cost=100, maxev=10):
-    # NOTE: due to the discrete nature of the optimization problem,
-    # this mode of optimization, which relies on Jacobian evaluations
-    # does not work well in practice.
-
-    # Establish a baseline based on current data
-    samples = get_posterior_samples(stmt_correct_by_num_ev,
-                                    nsteps=default_nsteps)
-    ref_params = np.mean(samples, 0)
-
-    bounds = [(0, cost)] * maxev
-    cost_constraint = {'type': 'ineq',
-                       'fun':
-                           lambda x: (sum(xx * curation_cost(i+1,
-                                                             default_cost_type)
-                                          for i, xx in enumerate(x)) - cost)}
-    fun = lambda x: proposal_uncertainty({i+1: int(np.floor(x[i]))
-                                          for i in range(maxev)},
-                                         ref_params, maxev=10,
-                                         ev_probs=ev_probs)
-    res = scipy.optimize.minimize(fun,
-                                  bounds=bounds,
-                                  constraints=[cost_constraint],
-                                  x0=([cost] + [0]*(maxev-1)))
-    return res.x
-
-
-def optimize_proposal_uncertainty_anneal(cost=100, maxev=10):
-    # Establish a baseline based on current data
-    samples = get_posterior_samples(stmt_correct_by_num_ev,
-                                    nsteps=default_nsteps)
-    ref_params = np.mean(samples, 0)
-
-    # Both parameters have to be between 0 and 1
-    cost_constraint = lambda x: sum(xx * curation_cost(i+1, default_cost_type)
-                                    for i, xx in enumerate(x)) < cost
-    positive_constraint = lambda x: all(x >= 0)
-    accept_test = lambda x: positive_constraint(x) and cost_constraint(x)
-    fun = lambda x: proposal_uncertainty({i+1: int(np.floor(x[i]))
-                                          for i in range(maxev)},
-                                         ref_params, maxev=10,
-                                         ev_probs=ev_probs)
-    res = scipy.optimize.basinhopping(fun,
-                                      accept_test=accept_test,
-                                      x0=([cost] + [0]*maxev))
-    return res.x
 
 
 def curation_cost(num_ev, type='linear'):
@@ -108,9 +53,15 @@ def cur_for_cost(cost, num_ev, cost_type):
 
 def find_next_best(cost=10, maxev=10, ev_probs=None):
     # First, establish reference values based on current curations
-    ref_samples = get_posterior_samples(stmt_correct_by_num_ev,
-                                        nsteps=default_nsteps)
-    ref_pred_unc = pred_uncertainty(belief, ref_samples, range(1, maxev+1),
+    ref_sampler = ens_sample(mf,
+                             nwalkers=default_nwalkers,
+                             burn_steps=1000,
+                             sample_steps=default_nsteps,
+                             )
+    ref_samples = ref_sampler.flatchain
+    ref_pred_unc = pred_uncertainty(mf.model.stmt_predictions,
+                                    ref_samples,
+                                    range(1, maxev+1),
                                     x_probs=ev_probs)
     logger.info('Baseline prediction uncertainty: %.2E' % ref_pred_unc)
     ref_param_unc = np.var(ref_samples, 0)
@@ -127,14 +78,19 @@ def find_next_best(cost=10, maxev=10, ev_probs=None):
         proposed_curations_by_num_ev = {num_ev: cur_for_cost(cost, num_ev,
                                                              default_cost_type)}
         proposed_correct_by_num_ev = \
-            add_proposed_data(stmt_correct_by_num_ev,
+            add_proposed_data(mf.data,
                               proposed_curations_by_num_ev,
                               ref_params)
-        samples = get_posterior_samples(proposed_correct_by_num_ev,
-                                        nsteps=default_nsteps,
-                                        nwalkers=default_nwalkers,
-                                        p0=ref_samples[-default_nwalkers:])
-        pred_unc = pred_uncertainty(belief, samples, range(1, maxev+1),
+        mf_prop = ModelFit(model, proposed_correct_by_num_ev)
+        prop_sampler = ens_sample(mf_prop,
+                                  nwalkers=default_nwalkers,
+                                  burn_steps=1000,
+                                  sample_steps=default_nsteps,
+                                  )
+        samples = prop_sampler.flatchain
+        pred_unc = pred_uncertainty(mf_prop.model.stmt_predictions,
+                                    samples,
+                                    range(1, maxev+1),
                                     x_probs=ev_probs)
         logger.info('Predicted overall uncertainty with %s: %.2E' %
                     (str(proposed_curations_by_num_ev), pred_unc))
@@ -167,10 +123,14 @@ if __name__ == '__main__':
     default_nsteps = 10000
     default_nwalkers = 50
     default_cost_type = 'log2'
+    stmts = load_reader_curated_stmts(reader='rlimsp')
     with open('stmt_evidence_distribution.json', 'r') as fh:
         ev_probs = json.load(fh)
         ev_probs = {int(k): v for k, v in ev_probs.items()}
-    stmts = load_reach_curated_stmts()
-    source_list = ('bioexp_paper_tsv', 'bioexp_paper_reach')
-    stmt_correct_by_num_ev = stmt_correct_by_num_ev(source_list, stmts)
-    opt_i, num_i = find_next_best(20, ev_probs=ev_probs)
+    stmts = []
+    source_list = ['bioexp_paper_rlimsp']
+    model = OrigBeliefStmt()
+    stmt_correct_by_num_ev = get_correctness_data(source_list, stmts,
+                                                  aggregation='evidence')
+    mf = ModelFit(model, stmt_correct_by_num_ev)
+    opt_i, num_i = find_next_best(cost=50, maxev=10, ev_probs=ev_probs)
