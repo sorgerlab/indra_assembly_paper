@@ -2,6 +2,7 @@ import json
 import logging
 import numpy as np
 from copy import deepcopy
+from multiprocessing import Pool
 from bioexp.curation.process_curations import *
 from bioexp.curation.belief_models import OrigBeliefStmt
 from bioexp.curation.model_fit import ModelFit, ens_sample
@@ -57,7 +58,7 @@ def find_next_best(cost=10, maxev=10, ev_probs=None):
                              nwalkers=default_nwalkers,
                              burn_steps=1000,
                              sample_steps=default_nsteps,
-                             threads=4
+                             pool=pool
                              )
     ref_samples = ref_sampler.flatchain
     ref_pred_unc = pred_uncertainty(mf.model.stmt_predictions,
@@ -87,7 +88,7 @@ def find_next_best(cost=10, maxev=10, ev_probs=None):
                                   nwalkers=default_nwalkers,
                                   burn_steps=1000,
                                   sample_steps=default_nsteps,
-                                  threads=4
+                                  pool=pool
                                   )
         samples = prop_sampler.flatchain
         pred_unc = pred_uncertainty(mf_prop.model.stmt_predictions,
@@ -122,6 +123,7 @@ def find_next_best(cost=10, maxev=10, ev_probs=None):
 
 
 if __name__ == '__main__':
+    pool = Pool(4)
     default_nsteps = 10000
     default_nwalkers = 50
     default_cost_type = 'log2'
@@ -133,3 +135,5 @@ if __name__ == '__main__':
                                                   aggregation='evidence')
     mf = ModelFit(model, stmt_correct_by_num_ev)
     opt_i, num_i = find_next_best(cost=50, maxev=10, ev_probs=ev_probs)
+    pool.close()
+    pool.join()

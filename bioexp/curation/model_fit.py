@@ -1,8 +1,12 @@
-import numpy as np
-from matplotlib import pyplot as plt
 import emcee
-from texttable import Texttable
 import corner
+import logging
+import numpy as np
+from texttable import Texttable
+from matplotlib import pyplot as plt
+
+
+logger = logging.getLogger('model_fit')
 
 
 def posterior(position, mf):
@@ -174,13 +178,13 @@ def ens_sample(mf, nwalkers, burn_steps, sample_steps, threads=1,
     if random_state is not None:
         sampler.random_state = random_state
 
-    print("Burn in sampling...")
+    logger.info("Burn in sampling...")
     pos, prob, state = sampler.run_mcmc(p0, burn_steps, store=False)
     sampler.reset()
 
-    print("Main sampling...")
+    logger.info("Main sampling...")
     sampler.run_mcmc(pos, sample_steps)
 
-    print("Done sampling.")
+    logger.info("Done sampling.")
     return sampler
 
