@@ -50,6 +50,8 @@ def get_raw_curations(sources, stmts_dict):
                       'loaded from pickle: %s' %
                       str((cur.pa_hash, cur.source_hash, cur.tag, cur.source)))
             curations[cur.pa_hash][cur.source_hash].append(cur)
+    logger.info('Loaded %d raw curations for sources %s' %
+                (len(curations), str(sources)))
     return curations
 
 

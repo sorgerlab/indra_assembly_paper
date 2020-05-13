@@ -57,6 +57,7 @@ def find_next_best(cost=10, maxev=10, ev_probs=None):
                              nwalkers=default_nwalkers,
                              burn_steps=1000,
                              sample_steps=default_nsteps,
+                             threads=4
                              )
     ref_samples = ref_sampler.flatchain
     ref_pred_unc = pred_uncertainty(mf.model.stmt_predictions,
@@ -86,6 +87,7 @@ def find_next_best(cost=10, maxev=10, ev_probs=None):
                                   nwalkers=default_nwalkers,
                                   burn_steps=1000,
                                   sample_steps=default_nsteps,
+                                  threads=4
                                   )
         samples = prop_sampler.flatchain
         pred_unc = pred_uncertainty(mf_prop.model.stmt_predictions,
