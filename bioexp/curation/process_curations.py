@@ -1,3 +1,4 @@
+import sys
 import json
 import pickle
 import logging
@@ -113,24 +114,19 @@ def _find_evidence_by_hash(stmt, source_hash):
             return ev
 
 
-def load_reach_curated_stmts():
-    logger.info('Loading REACH statement pickles')
-    with open(join(curation_data,
-                   'bioexp_reach_sample_uncurated_19-12-14.pkl'),
-              'rb') as fh:
-        stmts = pickle.load(fh)
-    with open(join(curation_data,
-                   'bioexp_reach_sample_uncurated_20-02-19.pkl'),
-              'rb') as fh:
-        stmts += pickle.load(fh)
-    with open(join(curation_data,
-                   'bioexp_reach_sample_tsv.pkl'),
-              'rb') as fh:
-        tsv_stmts = pickle.load(fh)
-        for stmt in tsv_stmts:
-            stmt.evidence = [e for e in stmt.evidence
-                             if e.source_api == 'reach']
-            stmts.append(stmt)
+def load_curated_pkl_files(pkl_list):
+    logger.info('Loading curation statement pickles')
+    stmts = []
+    for pkl_file in pkl_list:
+        pkl_path = join(curation_data, pkl_file)
+        with open(pkl_path, 'rb') as fh:
+            pkl_stmts = pickle.load(fh)
+            # Special handling for the pickle file for the TSV
+            if pkl_file == 'bioexp_reach_sample_tsv.pkl':
+                for stmt in pkl_stmts:
+                    stmt.evidence = [e for e in stmt.evidence
+                                     if e.source_api == 'reach']
+            stmts.extend(pkl_stmts)
     return stmts
 
 
@@ -154,22 +150,36 @@ def load_stmt_evidence_distribution():
 if __name__ == '__main__':
     plt.ion()
 
-    stmts = load_reach_curated_stmts()
-    source_list = ('bioexp_paper_tsv', 'bioexp_paper_reach')
+    reader = sys.argv[1]
+    if reader == 'reach':
+        pkl_list = ['bioexp_reach_sample_uncurated_19-12-14.pkl',
+                          'bioexp_reach_sample_uncurated_20-02-19.pkl',
+                          'bioexp_reach_sample_tsv.pkl']
+        source_list = ('bioexp_paper_tsv', 'bioexp_paper_reach')
+        ev_dist_path = join(here, 'reach_stmt_evidence_distribution.json')
+        pmid_dist_path = join(here, 'reach_stmt_pmid_distribution.json')
+    elif reader == 'rlimsp':
+        pkl_list = ['bioexp_rlimsp_sample_uncurated.pkl']
+        source_list = ('bioexp_paper_rlimsp',)
+        ev_dist_path = join(here, 'rlimsp_stmt_evidence_distribution.json')
+        pmid_dist_path = join(here, 'rlimsp_stmt_pmid_distribution.json')
+    else:
+        print("Reader %s not supported." % reader)
+        sys.exit(1)
+
+    stmts = load_curated_pkl_files(pkl_list)
     ev_correct_by_num_ev = get_correctness_data(source_list, stmts,
                                                 aggregation='evidence')
     ev_correct_by_num_pmid = get_correctness_data(source_list, stmts,
                                                   aggregation='pmid')
 
     # Load evidence frequency data
-    ev_dist_path = join(here, 'reach_stmt_evidence_distribution.json')
     with open(ev_dist_path, 'rt') as f:
         ev_dist = json.load(f)
         # Convert string keys to integer keys
         ev_dist = {int(k): v for k, v in ev_dist.items()}
 
     # Load PMID frequency data
-    pmid_dist_path = join(here, 'reach_stmt_pmid_distribution.json')
     with open(pmid_dist_path, 'rt') as f:
         pmid_dist = json.load(f)
         # Convert string keys to integer keys
@@ -178,12 +188,12 @@ if __name__ == '__main__':
     aggregations = {'pmid': (ev_correct_by_num_pmid, pmid_dist),
                     'evidence': (ev_correct_by_num_ev, ev_dist)}
     models = {
-        'orig_belief_ev': OrigBeliefEv,
+        #'orig_belief_ev': OrigBeliefEv,
         'orig_belief_stmt': OrigBeliefStmt,
-        'binom_ev': BinomialEv,
-        'binom_stmt': BinomialStmt,
-        'betabinom_ev': BetaBinomialEv,
-        'betabinom_stmt': BetaBinomialStmt
+        #'binom_ev': BinomialEv,
+        #'binom_stmt': BinomialStmt,
+        #'betabinom_ev': BetaBinomialEv,
+        #'betabinom_stmt': BetaBinomialStmt
         }
     results = []
     for aggregation_type, (data, ev_dist_weights) in aggregations.items():
