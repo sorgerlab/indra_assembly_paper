@@ -29,11 +29,14 @@ def get_correctness_data(sources, stmts, aggregation='evidence'):
     stmt_counts = Counter(stmt.get_hash() for stmt in stmts)
     full_curations = get_full_curations(sources, stmts_dict,
                                         aggregation=aggregation)
-    correct_by_num_ev = defaultdict(list)
+    correct_by_num_ev = {}
     for pa_hash, corrects in full_curations.items():
         num_correct = sum(corrects)
         num_correct_by_num_sampled = [num_correct] * stmt_counts[pa_hash]
-        correct_by_num_ev[len(corrects)] += num_correct_by_num_sampled
+        if len(corrects) not in correct_by_num_ev:
+            correct_by_num_ev[len(corrects)] = num_correct_by_num_sampled
+        else:
+            correct_by_num_ev[len(corrects)] += num_correct_by_num_sampled
     return correct_by_num_ev
 
 
@@ -172,7 +175,6 @@ if __name__ == '__main__':
                                                 aggregation='evidence')
     ev_correct_by_num_pmid = get_correctness_data(source_list, stmts,
                                                   aggregation='pmid')
-
     # Load evidence frequency data
     with open(ev_dist_path, 'rt') as f:
         ev_dist = json.load(f)

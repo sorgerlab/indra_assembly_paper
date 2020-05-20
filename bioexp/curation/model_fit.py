@@ -75,6 +75,8 @@ class ModelFit(object):
         for n in range(1, max(self.data.keys())+1):
             # First, plot the data
             plt.subplot(3, 4, n)
+            if n not in self.data:
+                continue
             plt.hist(self.data[n], bins=range(0, n+2), density=True)
             plt.title(n)
             # Then plot the model predictions
