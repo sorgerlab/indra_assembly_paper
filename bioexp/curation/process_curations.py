@@ -166,6 +166,11 @@ if __name__ == '__main__':
         source_list = ('bioexp_paper_rlimsp',)
         ev_dist_path = join(here, 'rlimsp_stmt_evidence_distribution.json')
         pmid_dist_path = join(here, 'rlimsp_stmt_pmid_distribution.json')
+    elif reader == 'trips':
+        pkl_list = ['bioexp_trips_sample_uncurated.pkl']
+        source_list = ('bioexp_paper_trips',)
+        ev_dist_path = join(here, 'trips_stmt_evidence_distribution.json')
+        pmid_dist_path = join(here, 'trips_stmt_pmid_distribution.json')
     else:
         print("Reader %s not supported." % reader)
         sys.exit(1)
@@ -195,7 +200,7 @@ if __name__ == '__main__':
         #'binom_ev': BinomialEv,
         #'binom_stmt': BinomialStmt,
         #'betabinom_ev': BetaBinomialEv,
-        #'betabinom_stmt': BetaBinomialStmt
+        'betabinom_stmt': BetaBinomialStmt
         }
     results = []
     for aggregation_type, (data, ev_dist_weights) in aggregations.items():
