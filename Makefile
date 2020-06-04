@@ -9,6 +9,8 @@ DEPLOY := ~/Dropbox/DARPA\ projects/papers/INDRA\ paper\ 2/figures/figure_panels
 
 all: fig2 fig4 fig5 korkut_pysb
 
+depmap: $(OUTPUT)/bioexp_signor_indranet.pkl
+
 sample: $(OUTPUT)/bioexp_reach_sample_uncurated.pkl
 
 deploy:
