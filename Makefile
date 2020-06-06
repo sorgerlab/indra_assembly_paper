@@ -9,7 +9,7 @@ DEPLOY := ~/Dropbox/DARPA\ projects/papers/INDRA\ paper\ 2/figures/figure_panels
 
 all: fig2 fig4 fig5 korkut_pysb
 
-depmap: $(OUTPUT)/bioexp_signor_indranet.pkl
+depmap: $(OUTPUT)/bioexp_signor_indranet_explainer.pkl
 
 sample: $(OUTPUT)/bioexp_reach_sample_uncurated.pkl
 
@@ -214,4 +214,8 @@ $(OUTPUT)/bioexp_db_only_paths.pkl: \
 # DEPMAP ----------------------------------------------------------------------
 $(OUTPUT)/bioexp_signor_indranet.pkl: $(OUTPUT)/bioexp_signor.pkl
 	python -m bioexp.depmap.stmts_to_indranet signor
+
+
+$(OUTPUT)/bioexp_explainer.pkl: \
+                              $(OUTPUT)/bioexp_signor_indranet.pkl
 	python -m bioexp.depmap.get_explanations signor_indranet combined_z_score
