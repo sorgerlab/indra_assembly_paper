@@ -87,6 +87,11 @@ class ModelFit(object):
         plt.tight_layout()
         plt.show()
 
+    def get_map_params(self, sampler):
+        map_ix = np.argmax(sampler.flatlnprobability)
+        map_p = sampler.flatchain[map_ix]
+        return dict(zip(self.model.param_names, map_p))
+
     def plot_stmt_fit(self, sampler, title):
         # Calculate the mean of correctness by number of evidence
         num_evs = sorted(self.data.keys())
