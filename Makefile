@@ -28,6 +28,9 @@ fig5: $(OUTPUT)/reach_complexes_raw.tsv
 
 korkut_pysb: $(OUTPUT)/bioexp_db_only_paths.pkl
 
+belief_fitting: $(OUTPUT)/bioexp_multi_src_results.pkl
+
+
 # MAKEFILE GRAPH
 graph: makegraph.pdf
 
@@ -154,3 +157,30 @@ $(OUTPUT)/bioexp_db_only_paths.pkl: \
 #    $(OUTPUT)/bioexp_db_only_pysb_model.pkl \
 #    $(OUTPUT)/bioexp_db_only_paths.pkl
 
+$(OUTPUT)/bioexp_multi_src_results.pkl: \
+    $(OUTPUT)/bioexp_reach_orig_belief_stmt_evidence_sampler.pkl \
+    $(OUTPUT)/bioexp_trips_orig_belief_stmt_evidence_sampler.pkl \
+    $(OUTPUT)/bioexp_rlimsp_orig_belief_stmt_evidence_sampler.pkl
+	python -u -m bioexp.curation.group_curations
+
+# The samplers for the fits
+$(OUTPUT)/bioexp_reach_orig_belief_stmt_evidence_sampler.pkl: \
+    $(DATA)/curation/bioexp_reach_sample_tsv.pkl \
+    $(DATA)/curation/bioexp_reach_sample_uncurated_19-12-14.pkl \
+    $(DATA)/curation/bioexp_reach_sample_uncurated_20-02-19.pkl \
+    $(OUTPUT)/bioexp_reach_stmt_evidence_distribution.json
+	python -u -m bioexp.curation.process_curations reach
+
+$(OUTPUT)/bioexp_rlimsp_orig_belief_stmt_evidence_sampler.pkl: \
+    $(DATA)/curation/bioexp_rlimsp_sample_uncurated.pkl \
+    $(OUTPUT)/bioexp_rlimsp_stmt_evidence_distribution.json
+	python -u -m bioexp.curation.process_curations rlimsp
+
+$(OUTPUT)/bioexp_trips_orig_belief_stmt_evidence_sampler.pkl: \
+    $(DATA)/curation/bioexp_trips_sample_uncurated.pkl \
+    $(OUTPUT)/bioexp_trips_stmt_evidence_distribution.json
+	python -u -m bioexp.curation.process_curations trips
+
+# Evidence distributions for the fits
+$(OUTPUT)/bioexp_%_stmt_evidence_distribution.json:
+	python -u -m bioexp.curation.get_ev_distro $*

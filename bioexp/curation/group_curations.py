@@ -1,8 +1,14 @@
+import sys
 import itertools
+from os.path import abspath, dirname, join
 from indra.tools import assemble_corpus as ac
 from bioexp.util import pkldump
-from process_curations import get_correctness_data, load_curated_pkl_files, \
-                              get_full_curations
+from bioexp.curation.process_curations import \
+            get_correctness_data, load_curated_pkl_files, get_full_curations
+
+
+# Prevent issues in pickling the results
+sys.setrecursionlimit(50000)
 
 
 reader_input = {'reach': {
@@ -10,13 +16,19 @@ reader_input = {'reach': {
                     'bioexp_reach_sample_uncurated_19-12-14.pkl',
                     'bioexp_reach_sample_uncurated_20-02-19.pkl',
                     'bioexp_reach_sample_tsv.pkl'],
-                 'source_list': ['bioexp_paper_reach', 'bioexp_paper_tsv']},
+                 'source_list': ['bioexp_paper_reach', 'bioexp_paper_tsv'],
+                 'belief_model':
+                      'bioexp_reach_orig_belief_stmt_evidence_sampler.pkl'},
                'rlimsp': {
                  'pkl_list': ['bioexp_rlimsp_sample_uncurated.pkl'],
-                 'source_list': ['bioexp_paper_rlimsp']},
+                 'source_list': ['bioexp_paper_rlimsp'],
+                 'belief_model':
+                      'bioexp_rlimsp_orig_belief_stmt_evidence_sampler.pkl'},
                'trips': {
                  'pkl_list': ['bioexp_trips_sample_uncurated.pkl'],
-                 'source_list': ['bioexp_paper_trips']}
+                 'source_list': ['bioexp_paper_trips'],
+                 'belief_model':
+                      'bioexp_trips_orig_belief_stmt_evidence_sampler.pkl'},
                }
 
 
@@ -39,7 +51,9 @@ for r1, r2 in itertools.combinations(curations.keys(), 2):
 # at least 1 extraction is correct; for the ones that are incorrect, check
 # if there is evidence from other readers; if so, add this to a pickle
 # to be curated
-all_stmts = ac.load_statements('../../data/bioexp_asmb_preassembled.pkl')
+asmb_pkl = join(dirname(abspath(__file__)), '..', '..', 'data',
+                'bioexp_asmb_preassembled.pkl')
+all_stmts = ac.load_statements(asmb_pkl)
 all_stmts_by_hash = {stmt.get_hash(): stmt for stmt in all_stmts}
 
 # Lists or sets? Sets may eliminate necessary multiplicity?
@@ -65,7 +79,7 @@ for reader, rdr_curs in curations.items():
 source_list = ['bioexp_paper_reach', 'bioexp_paper_trips',
                'bioexp_paper_rlimsp', 'bioexp_paper_multi']
 curations['multi'] = get_full_curations(source_list, all_stmts_by_hash,
-                                        filter_hashes=incorr_stmts_multi_src)
+                                        filter_hashes=incorr_hashes_multi_src)
 # At this point, if a curation is all zeros, we can confirm that it is
 # incorrect
 incorr_hashes_multi_curated = set()
@@ -80,6 +94,9 @@ curated = corr_hashes | incorr_hashes
 uncurated = all_hashes - curated
 
 curated_stmts = [all_stmts_by_hash[h] for h in curated]
+
+
+
 
 # Group curated stmts into bins
 bins = [0., 0.6, 0.8, 0.9, 0.95, 0.99, 1.0]
@@ -108,6 +125,7 @@ for bin_ix in range(len(bins) - 1):
     print(f'{lb}-{ub}: {n_corr} / {n_total} = {pct_corr}')
 
 pkldump(stmts_by_belief, 'multi_src_results')
+
 
 # Load curations for the incorr_multi_src statements to determine if they
 # have been fully curated

@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from collections import defaultdict, Counter
 from indra_db import get_primary_db
 from indra_db.client.principal.curation import get_curations
-from bioexp.util import prefixed_file
+from bioexp.util import prefixed_file, pkldump
 from bioexp.curation.belief_models import *
 from bioexp.curation.model_fit import ModelFit, ens_sample
 
@@ -199,8 +199,8 @@ if __name__ == '__main__':
         # Convert string keys to integer keys
         pmid_dist = {int(k): v for k, v in pmid_dist.items()}
 
-    aggregations = {'pmid': (ev_correct_by_num_pmid, pmid_dist),}
-                    #'evidence': (ev_correct_by_num_ev, ev_dist)}
+    aggregations = {#'pmid': (ev_correct_by_num_pmid, pmid_dist),}
+                    'evidence': (ev_correct_by_num_ev, ev_dist)}
     models = {
         #'orig_belief_ev': OrigBeliefEv,
         'orig_belief_stmt': OrigBeliefStmt,
