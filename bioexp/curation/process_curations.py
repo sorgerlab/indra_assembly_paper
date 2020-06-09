@@ -159,8 +159,8 @@ if __name__ == '__main__':
     reader = sys.argv[1]
     if reader == 'reach':
         pkl_list = ['bioexp_reach_sample_uncurated_19-12-14.pkl',
-                          'bioexp_reach_sample_uncurated_20-02-19.pkl',
-                          'bioexp_reach_sample_tsv.pkl']
+                    'bioexp_reach_sample_uncurated_20-02-19.pkl',
+                    'bioexp_reach_sample_tsv.pkl']
         source_list = ('bioexp_paper_tsv', 'bioexp_paper_reach')
         ev_dist_path = join(here, 'reach_stmt_evidence_distribution.json')
         pmid_dist_path = join(here, 'reach_stmt_pmid_distribution.json')
@@ -216,11 +216,9 @@ if __name__ == '__main__':
             with Pool() as pool:
                 sampler = ens_sample(mf, nwalkers, burn_steps, sample_steps,
                                      pool=pool)
-            filename = f'{reader}_{model_name}_sampler.pkl'
-            print(f'Saving to {filename}')
-            with open(filename, 'wb') as f:
-                sampler.pool = None
-                pickle.dump((mf, sampler), f)
+            filename = f'{reader}_{model_name}_sampler'
+            sampler.pool = None
+            pkldump((mf, sampler), filename)
             results.append((model_name, mf, sampler))
             mf.plot_ev_fit(sampler, model_name)
             mf.plot_stmt_fit(sampler, model_name)

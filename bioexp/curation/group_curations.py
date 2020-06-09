@@ -1,5 +1,6 @@
 import itertools
 from indra.tools import assemble_corpus as ac
+from bioexp.util import pkldump
 from process_curations import get_correctness_data, load_curated_pkl_files, \
                               get_full_curations
 
@@ -105,6 +106,9 @@ for bin_ix in range(len(bins) - 1):
                                'n_corr': n_corr, 'n_incorr': n_incorr,
                                'n_total': n_total, 'pct_corr': pct_corr}
     print(f'{lb}-{ub}: {n_corr} / {n_total} = {pct_corr}')
+
+pkldump(stmts_by_belief, 'multi_src_results')
+
 # Load curations for the incorr_multi_src statements to determine if they
 # have been fully curated
 # - load curations from all sources, but filter to those in the specific
