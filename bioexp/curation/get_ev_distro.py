@@ -30,7 +30,7 @@ pmid_distro = [Counter(pmid_cnt)[i] for i in range(1,11)]
 ev_distro = [Counter(ev_cnt)[i] for i in range(1,11)]
 
 
-pmid_file = prefixed_file(f'{reader}_stmt_pmid_distribution', '.json')
+pmid_file = prefixed_file(f'{reader}_stmt_pmid_distribution', 'json')
 with open(pmid_file, 'w') as fh:
     dd = {(i+1): pmid_distro[i] for i in range(10)}
     s = sum(dd.values())
@@ -38,7 +38,7 @@ with open(pmid_file, 'w') as fh:
     json.dump(dd, fh, indent=1)
 
 
-ev_file = prefixed_file(f'{reader}_stmt_evidence_distribution', '.json')
+ev_file = prefixed_file(f'{reader}_stmt_evidence_distribution', 'json')
 with open(ev_file, 'w') as fh:
     dd = {(i+1): ev_distro[i] for i in range(10)}
     s = sum(dd.values())

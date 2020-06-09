@@ -12,9 +12,9 @@ import matplotlib.pyplot as plt
 from collections import defaultdict, Counter
 from indra_db import get_primary_db
 from indra_db.client.principal.curation import get_curations
+from bioexp.util import prefixed_file
 from bioexp.curation.belief_models import *
 from bioexp.curation.model_fit import ModelFit, ens_sample
-
 
 logger = logging.getLogger('process_curations')
 here = dirname(abspath(__file__))
@@ -162,18 +162,22 @@ if __name__ == '__main__':
                     'bioexp_reach_sample_uncurated_20-02-19.pkl',
                     'bioexp_reach_sample_tsv.pkl']
         source_list = ('bioexp_paper_tsv', 'bioexp_paper_reach')
-        ev_dist_path = join(here, 'reach_stmt_evidence_distribution.json')
-        pmid_dist_path = join(here, 'reach_stmt_pmid_distribution.json')
+        ev_dist_path = prefixed_file('reach_stmt_evidence_distribution',
+                                     'json')
+        pmid_dist_path = prefixed_file('reach_stmt_pmid_distribution', 'json')
     elif reader == 'rlimsp':
         pkl_list = ['bioexp_rlimsp_sample_uncurated.pkl']
         source_list = ('bioexp_paper_rlimsp',)
         ev_dist_path = join(here, 'rlimsp_stmt_evidence_distribution.json')
-        pmid_dist_path = join(here, 'rlimsp_stmt_pmid_distribution.json')
+        ev_dist_path = prefixed_file('rlimsp_stmt_evidence_distribution',
+                                     'json')
+        pmid_dist_path = prefixed_file('rlimsp_stmt_pmid_distribution', 'json')
     elif reader == 'trips':
         pkl_list = ['bioexp_trips_sample_uncurated.pkl']
         source_list = ('bioexp_paper_trips',)
-        ev_dist_path = join(here, 'trips_stmt_evidence_distribution.json')
-        pmid_dist_path = join(here, 'trips_stmt_pmid_distribution.json')
+        ev_dist_path = prefixed_file('trips_stmt_evidence_distribution',
+                                     'json')
+        pmid_dist_path = prefixed_file('trips_stmt_pmid_distribution', 'json')
     else:
         print("Reader %s not supported." % reader)
         sys.exit(1)
@@ -195,15 +199,15 @@ if __name__ == '__main__':
         # Convert string keys to integer keys
         pmid_dist = {int(k): v for k, v in pmid_dist.items()}
 
-    aggregations = {'pmid': (ev_correct_by_num_pmid, pmid_dist),
-                    'evidence': (ev_correct_by_num_ev, ev_dist)}
+    aggregations = {'pmid': (ev_correct_by_num_pmid, pmid_dist),}
+                    #'evidence': (ev_correct_by_num_ev, ev_dist)}
     models = {
         #'orig_belief_ev': OrigBeliefEv,
         'orig_belief_stmt': OrigBeliefStmt,
         #'binom_ev': BinomialEv,
         #'binom_stmt': BinomialStmt,
         #'betabinom_ev': BetaBinomialEv,
-        'betabinom_stmt': BetaBinomialStmt
+        #'betabinom_stmt': BetaBinomialStmt
         }
     results = []
     for aggregation_type, (data, ev_dist_weights) in aggregations.items():
