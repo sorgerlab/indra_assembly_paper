@@ -59,12 +59,15 @@ def get_raw_curations(sources, stmts_dict):
     return curations
 
 
-def get_full_curations(sources, stmts_dict, aggregation='evidence'):
+def get_full_curations(sources, stmts_dict, aggregation='evidence',
+                       filter_hashes=None):
     curations = get_raw_curations(sources, stmts_dict)
     # Next we construct a dict of all curations that are "full" in that all
     # evidences of a given statement were curated, keyed by pa_hash
     full_curations = defaultdict(list)
     for pa_hash, stmt_curs in curations.items():
+        if filter_hashes and pa_hash not in filter_hashes:
+            continue
         # We need to make sure that all the evidence hashes were covered by the
         # curations in the DB. Note that we cannot go by number of curations
         # since two subtly different evidences can have the same hash, and
@@ -213,7 +216,7 @@ if __name__ == '__main__':
             with Pool() as pool:
                 sampler = ens_sample(mf, nwalkers, burn_steps, sample_steps,
                                      pool=pool)
-            filename = f'{model_name}_sampler.pkl'
+            filename = f'{reader}_{model_name}_sampler.pkl'
             print(f'Saving to {filename}')
             with open(filename, 'wb') as f:
                 sampler.pool = None
