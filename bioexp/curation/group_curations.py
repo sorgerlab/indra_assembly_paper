@@ -1,6 +1,8 @@
 import sys
 import itertools
+from matplotlib import pyplot as plt
 from os.path import abspath, dirname, join
+import numpy as np
 from indra.tools import assemble_corpus as ac
 from indra.belief import load_default_probs, SimpleScorer, BeliefEngine
 from bioexp.util import pkldump, pklload
@@ -17,10 +19,100 @@ def set_fitted_belief(reader_input, stmts):
         fitted_probs['syst'][reader] = map_params['Syst']
         fitted_probs['rand'][reader] = map_params['Rand']
     fitted_scorer = SimpleScorer(fitted_probs)
+    #fitted_scorer = MaxScorer(fitted_probs)
     be = BeliefEngine(scorer=fitted_scorer)
     be.set_prior_probs(stmts)
     be.set_hierarchy_probs(stmts)
 
+
+def MaxScorer(SimpleScorer):
+    def score_evidence_list(self, evidences):
+        """Return belief score given a list of supporting evidences."""
+        def _score(evidences):
+            if not evidences:
+                return 0
+            # Collect all unique sources
+            sources = [ev.source_api for ev in evidences]
+            uniq_sources = numpy.unique(sources)
+            # Calculate the systematic error factors given unique sources
+            syst_factors = {s: self.prior_probs['syst'][s]
+                            for s in uniq_sources}
+            # Calculate the radom error factors for each source
+            rand_factors = {k: [] for k in uniq_sources}
+            for ev in evidences:
+                rand_factors[ev.source_api].append(
+                    evidence_random_noise_prior(
+                        ev,
+                        self.prior_probs['rand'],
+                        self.subtype_probs))
+            # The probability of incorrectness is the product of the
+            # source-specific probabilities
+            neg_prob_prior = 1
+            # ########## THIS SECTION IS DIFFERENT ####################
+            # Take the minimum source-specific error estimate and don't
+            # multiply with other source-specific error rates
+            for s in uniq_sources:
+                source_specific_probs.append(
+                        syst_factors[s] + numpy.prod(rand_factors[s]))
+            neg_prob_prior = np.max(source_specific_probs)
+            #############################################
+            # Finally, the probability of correctness is one minus incorrect
+            prob_prior = 1 - neg_prob_prior
+            return prob_prior
+        pos_evidence = [ev for ev in evidences if
+                        not ev.epistemics.get('negated')]
+        neg_evidence = [ev for ev in evidences if
+                        ev.epistemics.get('negated')]
+        pp = _score(pos_evidence)
+        np = _score(neg_evidence)
+        # The basic assumption is that the positive and negative evidence
+        # can't simultaneously be correct.
+        # There are two cases to consider. (1) If the positive evidence is
+        # incorrect then there is no Statement and the belief should be 0,
+        # irrespective of the negative evidence.
+        # (2) If the positive evidence is correct and the negative evidence
+        # is incorrect.
+        # This amounts to the following formula:
+        # 0 * (1-pp) + 1 * (pp * (1-np)) which we simplify below
+        score = pp * (1 - np)
+        return score
+
+
+def moving_average(a, n=3) :
+    ret = np.cumsum(a, dtype=float)
+    ret[n:] = ret[n:] - ret[:-n]
+    return ret[n - 1:] / n
+
+
+def plot_calibration_curve(results):
+    stmts = []
+    bel_tuples = []
+    for bin_ix, bin_dict in results['bins'].items():
+        for stmt in bin_dict['stmts']:
+            stmts.append(stmt)
+            correct = 0 if stmt.get_hash() in results['incorr_hashes'] else 1
+            bel_tuples.append((stmt.belief, correct))
+    bel_tuples.sort(key=lambda x: x[0])
+    # Plot with moving average, raw
+    beliefs, corrects = zip(*bel_tuples)
+    beliefs = np.array(beliefs)
+    corrects = np.array(corrects)
+    n = 30
+    plt.plot(beliefs, corrects, linestyle='', marker='.')
+    plt.xlabel('Belief Score')
+    plt.ylabel('Empirical Correctness')
+    plt.plot(beliefs[:-(n-1)], moving_average(corrects, n=n), linestyle='',
+             marker='.', color='red')
+    plt.plot(beliefs, beliefs, color='gray')
+    bel_pre = []
+    corr_pre = []
+    for bel_val, corr_group in itertools.groupby(bel_tuples,
+                                                 key=lambda x: x[0]):
+        corr_vals = [t[1] for t in corr_group]
+        bel_pre.append(bel_val)
+        corr_pre.append(np.mean(corr_vals))
+    plt.plot(bel_pre[:-(n-1)], moving_average(corr_pre, n=n), marker='.',
+             color='orange')
 
 if __name__ == '__main__':
     # Prevent issues in pickling the results
@@ -52,13 +144,9 @@ if __name__ == '__main__':
     all_stmts = ac.load_statements(asmb_pkl)
     all_stmts_by_hash = {stmt.get_hash(): stmt for stmt in all_stmts}
 
-    set_fitted_belief(reader_input, all_stmts)
-
-    curated_stmts = []
     curations = {}
     for reader, rd_dict in reader_input.items():
         stmts = load_curated_pkl_files(rd_dict['pkl_list'])
-        curated_stmts.extend(stmts)
         stmts_dict = {stmt.get_hash(): stmt for stmt in stmts}
         curations[reader] = get_full_curations(rd_dict['source_list'],
                                             stmts_dict, aggregation='evidence')
@@ -113,9 +201,13 @@ if __name__ == '__main__':
 
     curated_stmts = [all_stmts_by_hash[h] for h in curated]
 
+    set_fitted_belief(reader_input, curated_stmts)
+
     # Group curated stmts into bins
     bins = [0., 0.6, 0.8, 0.9, 0.95, 0.99, 1.0]
-    stmts_by_belief = {}
+    stmts_by_belief = {'corr_hashes': corr_hashes,
+                       'incorr_hashes': incorr_hashes,
+                       'bins': {}}
     for bin_ix in range(len(bins) - 1):
         lb = bins[bin_ix] # Lower bound
         ub = bins[bin_ix + 1] # Upper bound
@@ -133,10 +225,13 @@ if __name__ == '__main__':
             else:
                 assert False
         n_total = n_corr + n_incorr
+        if n_total == 0:
+            continue
         pct_corr = n_corr / n_total
-        stmts_by_belief[bin_ix] = {'lb': lb, 'ub': ub, 'stmts': bin_stmts,
-                                   'n_corr': n_corr, 'n_incorr': n_incorr,
-                                   'n_total': n_total, 'pct_corr': pct_corr}
+        stmts_by_belief['bins'][bin_ix] = {
+                'lb': lb, 'ub': ub, 'stmts': bin_stmts,
+                'n_corr': n_corr, 'n_incorr': n_incorr,
+                'n_total': n_total, 'pct_corr': pct_corr}
         print(f'{lb}-{ub}: {n_corr} / {n_total} = {pct_corr}')
 
     pkldump(stmts_by_belief, 'multi_src_results')
