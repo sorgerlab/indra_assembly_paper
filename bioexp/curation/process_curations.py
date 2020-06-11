@@ -178,6 +178,12 @@ if __name__ == '__main__':
         ev_dist_path = prefixed_file('trips_stmt_evidence_distribution',
                                      'json')
         pmid_dist_path = prefixed_file('trips_stmt_pmid_distribution', 'json')
+    elif reader == 'sparser':
+        pkl_list = ['bioexp_sparser_sample_uncurated.pkl']
+        source_list = ('bioexp_paper_sparser',)
+        ev_dist_path = prefixed_file('sparser_stmt_evidence_distribution',
+                                     'json')
+        pmid_dist_path = prefixed_file('sparser_stmt_pmid_distribution', 'json')
     else:
         print("Reader %s not supported." % reader)
         sys.exit(1)
