@@ -3,8 +3,8 @@ import logging
 import numpy as np
 from copy import deepcopy
 from multiprocessing import Pool
+from bioexp.curation.belief_models import *
 from bioexp.curation.process_curations import *
-from bioexp.curation.belief_models import OrigBeliefStmt
 from bioexp.curation.model_fit import ModelFit, ens_sample
 
 logger = logging.getLogger('optimize_curations')
@@ -123,17 +123,18 @@ def find_next_best(cost=10, maxev=10, ev_probs=None):
 
 
 if __name__ == '__main__':
+    reader = 'reach'
     pool = Pool(4)
     default_nsteps = 10000
     default_nwalkers = 50
     default_cost_type = 'log2'
-    stmts = load_reader_curated_stmts(reader='rlimsp')
-    ev_probs = load_stmt_evidence_distribution()
-    source_list = ['bioexp_paper_rlimsp']
+    stmts = load_reader_curated_stmts(reader=reader)
+    ev_probs = load_stmt_evidence_distribution(reader)
+    source_list = ['bioexp_paper_%s' % reader]
     model = OrigBeliefStmt()
     stmt_correct_by_num_ev = get_correctness_data(source_list, stmts,
                                                   aggregation='evidence')
     mf = ModelFit(model, stmt_correct_by_num_ev)
-    opt_i, num_i = find_next_best(cost=50, maxev=10, ev_probs=ev_probs)
+    opt_i, num_i = find_next_best(cost=25, maxev=10, ev_probs=ev_probs)
     pool.close()
     pool.join()

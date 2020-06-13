@@ -137,50 +137,63 @@ def load_curated_pkl_files(pkl_list):
 
 
 def load_reader_curated_stmts(reader):
-    logger.info('Loading RLIMS-P statement pickles')
+    logger.info('Loading %s statement pickles' % reader)
     fname = 'bioexp_%s_sample_uncurated.pkl' % reader
     with open(join(curation_data, fname), 'rb') as fh:
         stmts = pickle.load(fh)
     return stmts
 
 
-def load_stmt_evidence_distribution():
+def load_stmt_evidence_distribution(reader):
     """Return a dict of empirical evidence count distributions in the corpus."""
-    fname = join(here, 'stmt_evidence_distribution.json')
-    with open(fname, 'r') as fh:
+    ev_file = prefixed_file(f'{reader}_stmt_evidence_distribution', 'json')
+    with open(ev_file, 'r') as fh:
         ev_probs = json.load(fh)
         ev_probs = {int(k): v for k, v in ev_probs.items()}
     return ev_probs
+
+
+pickles_by_reader = {
+    'reach': ('bioexp_reach_sample_uncurated_19-12-14.pkl',
+              'bioexp_reach_sample_uncurated_20-02-19.pkl',
+              'bioexp_reach_sample_tsv.pkl'),
+    'rlimsp': ('bioexp_rlimsp_sample_uncurated.pkl',),
+    'trips': ('bioexp_trips_sample_uncurated.pkl',),
+    'sparser': ('bioexp_sparser_sample_uncurated.pkl',),
+    'medscan': ('bioexp_medscan_sample_uncurated.pkl',),
+    }
+
+
+sources_by_reader = {
+    'reach': ('bioexp_paper_tsv', 'bioexp_paper_reach'),
+    'rlimsp': ('bioexp_paper_rlimsp',),
+    'trips': ('bioexp_paper_trips',),
+    'sparser': ('bioexp_paper_sparser',),
+    'medscan': ('bioexp_paper_medscan',),
+    }
+
 
 
 if __name__ == '__main__':
     plt.ion()
 
     reader = sys.argv[1]
+    pkl_list = pickles_by_reader[reader]
+    source_list = sources_by_reader[reader]
     if reader == 'reach':
-        pkl_list = ['bioexp_reach_sample_uncurated_19-12-14.pkl',
-                    'bioexp_reach_sample_uncurated_20-02-19.pkl',
-                    'bioexp_reach_sample_tsv.pkl']
-        source_list = ('bioexp_paper_tsv', 'bioexp_paper_reach')
         ev_dist_path = prefixed_file('reach_stmt_evidence_distribution',
                                      'json')
         pmid_dist_path = prefixed_file('reach_stmt_pmid_distribution', 'json')
     elif reader == 'rlimsp':
-        pkl_list = ['bioexp_rlimsp_sample_uncurated.pkl']
-        source_list = ('bioexp_paper_rlimsp',)
         ev_dist_path = join(here, 'rlimsp_stmt_evidence_distribution.json')
         ev_dist_path = prefixed_file('rlimsp_stmt_evidence_distribution',
                                      'json')
         pmid_dist_path = prefixed_file('rlimsp_stmt_pmid_distribution', 'json')
     elif reader == 'trips':
-        pkl_list = ['bioexp_trips_sample_uncurated.pkl']
-        source_list = ('bioexp_paper_trips',)
         ev_dist_path = prefixed_file('trips_stmt_evidence_distribution',
                                      'json')
         pmid_dist_path = prefixed_file('trips_stmt_pmid_distribution', 'json')
     elif reader == 'sparser':
-        pkl_list = ['bioexp_sparser_sample_uncurated.pkl']
-        source_list = ('bioexp_paper_sparser',)
         ev_dist_path = prefixed_file('sparser_stmt_evidence_distribution',
                                      'json')
         pmid_dist_path = prefixed_file('sparser_stmt_pmid_distribution', 'json')
