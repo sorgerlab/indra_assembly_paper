@@ -136,14 +136,6 @@ def load_curated_pkl_files(pkl_list):
     return stmts
 
 
-def load_reader_curated_stmts(reader):
-    logger.info('Loading %s statement pickles' % reader)
-    fname = 'bioexp_%s_sample_uncurated.pkl' % reader
-    with open(join(curation_data, fname), 'rb') as fh:
-        stmts = pickle.load(fh)
-    return stmts
-
-
 def load_stmt_evidence_distribution(reader):
     """Return a dict of empirical evidence count distributions in the corpus."""
     ev_file = prefixed_file(f'{reader}_stmt_evidence_distribution', 'json')

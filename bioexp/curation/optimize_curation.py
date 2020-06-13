@@ -128,9 +128,9 @@ if __name__ == '__main__':
     default_nsteps = 10000
     default_nwalkers = 50
     default_cost_type = 'log2'
-    stmts = load_reader_curated_stmts(reader=reader)
+    source_list = sources_by_reader[reader]
+    stmts = load_curated_pkl_files(pickles_by_reader[reader])
     ev_probs = load_stmt_evidence_distribution(reader)
-    source_list = ['bioexp_paper_%s' % reader]
     model = OrigBeliefStmt()
     stmt_correct_by_num_ev = get_correctness_data(source_list, stmts,
                                                   aggregation='evidence')
