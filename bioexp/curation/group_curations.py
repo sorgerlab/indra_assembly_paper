@@ -1,13 +1,86 @@
 import sys
+import pickle
 import itertools
 from matplotlib import pyplot as plt
 from os.path import abspath, dirname, join
+from collections import Counter
 import numpy as np
 from indra.tools import assemble_corpus as ac
 from indra.belief import load_default_probs, SimpleScorer, BeliefEngine
 from bioexp.util import pkldump, pklload
 from bioexp.curation.process_curations import \
             get_correctness_data, load_curated_pkl_files, get_full_curations
+
+
+def get_multi_reader_curations(reader_curations, reader_input,
+                               all_stmts_by_hash):
+    # For every curation hash across the pickles, set aside the ones where
+    # at least 1 extraction is correct; for the ones that are incorrect, check
+    # if there is evidence from other readers; if so, add this to a pickle
+    # to be curated
+    # TODO: Lists or sets? Sets may eliminate necessary multiplicity?
+    corr_hashes = set()
+    incorr_hashes_1_src = set()
+    incorr_hashes_multi_src = set()
+    all_hashes = set()
+    for reader, rdr_curs in reader_curations.items():
+        for pa_hash, corrects in rdr_curs.items():
+            all_hashes.add(pa_hash)
+            if sum(corrects) > 0:
+                corr_hashes.add(pa_hash)
+            else:
+                # Get the statement from the assembled pickle
+                stmt = all_stmts_by_hash[pa_hash]
+                sources = set([ev.source_api for ev in stmt.evidence])
+                if len(sources) > 1:
+                    incorr_hashes_multi_src.add(pa_hash)
+                else:
+                    incorr_hashes_1_src.add(pa_hash)
+
+    # Get curations from all DB curation tags for individual readers as
+    # well as the multi-reader curations
+    source_list = [source for reader_dict in reader_input.values()
+                          for source in reader_dict['source_list']]
+    source_list.append('bioexp_paper_multi')
+    multi_curations = get_full_curations(source_list, all_stmts_by_hash,
+                                         filter_hashes=incorr_hashes_multi_src)
+    # At this point, if a curation is all zeros, we can confirm that it is
+    # incorrect
+    incorr_hashes_multi_curated = set()
+    for pa_hash, corrects in multi_curations.items():
+        if sum(corrects) > 0:
+            corr_hashes.add(pa_hash)
+        else:
+            incorr_hashes_multi_curated.add(pa_hash)
+
+    # Put together the results
+    incorr_hashes = incorr_hashes_1_src | incorr_hashes_multi_curated
+    curated = corr_hashes | incorr_hashes
+    uncurated = all_hashes - curated
+    results = {'multi_src_curations': multi_curations,
+               'correct_hashes': corr_hashes,
+               'incorrect_hashes': incorr_hashes,
+               'multi_src': incorr_hashes_multi_src,
+               'uncurated': uncurated}
+    return results
+
+
+def get_single_reader_curations(curations):
+    # Version 2.0: Take all curated hashes (i.e., statements for which we can
+    # establish correct or incorrect definitively) and strip out the other
+    # evidences
+    # curations is a set dict of PA hashes with the vector of 0/1 correctness
+    # scores for evidences
+    corr_hashes = set()
+    incorr_hashes = set()
+    for pa_hash, corrects in curations.items():
+        if sum(corrects) > 0:
+            corr_hashes.add(pa_hash)
+        else:
+            incorr_hashes.add(pa_hash)
+    results = {'correct_hashes': corr_hashes,
+               'incorrect_hashes': incorr_hashes}
+    return results
 
 
 def set_fitted_belief(reader_input, stmts):
@@ -22,7 +95,7 @@ def set_fitted_belief(reader_input, stmts):
     #fitted_scorer = MaxScorer(fitted_probs)
     be = BeliefEngine(scorer=fitted_scorer)
     be.set_prior_probs(stmts)
-    be.set_hierarchy_probs(stmts)
+    #be.set_hierarchy_probs(stmts)
 
 
 def MaxScorer(SimpleScorer):
@@ -97,12 +170,12 @@ def plot_calibration_curve(results):
     beliefs, corrects = zip(*bel_tuples)
     beliefs = np.array(beliefs)
     corrects = np.array(corrects)
-    n = 30
-    plt.plot(beliefs, corrects, linestyle='', marker='.')
+    n = 5
+    #plt.plot(beliefs, corrects, linestyle='', marker='.')
     plt.xlabel('Belief Score')
     plt.ylabel('Empirical Correctness')
-    plt.plot(beliefs[:-(n-1)], moving_average(corrects, n=n), linestyle='',
-             marker='.', color='red')
+    #plt.plot(beliefs[:-(n-1)], moving_average(corrects, n=n), linestyle='',
+    #         marker='.', color='red')
     plt.plot(beliefs, beliefs, color='gray')
     bel_pre = []
     corr_pre = []
@@ -111,8 +184,10 @@ def plot_calibration_curve(results):
         corr_vals = [t[1] for t in corr_group]
         bel_pre.append(bel_val)
         corr_pre.append(np.mean(corr_vals))
-    plt.plot(bel_pre[:-(n-1)], moving_average(corr_pre, n=n), marker='.',
-             color='orange')
+    plt.plot(bel_pre[:-(n-1)], moving_average(corr_pre, n=n),
+             color='blue')
+    plt.plot(bel_pre, corr_pre, marker='.', linestyle='', color='orange')
+
 
 if __name__ == '__main__':
     # Prevent issues in pickling the results
@@ -137,105 +212,100 @@ if __name__ == '__main__':
          'source_list': ['bioexp_paper_trips'],
          'belief_model':
               'trips_orig_belief_stmt_evidence_sampler'},
+       'sparser': {
+         'pkl_list': ['bioexp_sparser_sample_uncurated.pkl'],
+         'source_list': ['bioexp_paper_sparser'],
+         'belief_model':
+              'sparser_orig_belief_stmt_evidence_sampler'},
     }
 
+    # Load the pickle file with all assembled statements
     asmb_pkl = join(dirname(abspath(__file__)), '..', '..', 'data',
                     'bioexp_asmb_preassembled.pkl')
     all_stmts = ac.load_statements(asmb_pkl)
     all_stmts_by_hash = {stmt.get_hash(): stmt for stmt in all_stmts}
 
+    # Load curations for all readers
     curations = {}
+    stmts_by_reader = {}
     for reader, rd_dict in reader_input.items():
-        stmts = load_curated_pkl_files(rd_dict['pkl_list'])
-        stmts_dict = {stmt.get_hash(): stmt for stmt in stmts}
+        reader_stmts = load_curated_pkl_files(rd_dict['pkl_list'])
+        reader_stmts_dict = {stmt.get_hash(): stmt for stmt in reader_stmts}
         curations[reader] = get_full_curations(rd_dict['source_list'],
-                                            stmts_dict, aggregation='evidence')
+                                   reader_stmts_dict, aggregation='evidence')
 
-    for r1, r2 in itertools.combinations(curations.keys(), 2):
-        r1_cur = set(curations[r1].keys())
-        r2_cur = set(curations[r2].keys())
-        overlap_hashes = r1_cur.intersection(r2_cur)
-        print(r1, r2, ": overlap ", len(overlap_hashes), " hashes")
+    multi_results = get_multi_reader_curations(curations, reader_input,
+                                               all_stmts_by_hash)
 
-    # For every curation hash across the 3 pickles, set aside the ones where
-    # at least 1 extraction is correct; for the ones that are incorrect, check
-    # if there is evidence from other readers; if so, add this to a pickle
-    # to be curated
-
-    # Lists or sets? Sets may eliminate necessary multiplicity?
-    corr_hashes = set()
-    incorr_hashes_1_src = set()
-    incorr_hashes_multi_src = set()
-    not_found = set()
-    all_hashes = set()
-    for reader, rdr_curs in curations.items():
-        for pa_hash, corrects in rdr_curs.items():
-            all_hashes.add(pa_hash)
-            if sum(corrects) > 0:
-                corr_hashes.add(pa_hash)
-            else:
-                # Get the statement from the assembled pickle
-                stmt = all_stmts_by_hash[pa_hash]
-                sources = set([ev.source_api for ev in stmt.evidence])
-                if len(sources) > 1:
-                    incorr_hashes_multi_src.add(pa_hash)
-                else:
-                    incorr_hashes_1_src.add(pa_hash)
-
-    source_list = ['bioexp_paper_reach', 'bioexp_paper_trips',
-                   'bioexp_paper_rlimsp', 'bioexp_paper_multi']
-    curations['multi'] = get_full_curations(source_list, all_stmts_by_hash,
-                                        filter_hashes=incorr_hashes_multi_src)
-    # At this point, if a curation is all zeros, we can confirm that it is
-    # incorrect
-    incorr_hashes_multi_curated = set()
-    for pa_hash, corrects in curations['multi'].items():
-        if sum(corrects) > 0:
-            corr_hashes.add(pa_hash)
-        else:
-            incorr_hashes_multi_curated.add(pa_hash)
-
-    incorr_hashes = incorr_hashes_1_src | incorr_hashes_multi_curated
-    curated = corr_hashes | incorr_hashes
-    uncurated = all_hashes - curated
-
-    curated_stmts = [all_stmts_by_hash[h] for h in curated]
+    curated_hashes = (multi_results['correct_hashes'] |
+                      multi_results['incorrect_hashes'])
+    curated_stmts = [all_stmts_by_hash[h] for h in curated_hashes]
 
     set_fitted_belief(reader_input, curated_stmts)
 
-    # Group curated stmts into bins
-    bins = [0., 0.6, 0.8, 0.9, 0.95, 0.99, 1.0]
-    stmts_by_belief = {'corr_hashes': corr_hashes,
-                       'incorr_hashes': incorr_hashes,
-                       'bins': {}}
-    for bin_ix in range(len(bins) - 1):
-        lb = bins[bin_ix] # Lower bound
-        ub = bins[bin_ix + 1] # Upper bound
-        bin_stmts = [s for s in curated_stmts
-                     if s.belief > lb and s.belief <= ub]
-        # Get correctness stats for statements in each bin
-        n_corr = 0
-        n_incorr = 0
-        for stmt in bin_stmts:
-            pa_hash = stmt.get_hash()
-            if pa_hash in corr_hashes:
-                n_corr += 1
-            elif pa_hash in incorr_hashes:
-                n_incorr += 1
-            else:
-                assert False
-        n_total = n_corr + n_incorr
-        if n_total == 0:
-            continue
-        pct_corr = n_corr / n_total
-        stmts_by_belief['bins'][bin_ix] = {
-                'lb': lb, 'ub': ub, 'stmts': bin_stmts,
-                'n_corr': n_corr, 'n_incorr': n_incorr,
-                'n_total': n_total, 'pct_corr': pct_corr}
-        print(f'{lb}-{ub}: {n_corr} / {n_total} = {pct_corr}')
+    # Prepare dataset for statistical modeling
+    reg_data = []
+    for stmt in curated_stmts:
+        sources = [ev.source_api for ev in stmt.evidence]
+        source_entry = dict(Counter(sources))
+        corr = 1 if stmt.get_hash() in multi_results['correct_hashes'] else 0
+        source_entry['correct'] = corr
+        source_entry['stmt_type'] = stmt.__class__.__name__
+        reg_data.append(source_entry)
+    with open('curation_dataset.pkl', 'wb') as f:
+        pickle.dump(reg_data, f)
 
-    pkldump(stmts_by_belief, 'multi_src_results')
+    import sys; sys.exit()
 
+    set_fitted_belief(reader_input, curated_stmts)
+
+    for reader in reader_input:
+        print("Reader", reader)
+        reader_results = get_single_reader_curations(curations[reader])
+        corr_hashes = reader_results['correct_hashes']
+        incorr_hashes = reader_results['incorrect_hashes']
+        curated_hashes = (reader_results['correct_hashes'] |
+                          reader_results['incorrect_hashes'])
+
+        set_fitted_belief(reader_input, curated_stmts)
+
+        # Group curated stmts into bins
+        bins = [0., 0.6, 0.8, 0.9, 0.95, 0.99, 1.0]
+        stmts_by_belief = {'corr_hashes': corr_hashes,
+                           'incorr_hashes': incorr_hashes,
+                           'bins': {}}
+        for bin_ix in range(len(bins) - 1):
+            lb = bins[bin_ix] # Lower bound
+            ub = bins[bin_ix + 1] # Upper bound
+            bin_stmts = [s for s in curated_stmts
+                         if s.belief > lb and s.belief <= ub]
+            # Get correctness stats for statements in each bin
+            n_corr = 0
+            n_incorr = 0
+            for stmt in bin_stmts:
+                pa_hash = stmt.get_hash()
+                if pa_hash in corr_hashes:
+                    n_corr += 1
+                elif pa_hash in incorr_hashes:
+                    n_incorr += 1
+                else:
+                    assert False
+            n_total = n_corr + n_incorr
+            if n_total == 0:
+                continue
+            pct_corr = n_corr / n_total
+            stmts_by_belief['bins'][bin_ix] = {
+                    'lb': lb, 'ub': ub, 'stmts': bin_stmts,
+                    'n_corr': n_corr, 'n_incorr': n_incorr,
+                    'n_total': n_total, 'pct_corr': pct_corr}
+            print(f'{lb}-{ub}: {n_corr} / {n_total} = {pct_corr}')
+
+            #pkldump(stmts_by_belief, 'multi_src_results')
+
+            plot_calibration_curve(stmts_by_belief)
+
+
+    
     # Load curations for the incorr_multi_src statements to determine if they
     # have been fully curated
     # - load curations from all sources, but filter to those in the specific

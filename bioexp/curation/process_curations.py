@@ -173,6 +173,10 @@ if __name__ == '__main__':
     pkl_list = pickles_by_reader[reader]
     source_list = sources_by_reader[reader]
     if reader == 'reach':
+        pkl_list = ['bioexp_reach_sample_uncurated_19-12-14.pkl',
+                    'bioexp_reach_sample_uncurated_20-02-19.pkl',
+                    'bioexp_reach_sample_tsv.pkl']
+        source_list = ('bioexp_paper_tsv', 'bioexp_paper_reach')
         ev_dist_path = prefixed_file('reach_stmt_evidence_distribution',
                                      'json')
         pmid_dist_path = prefixed_file('reach_stmt_pmid_distribution', 'json')
@@ -189,6 +193,12 @@ if __name__ == '__main__':
         ev_dist_path = prefixed_file('sparser_stmt_evidence_distribution',
                                      'json')
         pmid_dist_path = prefixed_file('sparser_stmt_pmid_distribution', 'json')
+    elif reader == 'medscan':
+        pkl_list = ['bioexp_medscan_sample_uncurated.pkl']
+        source_list = ('bioexp_paper_medscan',)
+        ev_dist_path = prefixed_file('medscan_stmt_evidence_distribution',
+                                     'json')
+        pmid_dist_path = prefixed_file('medscan_stmt_pmid_distribution', 'json')
     else:
         print("Reader %s not supported." % reader)
         sys.exit(1)
@@ -213,12 +223,12 @@ if __name__ == '__main__':
     aggregations = {#'pmid': (ev_correct_by_num_pmid, pmid_dist),}
                     'evidence': (ev_correct_by_num_ev, ev_dist)}
     models = {
-        #'orig_belief_ev': OrigBeliefEv,
+        'orig_belief_ev': OrigBeliefEv,
         'orig_belief_stmt': OrigBeliefStmt,
-        #'binom_ev': BinomialEv,
-        #'binom_stmt': BinomialStmt,
-        #'betabinom_ev': BetaBinomialEv,
-        #'betabinom_stmt': BetaBinomialStmt
+        'binom_ev': BinomialEv,
+        'binom_stmt': BinomialStmt,
+        'betabinom_ev': BetaBinomialEv,
+        'betabinom_stmt': BetaBinomialStmt
         }
     results = []
     for aggregation_type, (data, ev_dist_weights) in aggregations.items():
