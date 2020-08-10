@@ -245,6 +245,7 @@ if __name__ == '__main__':
 
     # Prepare dataset for statistical modeling
     reg_data = []
+    kge_data = []
     for stmt in curated_stmts:
         sources = [ev.source_api for ev in stmt.evidence]
         source_entry = dict(Counter(sources))
@@ -252,8 +253,18 @@ if __name__ == '__main__':
         source_entry['correct'] = corr
         source_entry['stmt_type'] = stmt.__class__.__name__
         reg_data.append(source_entry)
+        # Put together data for knowledge graph embedding evaluation
+        agent_names = [ag.name for ag in stmt.agent_list() if ag is not None]
+        if len(agent_names) == 2:
+            kge_entry = {'agA_name': agent_names[0],
+                         'stmt_type': stmt.__class__.__name__,
+                         'agB_name': agent_names[1],
+                         'correct': corr}
+            kge_data.append(kge_entry)
     with open('curation_dataset.pkl', 'wb') as f:
         pickle.dump(reg_data, f)
+    with open('kge_dataset.pkl', 'wb') as f:
+        pickle.dump(kge_data, f)
 
     import sys; sys.exit()
 
