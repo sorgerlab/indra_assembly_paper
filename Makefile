@@ -5,7 +5,7 @@ NET := networks
 FIG1 := bioexp/figures/figure1
 FIG2 := bioexp/figures/figure2
 FIG4 := bioexp/figures/figure4
-DEPLOY := ../bioexp_manuscript/figures/figure_panels
+DEPLOY := ~/Dropbox/DARPA\ projects/papers/INDRA\ paper\ 2/figures/figure_panels
 
 all: fig2 fig4 fig5 korkut_pysb
 
@@ -99,6 +99,9 @@ $(OUTPUT)/fig2_stmt_counts_before_pa.pdf: \
 $(OUTPUT)/fig4_belief_surface.pdf: \
         $(FIG4)/belief_surface.py
 	python -m bioexp.figures.figure4.belief_surface
+
+$(OUTPUT)/fig4_reach_curve.pdf: $(FIG4)/curated_correctness.py
+	python -m bioexp.figures.figure4.curated_correctness $(OUTPUT)
 
 # FIGURE 5 -------------------------------------------------------------------
 
