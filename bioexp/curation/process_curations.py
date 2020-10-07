@@ -24,6 +24,52 @@ curation_data = join(here, pardir, pardir, 'data', 'curation')
 db = get_primary_db()
 
 
+def dist_path(reader, dist_type):
+    return prefixed_file(f'{reader}_stmt_{dist_type}_distribution', 'json')
+
+
+reader_input = {
+   'reach': {
+     'pkl_list': [
+        'bioexp_reach_sample_uncurated_19-12-14.pkl',
+        'bioexp_reach_sample_uncurated_20-02-19.pkl',
+        'bioexp_reach_sample_tsv.pkl'],
+     'source_list': ['bioexp_paper_reach', 'bioexp_paper_tsv'],
+     'belief_model': 'reach_orig_belief_stmt_evidence_sampler',
+     'ev_dist_path': dist_path('reach', 'evidence'),
+     'pmid_dist_path': dist_path('reach', 'pmid'),
+    },
+   'rlimsp': {
+     'pkl_list': ['bioexp_rlimsp_sample_uncurated.pkl'],
+     'source_list': ['bioexp_paper_rlimsp'],
+     'belief_model': 'rlimsp_orig_belief_stmt_evidence_sampler',
+     'ev_dist_path': dist_path('rlimsp', 'evidence'),
+     'pmid_dist_path': dist_path('rlimsp', 'pmid'),
+    },
+   'trips': {
+     'pkl_list': ['bioexp_trips_sample_uncurated.pkl'],
+     'source_list': ['bioexp_paper_trips'],
+     'belief_model': 'trips_orig_belief_stmt_evidence_sampler',
+     'ev_dist_path': dist_path('trips', 'evidence'),
+     'pmid_dist_path': dist_path('trips', 'pmid'),
+    },
+   'sparser': {
+     'pkl_list': ['bioexp_sparser_sample_uncurated.pkl'],
+     'source_list': ['bioexp_paper_sparser'],
+     'belief_model': 'sparser_orig_belief_stmt_evidence_sampler',
+     'ev_dist_path': dist_path('sparser', 'evidence'),
+     'pmid_dist_path': dist_path('sparser', 'pmid'),
+    },
+   'medscan': {
+     'pkl_list': ['bioexp_medscan_sample_uncurated.pkl'],
+     'source_list': ['bioexp_paper_medscan'],
+     'belief_model': 'medscan_orig_belief_stmt_evidence_sampler',
+     'ev_dist_path': dist_path('medscan', 'evidence'),
+     'pmid_dist_path': dist_path('medscan', 'pmid'),
+    },
+}
+
+
 def get_correctness_data(sources, stmts, aggregation='evidence'):
     stmts_dict = {stmt.get_hash(): stmt for stmt in stmts}
     stmt_counts = Counter(stmt.get_hash() for stmt in stmts)
@@ -68,28 +114,29 @@ def get_full_curations(sources, stmts_dict, aggregation='evidence',
     for pa_hash, stmt_curs in curations.items():
         if filter_hashes and pa_hash not in filter_hashes:
             continue
+        cur_stmt = stmts_dict[pa_hash]
         # We need to make sure that all the evidence hashes were covered by the
         # curations in the DB. Note that we cannot go by number of curations
         # since two subtly different evidences can have the same hash, and
         # multiple curations sometimes exist for the same evidence.
-        ev_hashes = [e.get_source_hash() for e in stmts_dict[pa_hash].evidence]
+        ev_hashes = [e.get_source_hash() for e in cur_stmt.evidence]
         ev_hash_count = Counter(ev_hashes)
         if set(stmt_curs.keys()) != set(ev_hashes):
             # If not all evidences are covered by curations, we print enough
             # details to identify the statement to complete its curations.
             print('Not enough curations for %s: %s' %
-                  (stmts_dict[pa_hash].uuid, stmts_dict[pa_hash]))
+                  (cur_stmt.uuid, cur_stmt))
             continue
         # We can now assign 0 or 1 to each evidence's curation(s), resolve
         # any inconsistencies at the level of a single evidence.
         pmid_curations = defaultdict(list)
         for source_hash, ev_curs in stmt_curs.items():
-            ev = _find_evidence_by_hash(stmts_dict[pa_hash], source_hash)
+            ev = _find_evidence_by_hash(cur_stmt, source_hash)
             corrects = [1 if cur.tag in ('correct', 'hypothesis', 'act_vs_amt')
                         else 0 for cur in ev_curs]
             if any(corrects) and not all(corrects):
-                print('Suspicious curation: (%s, %s), %s. Assuming overall'
-                      ' incorrect.' % (pa_hash, source_hash,
+                print('Suspicious curation: (%s, %s, %s), %s. Assuming overall'
+                      ' incorrect.' % (pa_hash, source_hash, cur_stmt,
                                        str([(c.tag, c.curator)
                                             for c in ev_curs])))
             overall_cur = 1 if all(corrects) else 0
@@ -145,60 +192,18 @@ def load_stmt_evidence_distribution(reader):
     return ev_probs
 
 
-pickles_by_reader = {
-    'reach': ('bioexp_reach_sample_uncurated_19-12-14.pkl',
-              'bioexp_reach_sample_uncurated_20-02-19.pkl',
-              'bioexp_reach_sample_tsv.pkl'),
-    'rlimsp': ('bioexp_rlimsp_sample_uncurated.pkl',),
-    'trips': ('bioexp_trips_sample_uncurated.pkl',),
-    'sparser': ('bioexp_sparser_sample_uncurated.pkl',),
-    'medscan': ('bioexp_medscan_sample_uncurated.pkl',),
-    }
-
-
-sources_by_reader = {
-    'reach': ('bioexp_paper_tsv', 'bioexp_paper_reach'),
-    'rlimsp': ('bioexp_paper_rlimsp',),
-    'trips': ('bioexp_paper_trips',),
-    'sparser': ('bioexp_paper_sparser',),
-    'medscan': ('bioexp_paper_medscan',),
-    }
-
-
-
 if __name__ == '__main__':
     plt.ion()
 
     reader = sys.argv[1]
-    pkl_list = pickles_by_reader[reader]
-    source_list = sources_by_reader[reader]
-    if reader == 'reach':
-        pkl_list = ['bioexp_reach_sample_uncurated_19-12-14.pkl',
-                    'bioexp_reach_sample_uncurated_20-02-19.pkl',
-                    'bioexp_reach_sample_tsv.pkl']
-        source_list = ('bioexp_paper_tsv', 'bioexp_paper_reach')
-        ev_dist_path = prefixed_file('reach_stmt_evidence_distribution',
-                                     'json')
-        pmid_dist_path = prefixed_file('reach_stmt_pmid_distribution', 'json')
-    elif reader == 'rlimsp':
-        ev_dist_path = join(here, 'rlimsp_stmt_evidence_distribution.json')
-        ev_dist_path = prefixed_file('rlimsp_stmt_evidence_distribution',
-                                     'json')
-        pmid_dist_path = prefixed_file('rlimsp_stmt_pmid_distribution', 'json')
-    elif reader == 'trips':
-        ev_dist_path = prefixed_file('trips_stmt_evidence_distribution',
-                                     'json')
-        pmid_dist_path = prefixed_file('trips_stmt_pmid_distribution', 'json')
-    elif reader == 'sparser':
-        ev_dist_path = prefixed_file('sparser_stmt_evidence_distribution',
-                                     'json')
-        pmid_dist_path = prefixed_file('sparser_stmt_pmid_distribution', 'json')
-    elif reader == 'medscan':
-        pkl_list = ['bioexp_medscan_sample_uncurated.pkl']
-        source_list = ('bioexp_paper_medscan',)
-        ev_dist_path = prefixed_file('medscan_stmt_evidence_distribution',
-                                     'json')
-        pmid_dist_path = prefixed_file('medscan_stmt_pmid_distribution', 'json')
+
+    if reader in reader_input:
+        ri = reader_input[reader]
+        pkl_list = ri['pkl_list']
+        source_list = ri['source_list']
+        ev_dist_path = ri['ev_dist_path']
+        pmid_dist_path = ri['pmid_dist_path']
+        belief_model = ri['belief_model']
     else:
         print("Reader %s not supported." % reader)
         sys.exit(1)
