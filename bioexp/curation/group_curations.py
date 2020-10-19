@@ -9,7 +9,8 @@ from indra.tools import assemble_corpus as ac
 from indra.belief import load_default_probs, SimpleScorer, BeliefEngine
 from bioexp.util import pkldump, pklload
 from bioexp.curation.process_curations import \
-            get_correctness_data, load_curated_pkl_files, get_full_curations
+            get_correctness_data, load_curated_pkl_files, get_full_curations, \
+            reader_input
 
 
 def get_multi_reader_curations(reader_curations, reader_input,
@@ -193,32 +194,6 @@ if __name__ == '__main__':
     # Prevent issues in pickling the results
     sys.setrecursionlimit(50000)
 
-    reader_input = {
-       'reach': {
-         'pkl_list': [
-            'bioexp_reach_sample_uncurated_19-12-14.pkl',
-            'bioexp_reach_sample_uncurated_20-02-19.pkl',
-            'bioexp_reach_sample_tsv.pkl'],
-         'source_list': ['bioexp_paper_reach', 'bioexp_paper_tsv'],
-         'belief_model':
-              'reach_orig_belief_stmt_evidence_sampler'},
-       'rlimsp': {
-         'pkl_list': ['bioexp_rlimsp_sample_uncurated.pkl'],
-         'source_list': ['bioexp_paper_rlimsp'],
-         'belief_model':
-              'rlimsp_orig_belief_stmt_evidence_sampler'},
-       'trips': {
-         'pkl_list': ['bioexp_trips_sample_uncurated.pkl'],
-         'source_list': ['bioexp_paper_trips'],
-         'belief_model':
-              'trips_orig_belief_stmt_evidence_sampler'},
-       'sparser': {
-         'pkl_list': ['bioexp_sparser_sample_uncurated.pkl'],
-         'source_list': ['bioexp_paper_sparser'],
-         'belief_model':
-              'sparser_orig_belief_stmt_evidence_sampler'},
-    }
-
     # Load the pickle file with all assembled statements
     asmb_pkl = join(dirname(abspath(__file__)), '..', '..', 'data',
                     'bioexp_asmb_preassembled.pkl')
@@ -231,6 +206,8 @@ if __name__ == '__main__':
     for reader, rd_dict in reader_input.items():
         reader_stmts = load_curated_pkl_files(rd_dict['pkl_list'])
         reader_stmts_dict = {stmt.get_hash(): stmt for stmt in reader_stmts}
+        #curations[reader] = get_correctness_data(rd_dict['source_list'],
+        #                           reader_stmts, aggregation='evidence')
         curations[reader] = get_full_curations(rd_dict['source_list'],
                                    reader_stmts_dict, aggregation='evidence')
 
@@ -264,8 +241,10 @@ if __name__ == '__main__':
                          'correct': corr}
             kge_entry.update(source_entry)
             kge_data.append(kge_entry)
+
     with open('kge_dataset.pkl', 'wb') as f:
         pickle.dump(kge_data, f)
+
 
     set_fitted_belief(reader_input, curated_stmts)
 
@@ -298,6 +277,9 @@ if __name__ == '__main__':
                     n_corr += 1
                 elif pa_hash in incorr_hashes:
                     n_incorr += 1
+                # If this happens it means that there is a statement in
+                # "curated_stmts" whose hash is not in the
+                # reader_results correct/incorrect_hashes sets.
                 else:
                     assert False
             n_total = n_corr + n_incorr
