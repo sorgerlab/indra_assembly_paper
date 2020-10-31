@@ -158,36 +158,6 @@ def moving_average(a, n=3) :
     return ret[n - 1:] / n
 
 
-def plot_calibration_curve(results):
-    stmts = []
-    bel_tuples = []
-    for bin_ix, bin_dict in results['bins'].items():
-        for stmt in bin_dict['stmts']:
-            stmts.append(stmt)
-            correct = 0 if stmt.get_hash() in results['incorr_hashes'] else 1
-            bel_tuples.append((stmt.belief, correct))
-    bel_tuples.sort(key=lambda x: x[0])
-    # Plot with moving average, raw
-    beliefs, corrects = zip(*bel_tuples)
-    beliefs = np.array(beliefs)
-    corrects = np.array(corrects)
-    n = 5
-    #plt.plot(beliefs, corrects, linestyle='', marker='.')
-    plt.xlabel('Belief Score')
-    plt.ylabel('Empirical Correctness')
-    #plt.plot(beliefs[:-(n-1)], moving_average(corrects, n=n), linestyle='',
-    #         marker='.', color='red')
-    plt.plot(beliefs, beliefs, color='gray')
-    bel_pre = []
-    corr_pre = []
-    for bel_val, corr_group in itertools.groupby(bel_tuples,
-                                                 key=lambda x: x[0]):
-        corr_vals = [t[1] for t in corr_group]
-        bel_pre.append(bel_val)
-        corr_pre.append(np.mean(corr_vals))
-    plt.plot(bel_pre[:-(n-1)], moving_average(corr_pre, n=n),
-             color='blue')
-    plt.plot(bel_pre, corr_pre, marker='.', linestyle='', color='orange')
 
 
 if __name__ == '__main__':
@@ -209,7 +179,8 @@ if __name__ == '__main__':
         #curations[reader] = get_correctness_data(rd_dict['source_list'],
         #                           reader_stmts, aggregation='evidence')
         curations[reader] = get_full_curations(rd_dict['source_list'],
-                                   reader_stmts_dict, aggregation='evidence')
+                                   reader_stmts_dict, aggregation='evidence',
+                                   allow_incomplete_correct=True)
 
     multi_results = get_multi_reader_curations(curations, reader_input,
                                                all_stmts_by_hash)
@@ -245,6 +216,7 @@ if __name__ == '__main__':
     with open('kge_dataset.pkl', 'wb') as f:
         pickle.dump(kge_data, f)
 
+    import sys; sys.exit()
 
     set_fitted_belief(reader_input, curated_stmts)
 
