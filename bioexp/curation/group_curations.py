@@ -100,6 +100,37 @@ def load_reader_curations(reader_input):
     return curations
 
 
+def dump_dataset(curated_stmts, multi_results, filename):
+    # Prepare dataset for statistical modeling
+    kge_data = []
+    # For each stmt get the evidence from each source
+    for ix, stmt in enumerate(curated_stmts):
+        # Get the number of evidences for each source
+        sources = [ev.source_api for ev in stmt.evidence]
+        source_entry = dict(Counter(sources))
+        # Get the overall correctness status from the multi_results dict
+        corr = 1 if stmt.get_hash() in multi_results['correct_hashes'] else 0
+        source_entry['correct'] = corr
+        source_entry['stmt_type'] = stmt.__class__.__name__
+        # Add basic statement data (useful for linking to knowledge graph
+        # embedding-based link predict)
+        agent_names = [ag.name for ag in stmt.agent_list() if ag is not None]
+        # Complex > 3, translocations, autophosphorylations will be skipped
+        if len(agent_names) == 2:
+            kge_entry = {'stmt_num': ix,
+                         'stmt_hash': stmt.get_hash(),
+                         'agA_name': agent_names[0],
+                         'stmt_type': stmt.__class__.__name__,
+                         'agB_name': agent_names[1],
+                         'correct': corr}
+            kge_entry.update(source_entry)
+            kge_data.append(kge_entry)
+
+    with open(filename, 'wb') as f:
+        pickle.dump(kge_data, f)
+
+    return kge_data
+
 if __name__ == '__main__':
     # Prevent issues in pickling the results
     sys.setrecursionlimit(50000)
@@ -119,87 +150,9 @@ if __name__ == '__main__':
                       multi_results['incorrect_hashes'])
     curated_stmts = [all_stmts_by_hash[h] for h in curated_hashes]
 
-    set_fitted_belief(reader_input, curated_stmts)
-
-    # Prepare dataset for statistical modeling
-    reg_data = []
-    kge_data = []
-    for ix, stmt in enumerate(curated_stmts):
-        sources = [ev.source_api for ev in stmt.evidence]
-        source_entry = dict(Counter(sources))
-        corr = 1 if stmt.get_hash() in multi_results['correct_hashes'] else 0
-        source_entry['correct'] = corr
-        source_entry['stmt_type'] = stmt.__class__.__name__
-        # Put together data for knowledge graph embedding evaluation
-        agent_names = [ag.name for ag in stmt.agent_list() if ag is not None]
-        # Complex > 3, translocations, autophosphorylations will be skipped
-        if len(agent_names) == 2:
-            kge_entry = {'stmt_num': ix,
-                         'stmt_hash': stmt.get_hash(),
-                         'agA_name': agent_names[0],
-                         'stmt_type': stmt.__class__.__name__,
-                         'agB_name': agent_names[1],
-                         'correct': corr}
-            kge_entry.update(source_entry)
-            kge_data.append(kge_entry)
-
-    with open('kge_dataset.pkl', 'wb') as f:
-        pickle.dump(kge_data, f)
-
-    import sys; sys.exit()
-
-    set_fitted_belief(reader_input, curated_stmts)
-
-    for reader in reader_input:
-        print("Reader", reader)
-        reader_results = get_single_reader_curations(curations[reader])
-        corr_hashes = reader_results['correct_hashes']
-        incorr_hashes = reader_results['incorrect_hashes']
-        curated_hashes = (reader_results['correct_hashes'] |
-                          reader_results['incorrect_hashes'])
-
-        set_fitted_belief(reader_input, curated_stmts)
-
-        # Group curated stmts into bins
-        bins = [0., 0.6, 0.8, 0.9, 0.95, 0.99, 1.0]
-        stmts_by_belief = {'corr_hashes': corr_hashes,
-                           'incorr_hashes': incorr_hashes,
-                           'bins': {}}
-        for bin_ix in range(len(bins) - 1):
-            lb = bins[bin_ix] # Lower bound
-            ub = bins[bin_ix + 1] # Upper bound
-            bin_stmts = [s for s in curated_stmts
-                         if s.belief > lb and s.belief <= ub]
-            # Get correctness stats for statements in each bin
-            n_corr = 0
-            n_incorr = 0
-            for stmt in bin_stmts:
-                pa_hash = stmt.get_hash()
-                if pa_hash in corr_hashes:
-                    n_corr += 1
-                elif pa_hash in incorr_hashes:
-                    n_incorr += 1
-                # If this happens it means that there is a statement in
-                # "curated_stmts" whose hash is not in the
-                # reader_results correct/incorrect_hashes sets.
-                else:
-                    assert False
-            n_total = n_corr + n_incorr
-            if n_total == 0:
-                continue
-            pct_corr = n_corr / n_total
-            stmts_by_belief['bins'][bin_ix] = {
-                    'lb': lb, 'ub': ub, 'stmts': bin_stmts,
-                    'n_corr': n_corr, 'n_incorr': n_incorr,
-                    'n_total': n_total, 'pct_corr': pct_corr}
-            print(f'{lb}-{ub}: {n_corr} / {n_total} = {pct_corr}')
-
-            #pkldump(stmts_by_belief, 'multi_src_results')
-
-            plot_calibration_curve(stmts_by_belief)
+    kge_data = dump_dataset(curated_stmts, multi_results, 'kge_dataset.pkl')
 
 
-    
     # Load curations for the incorr_multi_src statements to determine if they
     # have been fully curated
     # - load curations from all sources, but filter to those in the specific
