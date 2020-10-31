@@ -10,7 +10,7 @@ import scipy.optimize
 from texttable import Texttable
 import matplotlib.pyplot as plt
 from collections import defaultdict, Counter
-from indra_db import get_primary_db
+from indra_db import get_db
 from indra_db.client.principal.curation import get_curations
 from bioexp.util import prefixed_file, pkldump
 from bioexp.curation.belief_models import *
@@ -21,7 +21,7 @@ here = dirname(abspath(__file__))
 curation_data = join(here, pardir, pardir, 'data', 'curation')
 
 
-db = get_primary_db()
+db = get_db('primary')
 
 
 def dist_path(reader, dist_type):
@@ -70,11 +70,13 @@ reader_input = {
 }
 
 
-def get_correctness_data(sources, stmts, aggregation='evidence'):
+def get_correctness_data(sources, stmts, aggregation='evidence',
+                         allow_incomplete_correct=False):
     stmts_dict = {stmt.get_hash(): stmt for stmt in stmts}
     stmt_counts = Counter(stmt.get_hash() for stmt in stmts)
     full_curations = get_full_curations(sources, stmts_dict,
-                                        aggregation=aggregation)
+                            aggregation=aggregation,
+                            allow_incomplete_correct=allow_incomplete_correct)
     correct_by_num_ev = {}
     for pa_hash, corrects in full_curations.items():
         num_correct = sum(corrects)
@@ -106,7 +108,7 @@ def get_raw_curations(sources, stmts_dict):
 
 
 def get_full_curations(sources, stmts_dict, aggregation='evidence',
-                       filter_hashes=None):
+                       filter_hashes=None, allow_incomplete_correct=False):
     curations = get_raw_curations(sources, stmts_dict)
     # Next we construct a dict of all curations that are "full" in that all
     # evidences of a given statement were curated, keyed by pa_hash
@@ -121,12 +123,6 @@ def get_full_curations(sources, stmts_dict, aggregation='evidence',
         # multiple curations sometimes exist for the same evidence.
         ev_hashes = [e.get_source_hash() for e in cur_stmt.evidence]
         ev_hash_count = Counter(ev_hashes)
-        if set(stmt_curs.keys()) != set(ev_hashes):
-            # If not all evidences are covered by curations, we print enough
-            # details to identify the statement to complete its curations.
-            print('Not enough curations for %s: %s' %
-                  (cur_stmt.uuid, cur_stmt))
-            continue
         # We can now assign 0 or 1 to each evidence's curation(s), resolve
         # any inconsistencies at the level of a single evidence.
         pmid_curations = defaultdict(list)
@@ -145,6 +141,21 @@ def get_full_curations(sources, stmts_dict, aggregation='evidence',
             overall_cur_by_num_ev_hash = \
                 [overall_cur] * ev_hash_count[source_hash]
             pmid_curations[ev.pmid] += overall_cur_by_num_ev_hash
+        evidence_corrects = list(itertools.chain(*pmid_curations.values()))
+
+        if allow_incomplete_correct and any(evidence_corrects) and \
+                    set(stmt_curs.keys()) != set(ev_hashes):
+            print("Allowing incompletely curated correct stmt",
+                  cur_stmt.uuid, cur_stmt)
+        elif set(stmt_curs.keys()) == set(ev_hashes):
+            pass
+        else:
+            # If not all evidences are covered by curations, we print enough
+            # details to identify the statement to complete its curations.
+            print('Not enough curations for %s: %s' %
+                  (cur_stmt.uuid, cur_stmt))
+            continue
+
         # If we aggregate at the pmid level, we determine correctness at the
         # level of each PMID to create the list of curations (whose number
         # will be equal to the number of PMIDs)
@@ -155,9 +166,7 @@ def get_full_curations(sources, stmts_dict, aggregation='evidence',
         # Otherwise we simply take the list of evidence-level curations
         # i.e., we flatten the PMID-based curations into a single flat list.
         else:
-            full_curations[pa_hash] = \
-                list(itertools.chain(*pmid_curations.values()))
-
+            full_curations[pa_hash] = evidence_corrects
     return full_curations
 
 
