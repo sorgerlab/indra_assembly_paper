@@ -99,66 +99,6 @@ def set_fitted_belief(reader_input, stmts):
     #be.set_hierarchy_probs(stmts)
 
 
-def MaxScorer(SimpleScorer):
-    def score_evidence_list(self, evidences):
-        """Return belief score given a list of supporting evidences."""
-        def _score(evidences):
-            if not evidences:
-                return 0
-            # Collect all unique sources
-            sources = [ev.source_api for ev in evidences]
-            uniq_sources = numpy.unique(sources)
-            # Calculate the systematic error factors given unique sources
-            syst_factors = {s: self.prior_probs['syst'][s]
-                            for s in uniq_sources}
-            # Calculate the radom error factors for each source
-            rand_factors = {k: [] for k in uniq_sources}
-            for ev in evidences:
-                rand_factors[ev.source_api].append(
-                    evidence_random_noise_prior(
-                        ev,
-                        self.prior_probs['rand'],
-                        self.subtype_probs))
-            # The probability of incorrectness is the product of the
-            # source-specific probabilities
-            neg_prob_prior = 1
-            # ########## THIS SECTION IS DIFFERENT ####################
-            # Take the minimum source-specific error estimate and don't
-            # multiply with other source-specific error rates
-            for s in uniq_sources:
-                source_specific_probs.append(
-                        syst_factors[s] + numpy.prod(rand_factors[s]))
-            neg_prob_prior = np.max(source_specific_probs)
-            #############################################
-            # Finally, the probability of correctness is one minus incorrect
-            prob_prior = 1 - neg_prob_prior
-            return prob_prior
-        pos_evidence = [ev for ev in evidences if
-                        not ev.epistemics.get('negated')]
-        neg_evidence = [ev for ev in evidences if
-                        ev.epistemics.get('negated')]
-        pp = _score(pos_evidence)
-        np = _score(neg_evidence)
-        # The basic assumption is that the positive and negative evidence
-        # can't simultaneously be correct.
-        # There are two cases to consider. (1) If the positive evidence is
-        # incorrect then there is no Statement and the belief should be 0,
-        # irrespective of the negative evidence.
-        # (2) If the positive evidence is correct and the negative evidence
-        # is incorrect.
-        # This amounts to the following formula:
-        # 0 * (1-pp) + 1 * (pp * (1-np)) which we simplify below
-        score = pp * (1 - np)
-        return score
-
-
-def moving_average(a, n=3) :
-    ret = np.cumsum(a, dtype=float)
-    ret[n:] = ret[n:] - ret[:-n]
-    return ret[n - 1:] / n
-
-
-
 
 if __name__ == '__main__':
     # Prevent issues in pickling the results
