@@ -84,20 +84,20 @@ def get_single_reader_curations(curations):
     return results
 
 
-def set_fitted_belief(reader_input, stmts):
-    fitted_probs = {'syst': {}, 'rand': {}}
+# Load curations for all readers
+def load_reader_curations(reader_input):
+    """Get a dict of curations for each reader."""
+    curations = {}
+    stmts_by_reader = {}
     for reader, rd_dict in reader_input.items():
-        bm_file = rd_dict['belief_model']
-        model_fit, sampler = pklload(bm_file)
-        map_params = model_fit.get_map_params(sampler)
-        fitted_probs['syst'][reader] = map_params['Syst']
-        fitted_probs['rand'][reader] = map_params['Rand']
-    fitted_scorer = SimpleScorer(fitted_probs)
-    #fitted_scorer = MaxScorer(fitted_probs)
-    be = BeliefEngine(scorer=fitted_scorer)
-    be.set_prior_probs(stmts)
-    #be.set_hierarchy_probs(stmts)
-
+        reader_stmts = load_curated_pkl_files(rd_dict['pkl_list'])
+        reader_stmts_dict = {stmt.get_hash(): stmt for stmt in reader_stmts}
+        #curations[reader] = get_correctness_data(rd_dict['source_list'],
+        #                           reader_stmts, aggregation='evidence')
+        curations[reader] = get_full_curations(rd_dict['source_list'],
+                                 reader_stmts_dict, aggregation='evidence',
+                                 allow_incomplete_correct=True)
+    return curations
 
 
 if __name__ == '__main__':
@@ -110,17 +110,7 @@ if __name__ == '__main__':
     all_stmts = ac.load_statements(asmb_pkl)
     all_stmts_by_hash = {stmt.get_hash(): stmt for stmt in all_stmts}
 
-    # Load curations for all readers
-    curations = {}
-    stmts_by_reader = {}
-    for reader, rd_dict in reader_input.items():
-        reader_stmts = load_curated_pkl_files(rd_dict['pkl_list'])
-        reader_stmts_dict = {stmt.get_hash(): stmt for stmt in reader_stmts}
-        #curations[reader] = get_correctness_data(rd_dict['source_list'],
-        #                           reader_stmts, aggregation='evidence')
-        curations[reader] = get_full_curations(rd_dict['source_list'],
-                                   reader_stmts_dict, aggregation='evidence',
-                                   allow_incomplete_correct=True)
+    curations = load_reader_curations(reader_input)
 
     multi_results = get_multi_reader_curations(curations, reader_input,
                                                all_stmts_by_hash)
