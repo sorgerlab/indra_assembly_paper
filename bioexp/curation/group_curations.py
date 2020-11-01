@@ -100,16 +100,59 @@ def load_reader_curations(reader_input):
     return curations
 
 
-def dump_dataset(curated_stmts, multi_results, filename):
+def dump_dataset(stmts_by_hash, corr_hashes, incorr_hashes, filename):
     # Prepare dataset for statistical modeling
     kge_data = []
     # For each stmt get the evidence from each source
-    for ix, stmt in enumerate(curated_stmts):
+    curated_hashes = corr_hashes | incorr_hashes
+    for ix, stmt_hash in enumerate(curated_hashes):
+        # Get the statement
+        stmt = stmts_by_hash[stmt_hash]
         # Get the number of evidences for each source
         sources = [ev.source_api for ev in stmt.evidence]
         source_entry = dict(Counter(sources))
         # Get the overall correctness status from the multi_results dict
-        corr = 1 if stmt.get_hash() in multi_results['correct_hashes'] else 0
+        corr = 1 if stmt.get_hash() in corr_hashes else 0
+        source_entry['correct'] = corr
+        source_entry['stmt_type'] = stmt.__class__.__name__
+        # Add basic statement data (useful for linking to knowledge graph
+        # embedding-based link predict)
+        agent_names = [ag.name for ag in stmt.agent_list() if ag is not None]
+        # Complex > 3, translocations, autophosphorylations will be skipped
+        if len(agent_names) == 2:
+            kge_entry = {'stmt_num': ix,
+                         'stmt_hash': stmt.get_hash(),
+                         'agA_name': agent_names[0],
+                         'stmt_type': stmt.__class__.__name__,
+                         'agB_name': agent_names[1],
+                         'correct': corr}
+            kge_entry.update(source_entry)
+            kge_data.append(kge_entry)
+
+    with open(filename, 'wb') as f:
+        pickle.dump(kge_data, f)
+
+    return kge_data
+
+
+def get_combined_curations(source_list, stmts_by_hash, filename):
+    # Note that this will ignore statements that are
+    # incompletely curated for which all current curations are 0
+
+    # Prepare dataset for statistical modeling
+    kge_data = []
+    # Get curations for all sources
+    full_curations = get_full_curations(source_list, stmts_by_hash,
+                                        allow_incomplete_correct=True)
+    for ix, (stmt_hash, corrects) in enumerate(full_curations.items()):
+        # Get the statement
+        stmt = stmts_by_hash[stmt_hash]
+        # Get the number of evidences for each source
+        sources = [ev.source_api for ev in stmt.evidence]
+        source_entry = dict(Counter(sources))
+        # Get the overall correctness status
+        num_correct = sum(corrects)
+        corr = 1 if sum(corrects) > 0 else 0
         source_entry['correct'] = corr
         source_entry['stmt_type'] = stmt.__class__.__name__
         # Add basic statement data (useful for linking to knowledge graph
@@ -141,6 +184,22 @@ if __name__ == '__main__':
     all_stmts = ac.load_statements(asmb_pkl)
     all_stmts_by_hash = {stmt.get_hash(): stmt for stmt in all_stmts}
 
+    # The new approach works to get all the curation data and is
+    # much faster than the old approach below.
+    all_sources = [source for rdr, rdr_dict in reader_input.items()
+                                  for source in rdr_dict['source_list']]
+    all_sources.append('bioexp_paper_multi')
+
+    curation_dataset = get_combined_curations(
+          all_sources, all_stmts_by_hash, 'curation_dataset.pkl')
+    refinement_dataset = get_combined_curations(
+          ['bioexp_refinements'], all_stmts_by_hash, 'refinement_dataset.pkl')
+
+    # Old approach: so this approach can be used to not only get the
+    # curation dataset but also to identify the statements that still
+    # need to be curated. The new approach can't yet do that because it
+    # only gets incomplete curations that have at least one correct curations.
+    """
     curations = load_reader_curations(reader_input)
 
     multi_results = get_multi_reader_curations(curations, reader_input,
@@ -150,7 +209,11 @@ if __name__ == '__main__':
                       multi_results['incorrect_hashes'])
     curated_stmts = [all_stmts_by_hash[h] for h in curated_hashes]
 
-    kge_data = dump_dataset(curated_stmts, multi_results, 'kge_dataset.pkl')
+    data_old = dump_dataset(all_stmts_by_hash,
+                            multi_results['correct_hashes'],
+                            multi_results['incorrect_hashes'],
+                            'kge_dataset.pkl')
+    """
 
 
     # Load curations for the incorr_multi_src statements to determine if they
