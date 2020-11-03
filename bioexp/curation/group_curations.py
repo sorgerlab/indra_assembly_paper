@@ -135,18 +135,23 @@ def dump_dataset(stmts_by_hash, corr_hashes, incorr_hashes, filename):
     return kge_data
 
 
-def get_combined_curations(source_list, stmts_by_hash, filename):
+def get_combined_curations(source_list, stmts_by_hash, filename,
+                           add_supports=False):
     # Note that this will ignore statements that are
     # incompletely curated for which all current curations are 0
 
     # Prepare dataset for statistical modeling
-    kge_data = []
+    cur_data = []
     # Get curations for all sources
     full_curations = get_full_curations(source_list, stmts_by_hash,
                                         allow_incomplete_correct=True)
     for ix, (stmt_hash, corrects) in enumerate(full_curations.items()):
         # Get the statement
         stmt = stmts_by_hash[stmt_hash]
+        agent_names = [ag.name for ag in stmt.agent_list() if ag is not None]
+        # Complex > 3, translocations, autophosphorylations will be skipped
+        if len(agent_names) != 2:
+            continue
         # Get the number of evidences for each source
         sources = [ev.source_api for ev in stmt.evidence]
         source_entry = dict(Counter(sources))
@@ -154,25 +159,40 @@ def get_combined_curations(source_list, stmts_by_hash, filename):
         num_correct = sum(corrects)
         corr = 1 if sum(corrects) > 0 else 0
         source_entry['correct'] = corr
-        source_entry['stmt_type'] = stmt.__class__.__name__
+        # Add in source evidence counts from supports
+        if add_supports:
+            source_entry['num_supports'] = len(stmt.supports)
+            for supp_stmt in stmt.supports:
+                supp_sources = [ev.source_api for ev in supp_stmt.evidence]
+                supp_source_ctr = dict(Counter(supp_sources))
+                # Add the supporting stmt sources to the stmt's own sources
+                for source_api, source_ct in supp_source_ctr.items():
+                    if source_api not in source_entry:
+                        source_entry[source_api] = 0
+                    source_entry[source_api] += source_ct
         # Add basic statement data (useful for linking to knowledge graph
         # embedding-based link predict)
-        agent_names = [ag.name for ag in stmt.agent_list() if ag is not None]
-        # Complex > 3, translocations, autophosphorylations will be skipped
-        if len(agent_names) == 2:
-            kge_entry = {'stmt_num': ix,
-                         'stmt_hash': stmt.get_hash(),
-                         'agA_name': agent_names[0],
-                         'stmt_type': stmt.__class__.__name__,
-                         'agB_name': agent_names[1],
-                         'correct': corr}
-            kge_entry.update(source_entry)
-            kge_data.append(kge_entry)
+        agA_ns, agA_id = stmt.agent_list()[0].get_grounding()
+        agB_ns, agB_id = stmt.agent_list()[1].get_grounding()
+
+        cur_entry = {'stmt_num': ix,
+                     'stmt_hash': stmt.get_hash(),
+                     'agA_name': agent_names[0],
+                     'agA_ns': agA_ns,
+                     'agA_id': agA_id,
+                     'stmt_type': stmt.__class__.__name__,
+                     'agB_name': agent_names[1],
+                     'agB_ns': agB_ns,
+                     'agB_id': agB_id,
+                     'correct': corr}
+        # Add this entry to the dataset
+        cur_entry.update(source_entry)
+        cur_data.append(cur_entry)
 
     with open(filename, 'wb') as f:
-        pickle.dump(kge_data, f)
+        pickle.dump(cur_data, f)
 
-    return kge_data
+    return cur_data
 
 if __name__ == '__main__':
     # Prevent issues in pickling the results
@@ -192,6 +212,9 @@ if __name__ == '__main__':
 
     curation_dataset = get_combined_curations(
           all_sources, all_stmts_by_hash, 'curation_dataset.pkl')
+    curation_dataset_with_supp = get_combined_curations(
+          all_sources, all_stmts_by_hash, 'curation_dataset_with_supp.pkl',
+          add_supports=True)
     refinement_dataset = get_combined_curations(
           ['bioexp_refinements'], all_stmts_by_hash, 'refinement_dataset.pkl')
 
