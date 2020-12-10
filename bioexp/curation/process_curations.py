@@ -71,11 +71,13 @@ reader_input = {
 
 
 def get_correctness_data(sources, stmts, aggregation='evidence',
+                         allow_incomplete=False,
                          allow_incomplete_correct=False):
     stmts_dict = {stmt.get_hash(): stmt for stmt in stmts}
     stmt_counts = Counter(stmt.get_hash() for stmt in stmts)
     full_curations = get_full_curations(sources, stmts_dict,
                             aggregation=aggregation,
+                            allow_incomplete=allow_incomplete,
                             allow_incomplete_correct=allow_incomplete_correct)
     correct_by_num_ev = {}
     for pa_hash, corrects in full_curations.items():
@@ -108,7 +110,9 @@ def get_raw_curations(sources, stmts_dict):
 
 
 def get_full_curations(sources, stmts_dict, aggregation='evidence',
-                       filter_hashes=None, allow_incomplete_correct=False):
+                       filter_hashes=None,
+                       allow_incomplete=False,
+                       allow_incomplete_correct=False):
     curations = get_raw_curations(sources, stmts_dict)
     # Next we construct a dict of all curations that are "full" in that all
     # evidences of a given statement were curated, keyed by pa_hash
@@ -143,12 +147,18 @@ def get_full_curations(sources, stmts_dict, aggregation='evidence',
             pmid_curations[ev.pmid] += overall_cur_by_num_ev_hash
         evidence_corrects = list(itertools.chain(*pmid_curations.values()))
 
-        if allow_incomplete_correct and any(evidence_corrects) and \
+        # The statement is complete, or if we don't care if it's not complete
+        # let the statement through
+        if allow_incomplete or set(stmt_curs.keys()) == set(ev_hashes):
+            pass
+        # The statement is incomplete but correct and we're allowing
+        # incomplete correct stmts
+        elif allow_incomplete_correct and any(evidence_corrects) and \
                     set(stmt_curs.keys()) != set(ev_hashes):
             print("Allowing incompletely curated correct stmt",
                   cur_stmt.uuid, cur_stmt)
-        elif set(stmt_curs.keys()) == set(ev_hashes):
-            pass
+        # Otherwise, the statement is incomplete AND either (so far) incorrect
+        # or we're not allowing incomplete corrects
         else:
             # If not all evidences are covered by curations, we print enough
             # details to identify the statement to complete its curations.

@@ -136,7 +136,7 @@ def dump_dataset(stmts_by_hash, corr_hashes, incorr_hashes, filename):
 
 
 def get_combined_curations(source_list, stmts_by_hash, filename,
-                           add_supports=False):
+                           add_supports=False, allow_incomplete=False):
     # Note that this will ignore statements that are
     # incompletely curated for which all current curations are 0
 
@@ -144,6 +144,7 @@ def get_combined_curations(source_list, stmts_by_hash, filename,
     cur_data = []
     # Get curations for all sources
     full_curations = get_full_curations(source_list, stmts_by_hash,
+                                        allow_incomplete=allow_incomplete,
                                         allow_incomplete_correct=True)
     for ix, (stmt_hash, corrects) in enumerate(full_curations.items()):
         # Get the statement
@@ -215,6 +216,10 @@ if __name__ == '__main__':
     curation_dataset_with_supp = get_combined_curations(
           all_sources, all_stmts_by_hash, 'curation_dataset_with_supp.pkl',
           add_supports=True)
+    curation_dataset_bg_psp = get_combined_curations(
+          all_sources + ['bioexp_biogrid', 'bioexp_psp'],
+          all_stmts_by_hash, 'curation_dataset_with_bg_psp.pkl',
+          allow_incomplete=True)
     refinement_dataset = get_combined_curations(
           ['bioexp_refinements'], all_stmts_by_hash, 'refinement_dataset.pkl')
 
