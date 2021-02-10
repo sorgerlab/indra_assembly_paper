@@ -70,6 +70,41 @@ reader_input = {
 }
 
 
+def get_curations_for_reader(reader, aggregation):
+    """Get correctness data for a given reader based on reader_input info.
+
+    Parameters
+    ----------
+    reader : str
+        Name of the reader, e.g. "reach".
+    aggregation: str
+        'evidence' to aggregate by distinct evidences, 'pmid' to
+        aggregate by distinct PMIDs.
+
+    Returns
+    -------
+    Dict
+        Dictionary mapping total evidence (or PMID) counts to a list of the
+        number of correct evidences/PMIDs for statements with that total
+        evidence/PMID count.
+    """
+    # Get the info for this reader
+    if reader in reader_input:
+        ri = reader_input[reader]
+        pkl_list = ri['pkl_list']
+        source_list = ri['source_list']
+        ev_dist_path = ri['ev_dist_path']
+        pmid_dist_path = ri['pmid_dist_path']
+        belief_model = ri['belief_model']
+    else:
+        raise ValueError("Reader %s not supported." % reader)
+
+    stmts = load_curated_pkl_files(pkl_list)
+    ev_corrects = get_correctness_data(source_list, stmts,
+                                       aggregation=aggregation)
+    return ev_corrects
+
+
 def get_correctness_data(sources, stmts, aggregation='evidence',
                          allow_incomplete=False,
                          allow_incomplete_correct=False):
@@ -88,44 +123,6 @@ def get_correctness_data(sources, stmts, aggregation='evidence',
         else:
             correct_by_num_ev[len(corrects)] += num_correct_by_num_sampled
     return correct_by_num_ev
-
-
-def get_raw_curations(sources, stmts_dict):
-    """Get curations from INDRA DB associated with the given source tags.
-
-    Parameters
-    ----------
-    sources : list of str
-        List of curation source tags (e.g. names of statement samples) to
-        query the DB curations table with.
-    stmts_dict : list of INDRA Statements
-        Statements corresponding to a superset of the curated statements with
-        the given tag.
-
-    Returns
-    -------
-    dict
-        Nested dictionary with the pa_hash as the first-level key, the
-        source_hash as the second-level key, and the statement curation
-        data itself as the innermost dictionary.
-    """
-    # Curations are in a dict keyed by pa_hash and then by evidence source hash
-    curations = defaultdict(lambda: defaultdict(list))
-    # Iterate over all the curation sources
-    for source in sources:
-        # Get curations from DB from given curation source
-        db_curations = get_curations(db, source=source)
-        # We populate the curations dict with entries from the DB
-        for cur in db_curations:
-            if cur['pa_hash'] not in stmts_dict:
-                print('Curation pa_hash is missing from list of Statements '
-                      'loaded from pickle: %s' %
-                      str((cur['pa_hash'], cur['source_hash'],
-                           cur['tag'], cur['source'])))
-            curations[cur['pa_hash']][cur['source_hash']].append(cur)
-    logger.info('Loaded %d raw curations for sources %s' %
-                (len(curations), str(sources)))
-    return curations
 
 
 def get_full_curations(sources, stmts_dict, aggregation='evidence',
@@ -200,6 +197,44 @@ def get_full_curations(sources, stmts_dict, aggregation='evidence',
     return full_curations
 
 
+def get_raw_curations(sources, stmts_dict):
+    """Get curations from INDRA DB associated with the given source tags.
+
+    Parameters
+    ----------
+    sources : list of str
+        List of curation source tags (e.g. names of statement samples) to
+        query the DB curations table with.
+    stmts_dict : list of INDRA Statements
+        Statements corresponding to a superset of the curated statements with
+        the given tag.
+
+    Returns
+    -------
+    dict
+        Nested dictionary with the pa_hash as the first-level key, the
+        source_hash as the second-level key, and the statement curation
+        data itself as the innermost dictionary.
+    """
+    # Curations are in a dict keyed by pa_hash and then by evidence source hash
+    curations = defaultdict(lambda: defaultdict(list))
+    # Iterate over all the curation sources
+    for source in sources:
+        # Get curations from DB from given curation source
+        db_curations = get_curations(db, source=source)
+        # We populate the curations dict with entries from the DB
+        for cur in db_curations:
+            if cur['pa_hash'] not in stmts_dict:
+                print('Curation pa_hash is missing from list of Statements '
+                      'loaded from pickle: %s' %
+                      str((cur['pa_hash'], cur['source_hash'],
+                           cur['tag'], cur['source'])))
+            curations[cur['pa_hash']][cur['source_hash']].append(cur)
+    logger.info('Loaded %d raw curations for sources %s' %
+                (len(curations), str(sources)))
+    return curations
+
+
 def _find_evidence_by_hash(stmt, source_hash):
     for ev in stmt.evidence:
         if ev.get_source_hash() == source_hash:
@@ -230,41 +265,6 @@ def load_stmt_evidence_distribution(reader):
         ev_probs = {int(k): v for k, v in ev_probs.items()}
     return ev_probs
 
-
-
-def get_curations_for_reader(reader, aggregation):
-    """Get correctness data for a given reader based on reader_input info.
-
-    Parameters
-    ----------
-    reader : str
-        Name of the reader, e.g. "reach".
-    aggregation: str
-        'evidence' to aggregate by distinct evidences, 'pmid' to
-        aggregate by distinct PMIDs.
-
-    Returns
-    -------
-    Dict
-        Dictionary mapping total evidence (or PMID) counts to a list of the
-        number of correct evidences/PMIDs for statements with that total
-        evidence/PMID count.
-    """
-    # Get the info for this reader
-    if reader in reader_input:
-        ri = reader_input[reader]
-        pkl_list = ri['pkl_list']
-        source_list = ri['source_list']
-        ev_dist_path = ri['ev_dist_path']
-        pmid_dist_path = ri['pmid_dist_path']
-        belief_model = ri['belief_model']
-    else:
-        raise ValueError("Reader %s not supported." % reader)
-
-    stmts = load_curated_pkl_files(pkl_list)
-    ev_corrects = get_correctness_data(source_list, stmts,
-                                       aggregation=aggregation)
-    return ev_corrects
 
 # MAIN -----------------------------------------------------------------
 
