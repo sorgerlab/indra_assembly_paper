@@ -91,6 +91,24 @@ def get_correctness_data(sources, stmts, aggregation='evidence',
 
 
 def get_raw_curations(sources, stmts_dict):
+    """Get curations from INDRA DB associated with the given source tags.
+
+    Parameters
+    ----------
+    sources : list of str
+        List of curation source tags (e.g. names of statement samples) to
+        query the DB curations table with.
+    stmts_dict : list of INDRA Statements
+        Statements corresponding to a superset of the curated statements with
+        the given tag.
+
+    Returns
+    -------
+    dict
+        Nested dictionary with the pa_hash as the first-level key, the
+        source_hash as the second-level key, and the statement curation
+        data itself as the innermost dictionary.
+    """
     # Curations are in a dict keyed by pa_hash and then by evidence source hash
     curations = defaultdict(lambda: defaultdict(list))
     # Iterate over all the curation sources
