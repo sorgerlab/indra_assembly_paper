@@ -12,7 +12,7 @@ all: fig2 fig4 fig5 korkut_pysb
 sample: $(OUTPUT)/bioexp_reach_sample_uncurated.pkl
 
 deploy:
-	rsync -av $(OUTPUT)/*.pdf $(DEPLOY)
+	rsync -av $(OUTPUT)/fig*.pdf $(DEPLOY)
 
 clean:
 	cd $(OUTPUT); rm -rf *
