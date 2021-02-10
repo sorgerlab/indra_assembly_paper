@@ -99,11 +99,12 @@ def get_raw_curations(sources, stmts_dict):
         db_curations = get_curations(db, source=source)
         # We populate the curations dict with entries from the DB
         for cur in db_curations:
-            if cur.pa_hash not in stmts_dict:
-                print('Curation pa_hash is missing fron list of Statements '
+            if cur['pa_hash'] not in stmts_dict:
+                print('Curation pa_hash is missing from list of Statements '
                       'loaded from pickle: %s' %
-                      str((cur.pa_hash, cur.source_hash, cur.tag, cur.source)))
-            curations[cur.pa_hash][cur.source_hash].append(cur)
+                      str((cur['pa_hash'], cur['source_hash'],
+                           cur['tag'], cur['source'])))
+            curations[cur['pa_hash']][cur['source_hash']].append(cur)
     logger.info('Loaded %d raw curations for sources %s' %
                 (len(curations), str(sources)))
     return curations
@@ -132,12 +133,13 @@ def get_full_curations(sources, stmts_dict, aggregation='evidence',
         pmid_curations = defaultdict(list)
         for source_hash, ev_curs in stmt_curs.items():
             ev = _find_evidence_by_hash(cur_stmt, source_hash)
-            corrects = [1 if cur.tag in ('correct', 'hypothesis', 'act_vs_amt')
+            corrects = [1 if cur['tag'] in
+                                    ('correct', 'hypothesis', 'act_vs_amt')
                         else 0 for cur in ev_curs]
             if any(corrects) and not all(corrects):
                 print('Suspicious curation: (%s, %s, %s), %s. Assuming overall'
                       ' incorrect.' % (pa_hash, source_hash, cur_stmt,
-                                       str([(c.tag, c.curator)
+                                       str([(c['tag'], c['curator'])
                                             for c in ev_curs])))
             overall_cur = 1 if all(corrects) else 0
             # We also need to make sure that if the same evidence hash appears
@@ -211,11 +213,26 @@ def load_stmt_evidence_distribution(reader):
     return ev_probs
 
 
-if __name__ == '__main__':
-    plt.ion()
 
-    reader = sys.argv[1]
+def get_curations_for_reader(reader, aggregation):
+    """Get correctness data for a given reader based on reader_input info.
 
+    Parameters
+    ----------
+    reader : str
+        Name of the reader, e.g. "reach".
+    aggregation: str
+        'evidence' to aggregate by distinct evidences, 'pmid' to
+        aggregate by distinct PMIDs.
+
+    Returns
+    -------
+    Dict
+        Dictionary mapping total evidence (or PMID) counts to a list of the
+        number of correct evidences/PMIDs for statements with that total
+        evidence/PMID count.
+    """
+    # Get the info for this reader
     if reader in reader_input:
         ri = reader_input[reader]
         pkl_list = ri['pkl_list']
@@ -224,14 +241,27 @@ if __name__ == '__main__':
         pmid_dist_path = ri['pmid_dist_path']
         belief_model = ri['belief_model']
     else:
-        print("Reader %s not supported." % reader)
-        sys.exit(1)
+        raise ValueError("Reader %s not supported." % reader)
 
     stmts = load_curated_pkl_files(pkl_list)
-    ev_correct_by_num_ev = get_correctness_data(source_list, stmts,
-                                                aggregation='evidence')
-    ev_correct_by_num_pmid = get_correctness_data(source_list, stmts,
-                                                  aggregation='pmid')
+    ev_corrects = get_correctness_data(source_list, stmts,
+                                       aggregation=aggregation)
+    return ev_corrects
+
+# MAIN -----------------------------------------------------------------
+
+
+if __name__ == '__main__':
+    plt.ion()
+
+    reader = sys.argv[1]
+
+    ev_correct_by_num_ev = get_curations_for_reader(
+                                    reader, aggregation='evidence')
+    ev_correct_by_num_pmid = get_curations_for_reader(
+                                    reader, aggregation='pmid')
+
+    # -- Everything below is for model fitting! --
     # Load evidence frequency data
     with open(ev_dist_path, 'rt') as f:
         ev_dist = json.load(f)
