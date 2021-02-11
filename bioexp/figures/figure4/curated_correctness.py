@@ -5,11 +5,13 @@ import texttable
 import numpy as np
 from matplotlib import pyplot as plt
 from bioexp.curation.group_curations import reader_input
-from bioexp.curation.process_curations import get_curations_for_reader
+from bioexp.curation.process_curations import get_curations_for_reader, \
+                                    reader_input, load_curated_pkl_files, \
+                                    get_correctness_data
 from bioexp.util import set_fig_params, format_axis, fontsize
 
 
-def plot_correctness_curve(reader):
+def plot_correctness_curve(reader, show_ylabel=True):
     ev_correct_by_num_ev = get_curations_for_reader(reader, 'evidence')
     data = ev_correct_by_num_ev
     data_stmt = {}
@@ -29,19 +31,23 @@ def plot_correctness_curve(reader):
 
     # -- Plot statement correctness curve --
     #set_fig_params()
-    plt.figure(figsize=(2, 2), dpi=150)
+    plt.figure(figsize=(1, 1.25), dpi=150)
     plt.errorbar(num_evs, means, yerr=std, fmt='bo-', ls='none',
                  label='Empirical mean correctness', linewidth=1, markersize=3)
     # Legends, labels, etc.
     plt.ylim(0, 1)
-    plt.grid(True)
+    #plt.grid(True)
     plt.xticks(num_evs)
-    plt.xlabel('Number of evidence per INDRA Statement')
-    plt.ylabel('Average statement correctness')
+    plt.xlabel('Mentions')
+    if show_ylabel:
+        plt.yticks([0, 0.25, 0.5, 0.75, 1.0])
+        plt.ylabel('Precision')
+    else:
+        plt.yticks([])
     #plt.legend(loc='lower right', fontsize=fontsize)
     reader_name = reader[0].upper() + reader[1:]
-    plt.title('Statement Correctness', fontsize=fontsize)
-    plt.subplots_adjust(left=0.15, right=0.94)
+    plt.title(reader, fontsize=fontsize)
+    plt.subplots_adjust(left=0.214, right=0.94, bottom=0.23, top=0.826)
     ax = plt.gca()
     format_axis(ax)
     plt.savefig(join(output_dir, f'fig4_{reader}_curve.pdf'))
@@ -77,6 +83,7 @@ if __name__ == '__main__':
     # Get output directory
     output_dir = sys.argv[1]
     plot_correctness_curve('reach')
-    plot_correctness_curve('sparser')
+    plot_correctness_curve('sparser', show_ylabel=False)
+    plot_correctness_curve('medscan', show_ylabel=False)
     # Make the dataset table 
     dataset_table()
