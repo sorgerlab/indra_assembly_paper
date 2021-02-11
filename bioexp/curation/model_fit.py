@@ -92,7 +92,7 @@ class ModelFit(object):
         map_p = sampler.flatchain[map_ix]
         return dict(zip(self.model.param_names, map_p))
 
-    def plot_stmt_fit(self, sampler, title):
+    def plot_stmt_fit(self, sampler, label, color, ax=None):
         # Calculate the mean of correctness by number of evidence
         num_evs = sorted(self.data.keys())
         means = [np.mean(self.data_stmt[n]) for n in num_evs]
@@ -103,22 +103,26 @@ class ModelFit(object):
                for n in num_evs]
 
         # Plot the data
-        plt.figure()
-        plt.errorbar(num_evs, means, yerr=std, fmt='bo-', ls='none',
-                     label='Empirical mean correctness')
+        if ax is None:
+            plt.figure(figsize=(2, 2), dpi=150)
+            ax = plt.gca()
+            ax.errorbar(num_evs, means, yerr=std, marker='.', color='gray',
+                        linestyle='none', label='Mean correctness')
         # Plot the MAP predictions
         map_ix = np.argmax(sampler.flatlnprobability)
         map_p = sampler.flatchain[map_ix]
         stmt_probs = self.model.stmt_predictions(map_p, num_evs)
-        plt.plot(num_evs, stmt_probs, 'ro-', label='MAP belief')
+        ax.plot(num_evs, stmt_probs, linestyle='-', color=color, label=label)
         # Legends, labels, etc.
-        plt.ylim(0, 1)
-        plt.grid(True)
-        plt.xticks(num_evs)
-        plt.xlabel('Number of evidence per INDRA Statement')
-        plt.legend(loc='lower right')
-        plt.title(title)
-        plt.show()
+        ax.set_ylim(0, 1)
+        #ax.grid(True)
+        ax.set_xticks(num_evs)
+        ax.set_ylabel('Precision')
+        ax.set_xlabel('Mentions')
+        #ax.legend(loc='lower right')
+        #ax.title(title)
+        #plt.show()
+        return ax
 
     def plot_corner(self, sampler):
         # Plot the posterior parameter distribution

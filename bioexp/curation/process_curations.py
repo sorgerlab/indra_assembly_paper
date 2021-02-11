@@ -273,6 +273,7 @@ if __name__ == '__main__':
     plt.ion()
 
     reader = sys.argv[1]
+    output_dir = sys.argv[2]
 
     ev_correct_by_num_ev = get_curations_for_reader(
                                     reader, aggregation='evidence')
@@ -281,13 +282,13 @@ if __name__ == '__main__':
 
     # -- Everything below is for model fitting! --
     # Load evidence frequency data
-    with open(ev_dist_path, 'rt') as f:
+    with open(reader_input[reader]['ev_dist_path'], 'rt') as f:
         ev_dist = json.load(f)
         # Convert string keys to integer keys
         ev_dist = {int(k): v for k, v in ev_dist.items()}
 
     # Load PMID frequency data
-    with open(pmid_dist_path, 'rt') as f:
+    with open(reader_input[reader]['pmid_dist_path'], 'rt') as f:
         pmid_dist = json.load(f)
         # Convert string keys to integer keys
         pmid_dist = {int(k): v for k, v in pmid_dist.items()}
@@ -339,4 +340,9 @@ if __name__ == '__main__':
     table_data.extend(zip(labels, stmt_lkls, stmt_lkls_wt))
     table.add_rows(table_data)
     print(table.draw())
+
+    # Pickle results
+    results_path = join(output_dir, f'fig4_model_fit_results_{reader}.pkl')
+    with open(results_path, 'wb') as f:
+        pickle.dump(results, f)
 
