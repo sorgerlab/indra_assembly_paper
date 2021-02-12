@@ -77,12 +77,16 @@ class ModelFit(object):
             plt.subplot(3, 4, n)
             if n not in self.data:
                 continue
-            plt.hist(self.data[n], bins=range(0, n+2), density=True)
+            bin_counts = range(0, n+2)
+            plt.hist(self.data[n], bins=bin_counts, density=True)
             plt.title(n)
             # Then plot the model predictions
             ev_lks = self.model.ev_predictions(map_p, n)
             bin_centers = 0.5 + np.array(range(0, n+1))
             plt.plot(bin_centers, ev_lks, color='r', marker='.')
+            plt.xticks(bin_centers)
+            ax = plt.gca()
+            ax.set_xticklabels(bin_counts[:-1])
         fig.suptitle(title)
         plt.tight_layout()
         plt.show()
