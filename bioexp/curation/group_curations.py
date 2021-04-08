@@ -213,6 +213,9 @@ if __name__ == '__main__':
 
     curation_dataset = get_combined_curations(
           all_sources, all_stmts_by_hash, 'curation_dataset.pkl')
+    curation_dataset_inc = get_combined_curations(
+          all_sources, all_stmts_by_hash, 'curation_dataset_inc.pkl',
+          allow_incomplete=True)
     curation_dataset_with_supp = get_combined_curations(
           all_sources, all_stmts_by_hash, 'curation_dataset_with_supp.pkl',
           add_supports=True)

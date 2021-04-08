@@ -55,14 +55,14 @@ reader_input = {
     },
    'sparser': {
      'pkl_list': ['bioexp_sparser_sample_uncurated.pkl'],
-     'source_list': ['bioexp_paper_sparser'],
+     'source_list': ['bioexp_paper_sparser', 'bioexp_sparser'],
      'belief_model': 'sparser_orig_belief_stmt_evidence_sampler',
      'ev_dist_path': dist_path('sparser', 'evidence'),
      'pmid_dist_path': dist_path('sparser', 'pmid'),
     },
    'medscan': {
      'pkl_list': ['bioexp_medscan_sample_uncurated.pkl'],
-     'source_list': ['bioexp_paper_medscan'],
+     'source_list': ['bioexp_paper_medscan', 'bioexp_medscan'],
      'belief_model': 'medscan_orig_belief_stmt_evidence_sampler',
      'ev_dist_path': dist_path('medscan', 'evidence'),
      'pmid_dist_path': dist_path('medscan', 'pmid'),
@@ -70,7 +70,7 @@ reader_input = {
 }
 
 
-def get_curations_for_reader(reader, aggregation):
+def get_curations_for_reader(reader, aggregation, **kwargs):
     """Get correctness data for a given reader based on reader_input info.
 
     Parameters
@@ -101,7 +101,7 @@ def get_curations_for_reader(reader, aggregation):
 
     stmts = load_curated_pkl_files(pkl_list)
     ev_corrects = get_correctness_data(source_list, stmts,
-                                       aggregation=aggregation)
+                                       aggregation=aggregation, **kwargs)
     return ev_corrects
 
 
