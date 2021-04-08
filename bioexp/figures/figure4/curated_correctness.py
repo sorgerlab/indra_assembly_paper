@@ -11,8 +11,9 @@ from bioexp.curation.process_curations import get_curations_for_reader, \
 from bioexp.util import set_fig_params, format_axis, fontsize
 
 
-def plot_correctness_curve(reader, show_ylabel=True):
-    ev_correct_by_num_ev = get_curations_for_reader(reader, 'evidence')
+def plot_correctness_curve(reader, show_ylabel=True, allow_incomplete=False):
+    ev_correct_by_num_ev = get_curations_for_reader(reader, 'evidence',
+                                            allow_incomplete=allow_incomplete)
     data = ev_correct_by_num_ev
     data_stmt = {}
     # Convert at the evidence level to data at the stmt level and store
@@ -82,8 +83,8 @@ def dataset_table():
 if __name__ == '__main__':
     # Get output directory
     output_dir = sys.argv[1]
-    plot_correctness_curve('reach')
-    plot_correctness_curve('sparser', show_ylabel=False)
-    plot_correctness_curve('medscan', show_ylabel=False)
+    plot_correctness_curve('reach', allow_incomplete=True)
+    plot_correctness_curve('sparser', show_ylabel=False, allow_incomplete=True)
+    plot_correctness_curve('medscan', show_ylabel=False, allow_incomplete=True)
     # Make the dataset table 
     dataset_table()
