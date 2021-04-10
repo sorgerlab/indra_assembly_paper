@@ -116,12 +116,13 @@ def get_correctness_data(sources, stmts, aggregation='evidence',
                             allow_incomplete_correct=allow_incomplete_correct)
     correct_by_num_ev = {}
     for pa_hash, corrects in full_curations.items():
+        stmt = stmts_dict[pa_hash]
         num_correct = sum(corrects)
         num_correct_by_num_sampled = [num_correct] * stmt_counts[pa_hash]
-        if len(corrects) not in correct_by_num_ev:
-            correct_by_num_ev[len(corrects)] = num_correct_by_num_sampled
+        if len(stmt.evidence) not in correct_by_num_ev:
+            correct_by_num_ev[len(stmt.evidence)] = num_correct_by_num_sampled
         else:
-            correct_by_num_ev[len(corrects)] += num_correct_by_num_sampled
+            correct_by_num_ev[len(stmt.evidence)] += num_correct_by_num_sampled
     return correct_by_num_ev
 
 
@@ -246,6 +247,7 @@ def load_curated_pkl_files(pkl_list):
     stmts = []
     for pkl_file in pkl_list:
         pkl_path = join(curation_data, pkl_file)
+        logger.info('Loading %s' % pkl_path)
         with open(pkl_path, 'rb') as fh:
             pkl_stmts = pickle.load(fh)
             # Special handling for the pickle file for the TSV

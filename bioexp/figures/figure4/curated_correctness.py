@@ -63,8 +63,10 @@ def dataset_table():
     for reader, rd_dict in reader_input.items():
         reader_stmts = load_curated_pkl_files(rd_dict['pkl_list'])
         #reader_stmts_dict = {stmt.get_hash(): stmt for stmt in reader_stmts}
-        curations[reader] = get_correctness_data(rd_dict['source_list'],
-                                   reader_stmts, aggregation='evidence')
+        curations[reader] = \
+            get_correctness_data(rd_dict['source_list'],
+                                 reader_stmts, aggregation='evidence',
+                                 allow_incomplete=True)
         row = [reader]
         for i in range(1, 11):
             counts = curations[reader].get(i, {})
