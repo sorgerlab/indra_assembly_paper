@@ -13,6 +13,7 @@ sample: $(OUTPUT)/bioexp_reach_sample_uncurated.pkl
 
 deploy:
 	rsync -av $(OUTPUT)/fig*.pdf $(DEPLOY)
+	rsync -av $(OUTPUT)/fig*.png $(DEPLOY)
 
 clean:
 	cd $(OUTPUT); rm -rf *
