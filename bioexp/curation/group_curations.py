@@ -199,6 +199,8 @@ if __name__ == '__main__':
     # Prevent issues in pickling the results
     sys.setrecursionlimit(50000)
 
+    output_dir = sys.argv[1]
+
     # Load the pickle file with all assembled statements
     asmb_pkl = join(dirname(abspath(__file__)), '..', '..', 'data',
                     'bioexp_asmb_preassembled.pkl')
@@ -212,19 +214,24 @@ if __name__ == '__main__':
     all_sources.append('bioexp_paper_multi')
 
     curation_dataset = get_combined_curations(
-          all_sources, all_stmts_by_hash, 'curation_dataset.pkl')
+          all_sources, all_stmts_by_hash,
+          join(output_dir, 'curation_dataset.pkl'))
     curation_dataset_inc = get_combined_curations(
-          all_sources, all_stmts_by_hash, 'curation_dataset_inc.pkl',
+          all_sources, all_stmts_by_hash,
+          join(output_dir, 'curation_dataset_inc.pkl'),
           allow_incomplete=True)
     curation_dataset_with_supp = get_combined_curations(
-          all_sources, all_stmts_by_hash, 'curation_dataset_with_supp.pkl',
+          all_sources, all_stmts_by_hash,
+          join(output_dir, 'curation_dataset_with_supp.pkl'),
           add_supports=True)
     curation_dataset_bg_psp = get_combined_curations(
           all_sources + ['bioexp_biogrid', 'bioexp_psp'],
-          all_stmts_by_hash, 'curation_dataset_with_bg_psp.pkl',
+          all_stmts_by_hash,
+          join(output_dir, 'curation_dataset_with_bg_psp.pkl'),
           allow_incomplete=True)
     refinement_dataset = get_combined_curations(
-          ['bioexp_refinements'], all_stmts_by_hash, 'refinement_dataset.pkl')
+          ['bioexp_refinements'], all_stmts_by_hash,
+          join(output_dir, 'refinement_dataset.pkl'))
 
     # Old approach: so this approach can be used to not only get the
     # curation dataset but also to identify the statements that still

@@ -17,9 +17,6 @@ if __name__ == '__main__':
     betabin_res = results[5]
     bel_res = results[1]
 
-    plt.ion()
-
-    """
     # Plot binomial
     ax = bin_res[1].plot_stmt_fit(bin_res[2], 'Binomial', color='r')
     # Plot beta-binomial
@@ -32,7 +29,6 @@ if __name__ == '__main__':
     format_axis(ax)
     plt.subplots_adjust(left=0.152)
     plt.savefig(join(output_dir, f'fig4_{reader}_model_fits.pdf'))
-    """
 
     # Plot evidence distribution fits
     betabin_res[1].plot_ev_fit(betabin_res[2],
@@ -43,4 +39,3 @@ if __name__ == '__main__':
     bel_res[1].plot_ev_fit(bel_res[2],
                            f'{reader.upper()} statements, Belief model')
     plt.savefig(join(output_dir, f'fig4_{reader}_ev_fit_belief.pdf'))
-

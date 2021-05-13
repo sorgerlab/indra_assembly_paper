@@ -321,7 +321,7 @@ if __name__ == '__main__':
             pkldump((mf, sampler), filename)
             results.append((model_name, mf, sampler))
             mf.plot_ev_fit(sampler, model_name)
-            mf.plot_stmt_fit(sampler, model_name)
+            mf.plot_stmt_fit(sampler, model_name, 'red')
 
     stmt_lkls = []
     stmt_lkls_wt = []

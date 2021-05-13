@@ -23,7 +23,13 @@ clean:
 fig2: $(OUTPUT)/fig2_evidence_distribution.pdf \
       $(OUTPUT)/fig2_stmt_counts_before_pa.pdf
 
-fig4: $(OUTPUT)/fig4_belief_surface.pdf
+fig4: \
+    $(OUTPUT)/fig4_reach_curve.pdf \
+    $(OUTPUT)/fig4_belief_surface.pdf \
+    $(OUTPUT)/fig4_reach_model_fits.pdf \
+    $(OUTPUT)/fig4_sparser_model_fits.pdf \
+    $(OUTPUT)/fig4_medscan_model_fits.pdf \
+    $(OUTPUT)/curation_dataset.pkl
 
 fig5: $(OUTPUT)/reach_complexes_raw.tsv
 
@@ -97,12 +103,58 @@ $(OUTPUT)/fig2_stmt_counts_before_pa.pdf: \
 	python -m bioexp.figures.figure2.plot_stmt_counts
 
 # FIGURE 4 -------------------------------------------------------------------
-$(OUTPUT)/fig4_belief_surface.pdf: \
-        $(FIG4)/belief_surface.py
-	python -m bioexp.figures.figure4.belief_surface
+#$(OUTPUT)/bioexp_multi_src_results.pkl: \
+    $(OUTPUT)/bioexp_reach_orig_belief_stmt_evidence_sampler.pkl \
+    $(OUTPUT)/bioexp_trips_orig_belief_stmt_evidence_sampler.pkl \
+    $(OUTPUT)/bioexp_rlimsp_orig_belief_stmt_evidence_sampler.pkl \
+    $(OUTPUT)/bioexp_sparser_orig_belief_stmt_evidence_sampler.pkl \
+    $(OUTPUT)/bioexp_medscan_orig_belief_stmt_evidence_sampler.pkl
+#	python -u -m bioexp.curation.group_curations
+#
+# Evidence distributions for the fits
+$(OUTPUT)/bioexp_%_stmt_evidence_distribution.json:
+	python -u -m bioexp.curation.get_ev_distro $*
 
+# The samplers for the fits
+# Reach
+#$(OUTPUT)/bioexp_reach_orig_belief_stmt_evidence_sampler.pkl: \
+#
+# Run model fits
+$(OUTPUT)/fig4_model_fit_results_reach.pkl: \
+    $(DATA)/curation/bioexp_reach_sample_tsv.pkl \
+    $(DATA)/curation/bioexp_reach_sample_uncurated_19-12-14.pkl \
+    $(DATA)/curation/bioexp_reach_sample_uncurated_20-02-19.pkl \
+    $(OUTPUT)/bioexp_reach_stmt_evidence_distribution.json
+	python -u -m bioexp.curation.process_curations reach $(OUTPUT)
+
+# Other readers
+$(OUTPUT)/fig4_model_fit_results_%.pkl: \
+    $(DATA)/curation/bioexp_%_sample_uncurated.pkl \
+    $(OUTPUT)/bioexp_%_stmt_evidence_distribution.json
+	python -u -m bioexp.curation.process_curations $* $(OUTPUT)
+
+# Correctness curves for each reader (no model fits)
 $(OUTPUT)/fig4_reach_curve.pdf: $(FIG4)/curated_correctness.py
 	python -m bioexp.figures.figure4.curated_correctness $(OUTPUT)
+
+# Model fit plots
+$(OUTPUT)/fig4_%_model_fits.pdf: \
+        $(OUTPUT)/fig4_model_fit_results_%.pkl
+	python -m bioexp.figures.figure4.model_fit_plots $< $* $(OUTPUT)
+
+# Belief surface
+$(OUTPUT)/fig4_belief_surface.pdf: $(FIG4)/belief_surface.py
+	python -m bioexp.figures.figure4.belief_surface
+
+# Compiled curation dataset for training sklearn models
+$(OUTPUT)/curation_dataset.pkl: $(DATA)/bioexp_asmb_preassembled.pkl
+	python -m bioexp.curation.group_curations $(OUTPUT)
+
+# Various other downstreams in the notebook
+# $(OUTPUT)/curation_dataset.pkl \
+# $(DATA)/bioexp_asmb_preassembled.pkl
+# (Check other dependencies in the notebook)
+
 
 # FIGURE 5 -------------------------------------------------------------------
 
@@ -160,27 +212,3 @@ $(OUTPUT)/bioexp_db_only_paths.pkl: \
 #    $(OUTPUT)/bioexp_db_only_pysb_model.pkl \
 #    $(OUTPUT)/bioexp_db_only_paths.pkl
 
-$(OUTPUT)/bioexp_multi_src_results.pkl: \
-    $(OUTPUT)/bioexp_reach_orig_belief_stmt_evidence_sampler.pkl \
-    $(OUTPUT)/bioexp_trips_orig_belief_stmt_evidence_sampler.pkl \
-    $(OUTPUT)/bioexp_rlimsp_orig_belief_stmt_evidence_sampler.pkl \
-    $(OUTPUT)/bioexp_sparser_orig_belief_stmt_evidence_sampler.pkl \
-    $(OUTPUT)/bioexp_medscan_orig_belief_stmt_evidence_sampler.pkl
-	python -u -m bioexp.curation.group_curations
-
-# The samplers for the fits
-$(OUTPUT)/bioexp_reach_orig_belief_stmt_evidence_sampler.pkl: \
-    $(DATA)/curation/bioexp_reach_sample_tsv.pkl \
-    $(DATA)/curation/bioexp_reach_sample_uncurated_19-12-14.pkl \
-    $(DATA)/curation/bioexp_reach_sample_uncurated_20-02-19.pkl \
-    $(OUTPUT)/bioexp_reach_stmt_evidence_distribution.json
-	python -u -m bioexp.curation.process_curations reach
-
-$(OUTPUT)/bioexp_%_orig_belief_stmt_evidence_sampler.pkl: \
-    $(DATA)/curation/bioexp_%_sample_uncurated.pkl \
-    $(OUTPUT)/bioexp_%_stmt_evidence_distribution.json
-	python -u -m bioexp.curation.process_curations $*
-
-# Evidence distributions for the fits
-$(OUTPUT)/bioexp_%_stmt_evidence_distribution.json:
-	python -u -m bioexp.curation.get_ev_distro $*
