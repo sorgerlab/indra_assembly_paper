@@ -103,23 +103,11 @@ $(OUTPUT)/fig2_stmt_counts_before_pa.pdf: \
 	python -m bioexp.figures.figure2.plot_stmt_counts
 
 # FIGURE 4 -------------------------------------------------------------------
-#$(OUTPUT)/bioexp_multi_src_results.pkl: \
-    $(OUTPUT)/bioexp_reach_orig_belief_stmt_evidence_sampler.pkl \
-    $(OUTPUT)/bioexp_trips_orig_belief_stmt_evidence_sampler.pkl \
-    $(OUTPUT)/bioexp_rlimsp_orig_belief_stmt_evidence_sampler.pkl \
-    $(OUTPUT)/bioexp_sparser_orig_belief_stmt_evidence_sampler.pkl \
-    $(OUTPUT)/bioexp_medscan_orig_belief_stmt_evidence_sampler.pkl
-#	python -u -m bioexp.curation.group_curations
-#
 # Evidence distributions for the fits
 $(OUTPUT)/bioexp_%_stmt_evidence_distribution.json:
 	python -u -m bioexp.curation.get_ev_distro $*
 
-# The samplers for the fits
-# Reach
-#$(OUTPUT)/bioexp_reach_orig_belief_stmt_evidence_sampler.pkl: \
-#
-# Run model fits
+# Run model fits (REACH)
 $(OUTPUT)/fig4_model_fit_results_reach.pkl: \
     $(DATA)/curation/bioexp_reach_sample_tsv.pkl \
     $(DATA)/curation/bioexp_reach_sample_uncurated_19-12-14.pkl \
@@ -127,7 +115,7 @@ $(OUTPUT)/fig4_model_fit_results_reach.pkl: \
     $(OUTPUT)/bioexp_reach_stmt_evidence_distribution.json
 	python -u -m bioexp.curation.process_curations reach $(OUTPUT)
 
-# Other readers
+# Run model fits (other readers)
 $(OUTPUT)/fig4_model_fit_results_%.pkl: \
     $(DATA)/curation/bioexp_%_sample_uncurated.pkl \
     $(OUTPUT)/bioexp_%_stmt_evidence_distribution.json
