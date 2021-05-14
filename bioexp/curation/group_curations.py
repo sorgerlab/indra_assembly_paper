@@ -3,14 +3,14 @@ import pickle
 import itertools
 from matplotlib import pyplot as plt
 from os.path import abspath, dirname, join
-from collections import Counter
+from collections import Counter, defaultdict
 import numpy as np
 from indra.tools import assemble_corpus as ac
 from indra.belief import load_default_probs, SimpleScorer, BeliefEngine
 from bioexp.util import pkldump, pklload
 from bioexp.curation.process_curations import \
             get_correctness_data, load_curated_pkl_files, get_full_curations, \
-            reader_input
+            reader_input, get_raw_curations
 
 
 def get_multi_reader_curations(reader_curations, reader_input,
@@ -146,6 +146,15 @@ def get_combined_curations(source_list, stmts_by_hash, filename,
     full_curations = get_full_curations(source_list, stmts_by_hash,
                                         allow_incomplete=allow_incomplete,
                                         allow_incomplete_correct=True)
+    # Build up a dictionary of hashes associated with each curation tag
+    stmt_tags_by_hash = defaultdict(list)
+    for source_tag in source_list:
+        db_curations = get_raw_curations([source_tag], stmts_by_hash)
+        db_cur_hashes = list(db_curations.keys())
+        for cur_hash in db_cur_hashes:
+            stmt_tags_by_hash[cur_hash].append(source_tag)
+    stmt_tags_by_hash = dict(stmt_tags_by_hash)
+
     for ix, (stmt_hash, corrects) in enumerate(full_curations.items()):
         # Get the statement
         stmt = stmts_by_hash[stmt_hash]
@@ -186,6 +195,11 @@ def get_combined_curations(source_list, stmts_by_hash, filename,
                      'agB_ns': agB_ns,
                      'agB_id': agB_id,
                      'correct': corr}
+        # Add columns indicating which curation samples included this stmt
+        for source_tag in source_list:
+            has_tag = int(source_tag in stmt_tags_by_hash[stmt_hash])
+            cur_entry[source_tag] = has_tag
+
         # Add this entry to the dataset
         cur_entry.update(source_entry)
         cur_data.append(cur_entry)
