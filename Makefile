@@ -29,7 +29,8 @@ fig4: \
     $(OUTPUT)/fig4_reach_model_fits.pdf \
     $(OUTPUT)/fig4_sparser_model_fits.pdf \
     $(OUTPUT)/fig4_medscan_model_fits.pdf \
-    $(OUTPUT)/curation_dataset.pkl
+    $(OUTPUT)/curation_dataset.pkl \
+    $(OUTPUT)/fig4_ipynb_overlap_upset_linear
 
 fig5: $(OUTPUT)/reach_complexes_raw.tsv
 
@@ -142,6 +143,11 @@ $(OUTPUT)/curation_dataset.pkl: $(DATA)/bioexp_asmb_preassembled.pkl
 # $(OUTPUT)/curation_dataset.pkl \
 # $(DATA)/bioexp_asmb_preassembled.pkl
 # (Check other dependencies in the notebook)
+
+$(OUTPUT)/fig4_ipynb_overlap_upset_linear: \
+        $(OUTPUT)/curation_dataset.pkl $(DATA)/bioexp_asmb_preassembled.pkl
+	jupyter nbconvert --to notebook --ExecutePreprocessor.timeout=180 \
+        --execute notebooks/Reader_overlap_and_error_analysis.ipynb
 
 
 # FIGURE 5 -------------------------------------------------------------------
