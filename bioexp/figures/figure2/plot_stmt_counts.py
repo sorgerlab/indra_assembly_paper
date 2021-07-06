@@ -13,9 +13,7 @@ def plot_steps_before_preassembly(data):
         ('filter_grounded_only', 'Filter ungrounded'),
         ('filter_genes_only', 'Filter to genes only'),
         ('filter_human_only', 'Filter to human only'),
-        ('expand_families', 'Expand families/cplxes'),
-        ('filter_gene_list', 'Filter to gene list'),
-        ('map_sequence', 'Map sites of PTMs'),
+        ('asmb_map_sequence', 'Map sites of PTMs'),
         )
     # Put source of greatest numbers of statements at the bottom of the stack
     source_order = ['reach', 'sparser', 'biopax', 'signor', 'bel']
@@ -32,6 +30,7 @@ def plot_steps_before_preassembly(data):
         last_val = 0
         for source in source_order:
             col = source_colors[source]
+            print(data, step, source)
             count = int(data[step][(source,)])
             plt.bar(ix, count, bottom=last_val, color=col)
             last_val += count
@@ -119,7 +118,7 @@ if __name__ == '__main__':
 
     # Read the statement source data from the TSV file
     data = defaultdict(dict)
-    tsv_file = join(data_dir, 'fig2_stmt_counts.txt')
+    tsv_file = join(build_dir, 'fig2_stmt_counts.txt')
     with open(tsv_file, 'rt') as f:
         for line in f.readlines():
             entries = line.strip().split('\t')
@@ -136,5 +135,5 @@ if __name__ == '__main__':
 
     # Make plot for steps after preassembly, where bars are stratified
     # by combinations of sources
-    plot_steps_after_preassembly(data)
+    # plot_steps_after_preassembly(data)
 

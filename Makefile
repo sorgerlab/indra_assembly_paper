@@ -93,13 +93,13 @@ $(OUTPUT)/fig1_pc_egfr_mapk1_paths.txt: $(OUTPUT)/pc_multidigraph.pkl \
 # FIGURE 2 -------------------------------------------------------------------
 
 $(OUTPUT)/fig2_evidence_distribution.pdf: \
-        $(DATA)/bioexp_preassembled.pkl \
+        $(DATA)/bioexp_asmb_preassembled.pkl \
         $(FIG2)/preassembly_stats.py
 	python -m bioexp.figures.figure2.preassembly_stats
 
 $(OUTPUT)/fig2_stmt_counts_before_pa.pdf: \
-        $(DATA)/bioexp_preassembled.pkl \
-        $(DATA)/fig2_stmt_counts.txt \
+        $(DATA)/bioexp_asmb_preassembled.pkl \
+        $(OUTPUT)/fig2_stmt_counts.txt \
         $(FIG2)/plot_stmt_counts.py
 	python -m bioexp.figures.figure2.plot_stmt_counts
 

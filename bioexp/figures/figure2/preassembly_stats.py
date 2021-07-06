@@ -53,7 +53,7 @@ if __name__ == '__main__':
     data_dir = join(dirname(__file__), '..', '..', '..', 'data')
     build_dir = based
 
-    stmts_file = join(data_dir, 'bioexp_preassembled.pkl')
+    stmts_file = join(data_dir, 'bioexp_asmb_preassembled.pkl')
 
     # Load the pickle
     print("Loading statements from %s" % stmts_file)
