@@ -5,16 +5,9 @@ import pickle
 from collections import Counter
 from bioexp.util import prefixed_file
 
-stmts_file = join(dirname(abspath(__file__)), '..', '..', 'data',
-                  'bioexp_asmb_preassembled.pkl')
 
 
-with open(stmts_file, 'rb') as fh:
-    print(f'Loading {stmts_file}')
-    stmts = pickle.load(fh)
-
-
-def get_reader_ev_pmid_distro(reader):
+def get_reader_ev_pmid_distro(reader, stmts):
     pmid_cnt = []
     ev_cnt = []
     for stmt in stmts:
@@ -38,9 +31,9 @@ def get_reader_ev_pmid_distro(reader):
     return ev_distro_norm, pmid_distro_norm
 
 
-def dump_jsons(reader):
+def dump_jsons(reader, stmts):
     print(f'Dumping distributions for {reader}')
-    ev_distro_norm, pmid_distro_norm = get_reader_ev_pmid_distro(reader)
+    ev_distro_norm, pmid_distro_norm = get_reader_ev_pmid_distro(reader, stmts)
 
     ev_file = prefixed_file(f'{reader}_stmt_evidence_distribution', 'json')
     print(f'Dumping into {ev_file}')
@@ -54,6 +47,13 @@ def dump_jsons(reader):
 
 
 if __name__ == '__main__':
+    stmts_file = join(dirname(abspath(__file__)), '..', '..', 'data',
+                      'bioexp_asmb_preassembled.pkl')
+
+    with open(stmts_file, 'rb') as fh:
+        print(f'Loading {stmts_file}')
+        stmts = pickle.load(fh)
+
     readers = sys.argv[1:]
     for reader in readers:
-        dump_jsons(reader)
+        dump_jsons(reader, stmts)
