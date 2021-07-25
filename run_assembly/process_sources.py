@@ -57,7 +57,7 @@ def process_pathway_commons(data_folder):
     # Now filter out phosphosite
     stmts = [s for s in bp.statements if
              (s.evidence[0].annotations.get('source_sub_id')
-              != 'phosphositeplus')]
+              != 'phosphosite')]
     # Print some source stats as a sanity check
     counter = Counter([s.evidence[0].annotations.get('source_sub_id')
                        for s in bp.statements])
