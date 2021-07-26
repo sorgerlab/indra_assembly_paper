@@ -65,7 +65,7 @@ if __name__ == '__main__':
 
     # Get/plot evidence distribution
     ev_counts = [len(s.evidence) for s in stmts]
-    plot_frequencies(ev_counts, 'Mentions',
+    plot_frequencies(ev_counts, 'Number of evidences',
                      'Number of statements', 'fig2_evidence_distribution.pdf',
                      plot_type='dot', log_x=True, log_y=True)
 
