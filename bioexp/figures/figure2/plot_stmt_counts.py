@@ -36,12 +36,12 @@ def plot_steps_before_preassembly(data):
             last_val += count
     _, step_labels = zip(*step_order)
     plt.xticks(range(len(step_labels)), step_labels, rotation='vertical')
-    plt.ylabel(r'Statements ($\times10^{-6}$)')
+    plt.ylabel(r'Statements ($\times10^{6}$)')
     ax = fig.gca()
     format_axis(ax, tick_padding=2)
     plt.subplots_adjust(left=0.18, bottom=0.53, right=0.96, top=0.97)
-    plt.yticks([0, 2000000, 4000000, 6000000, 8000000],
-               [0, 2, 4, 6, 8])
+    plt.yticks([0, 2000000, 4000000, 6000000],
+               [0, 2, 4, 6])
     plt.show()
     filename = join(build_dir, 'fig2_stmt_counts_before_pa.pdf')
     plt.savefig(filename)
