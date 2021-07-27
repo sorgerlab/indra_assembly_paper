@@ -41,14 +41,18 @@ if __name__ == '__main__':
                 # We have to do some special handling for CBN here, if the
                 # statements are already assembled, we have to look at
                 # evidence prior UUID to check if they are originally from CBN
-                if filename == 'asmb_preassembled':
-                    if set(e.annotations.get('prior_uuids', set())) & cbn_uuids:
-                        source_api = 'cbn'
-                # Otherwise we look at the statement's UUID (only available
-                # here before assembly) to see if it's originally from CBN
-                else:
-                    if s.uuid in cbn_uuids:
-                        source_api = 'cbn'
+                if filename == 'cbn':
+                    source_api = 'cbn'
+                elif e.source_api == 'bel' and filename != 'bel':
+                    if filename == 'asmb_preassembled':
+                        if set(e.annotations.get('prior_uuids', set())) & \
+                                cbn_uuids:
+                            source_api = 'cbn'
+                    # Otherwise we look at the statement's UUID (only available
+                    # here before assembly) to see if it's originally from CBN
+                    else:
+                        if s.uuid in cbn_uuids:
+                            source_api = 'cbn'
                 # We can now check if the source sub ID is phosphositeplus
                 # which we need to separate from biopax
                 if e.annotations.get('source_sub_id') == 'phosphositeplus':
