@@ -27,12 +27,33 @@ if __name__ == '__main__':
             stmts = ac.load_statements('../data/bioexp_%s.pkl' % filename)
         else:
             stmts = pklload(filename)
+        # We get the CBN UUIDs here so we can figure out later which
+        # evidences are from CBN later
+        if filename == 'cbn':
+            cbn_uuids = {stmt.uuid for stmt in stmts}
         # Tabulate evidence source combinations
         ev_types = []
         for s in stmts:
             source_apis = []
             for e in s.evidence:
-                source_apis.append(e.source_api)
+                # We use the evidence source_api by default
+                source_api = e.source_api
+                # We have to do some special handling for CBN here, if the
+                # statements are already assembled, we have to look at
+                # evidence prior UUID to check if they are originally from CBN
+                if filename == 'asmb_preassembled':
+                    if set(e.annotations.get('prior_uuids', set())) & cbn_uuids:
+                        source_api = 'cbn'
+                # Otherwise we look at the statement's UUID (only available
+                # here before assembly) to see if it's originally from CBN
+                else:
+                    if s.uuid in cbn_uuids:
+                        source_api = 'cbn'
+                # We can now check if the source sub ID is phosphositeplus
+                # which we need to separate from biopax
+                if e.annotations.get('source_sub_id') == 'phosphositeplus':
+                    source_api = 'phosphosite'
+                source_apis.append(source_api)
             source_apis = frozenset(source_apis)
             ev_types.append(source_apis)
         ev_ctr = Counter(ev_types)
