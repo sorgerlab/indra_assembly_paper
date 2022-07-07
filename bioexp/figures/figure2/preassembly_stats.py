@@ -71,7 +71,7 @@ if __name__ == '__main__':
 
     # Supported-by distribution
     supp_by_counts = [len(s.supported_by) for s in stmts]
-    plot_frequencies(supp_by_counts, 'Supporting statements',
+    plot_frequencies(supp_by_counts, 'Statements refined',
                      'Number of statements',
                      'fig2_supported_by_distribution.pdf',
                      plot_type='bar', log_y=True)
@@ -81,7 +81,8 @@ if __name__ == '__main__':
     supp_depths_stmts = sorted(supp_depths_stmts, key=lambda x: x[1],
                                reverse=True)
     supp_depths = [t[1] for t in supp_depths_stmts]
-    plot_frequencies(supp_depths, 'Depth of support', 'Number of statements',
+    plot_frequencies(supp_depths, 'Depth of statements refined',
+                     'Number of statements',
                      'fig2_depths_of_support.pdf',
                      plot_type='bar', log_y=True)
     num_graphs = 30
