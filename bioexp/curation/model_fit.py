@@ -28,15 +28,16 @@ def likelihood(position, mf):
 
 
 class ModelFit(object):
-    def __init__(self, model, data):
+    def __init__(self, model, data, flat_data=False):
         self.model = model
         self.data = data
         self.data_stmt = {}
         # Convert at the evidence level to data at the stmt level and store
-        for num_ev in data.keys():
-            stmt_corrects = list(np.array(np.array(data[num_ev]) >= 1,
-                                          dtype=int))
-            self.data_stmt[num_ev] = stmt_corrects
+        if not flat_data:
+            for num_ev in data.keys():
+                stmt_corrects = list(np.array(np.array(data[num_ev]) >= 1,
+                                              dtype=int))
+                self.data_stmt[num_ev] = stmt_corrects
 
     def data_table(self):
         # Print table of results before plotting

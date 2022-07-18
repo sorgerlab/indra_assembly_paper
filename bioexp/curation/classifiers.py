@@ -73,7 +73,7 @@ class BeliefModel(object):
             d[num_ev].append(correct)
         return d
 
-    def fit(self, x_train, y_train, y_target=1):
+    def fit(self, x_train, y_train, y_target=1, sample_weight=None):
         data = np.column_stack([x_train, y_train])
         self.y_ix = data.shape[1]-1
         self.y_target = y_target
@@ -86,7 +86,7 @@ class BeliefModel(object):
             # Convert the dataframe into a dictionary of corrects and
             # incorrects keyed by numbers of evidences
             print(reader, r_df.shape)
-            model = OrigBeliefStmt()
+            model = OrigBeliefStmt(weights=sample_weight)
             mf = ModelFit(model, correct_by_num_ev)
             with Pool() as pool:
                 sampler = ens_sample(mf, self.nwalkers, self.burn_steps,

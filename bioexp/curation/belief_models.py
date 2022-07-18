@@ -296,3 +296,34 @@ class OrigBeliefStmt(OrigBelief):
 class OrigBeliefEv(OrigBelief):
     def log_likelihood(self, *args):
         return self.log_likelihood_ev(*args)
+
+
+# ORIGINAL BELIEF MODEL with sklearn-style statement weights ------------
+"""
+class OrigBeliefStmtSampleWt(OrigBeliefStmt):
+    def __init__(self, weights):
+        # Modify constructor to make sure weights are not optional
+        super(OrigBeliefStmtSampleWt, self).__init__(['Rand', 'Syst'], weights)
+
+    def log_likelihood_stmt(self, params, correct_by_num_ev, args):
+        pr, ps = params
+        ll = 0
+        #if len(self.weights) != len(correct_by_num_ev):
+        #    raise ValueError("Weight vector must correspond to the stmt data.")
+        import ipdb; ipdb.set_trace()
+        for ix, (num_ev, num_corrects) in enumerate(correct_by_num_ev.items()):
+            sample_wt = self.weights[ix]
+            ll_n = 0
+            for num_correct in num_corrects:
+                if num_correct == 0:
+                    ll_n += np.log(1 - self.belief(num_ev, pr, ps))
+                else:
+                    ll_n += np.log(self.belief(num_ev, pr, ps))
+            ll += self.weights[num_ev] * ll_n * len(correct_by_num_ev)
+
+            else:
+                ll += ll_n
+        return ll
+
+
+"""
