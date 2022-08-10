@@ -88,9 +88,9 @@ class ModelFit(object):
             plt.xticks(bin_centers)
             ax = plt.gca()
             ax.set_xticklabels(bin_counts[:-1])
-        fig.suptitle(title)
+        #fig.suptitle(title)
         plt.tight_layout()
-        plt.show()
+        #plt.show()
 
     def get_map_params(self, sampler):
         map_ix = np.argmax(sampler.flatlnprobability)
