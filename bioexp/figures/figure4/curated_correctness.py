@@ -32,23 +32,24 @@ def plot_correctness_curve(reader, show_ylabel=True, allow_incomplete=False):
 
     # -- Plot statement correctness curve --
     #set_fig_params()
-    plt.figure(figsize=(1, 1.25), dpi=150)
+    plt.figure(figsize=(1.15, 1.25), dpi=150)
     plt.errorbar(num_evs, means, yerr=std, fmt='bo-', ls='none',
                  label='Empirical mean correctness', linewidth=1, markersize=3)
     # Legends, labels, etc.
-    plt.ylim(0, 1)
+    plt.ylim(0, 1.1)
     #plt.grid(True)
     plt.xticks(num_evs)
     plt.xlabel('Mentions')
     if show_ylabel:
         plt.yticks([0, 0.25, 0.5, 0.75, 1.0])
-        plt.ylabel('Precision')
+        plt.ylabel('Empirical precision')
     else:
         plt.yticks([])
     #plt.legend(loc='lower right', fontsize=fontsize)
     reader_name = reader[0].upper() + reader[1:]
-    plt.title(reader, fontsize=fontsize)
-    plt.subplots_adjust(left=0.214, right=0.94, bottom=0.23, top=0.826)
+    print("Setting title", reader_name)
+    plt.title(reader_name, fontsize=fontsize)
+    plt.subplots_adjust(left=0.3, right=0.94, bottom=0.23, top=0.826)
     ax = plt.gca()
     format_axis(ax)
     plt.savefig(join(output_dir, f'fig4_{reader}_curve.pdf'))
@@ -85,7 +86,7 @@ def dataset_table():
 if __name__ == '__main__':
     # Get output directory
     output_dir = sys.argv[1]
-    plot_correctness_curve('reach', allow_incomplete=True)
+    plot_correctness_curve('reach', show_ylabel=True, allow_incomplete=True)
     plot_correctness_curve('sparser', show_ylabel=False, allow_incomplete=True)
     plot_correctness_curve('medscan', show_ylabel=False, allow_incomplete=True)
     # Make the dataset table 
