@@ -8,7 +8,7 @@ from bioexp.curation.group_curations import reader_input
 from bioexp.curation.process_curations import get_curations_for_reader, \
                                     reader_input, load_curated_pkl_files, \
                                     get_correctness_data
-from bioexp.util import set_fig_params, format_axis, fontsize
+from bioexp.util import set_fig_params, format_axis, fontsize, reader_name_map
 
 
 def plot_correctness_curve(reader, show_ylabel=True, allow_incomplete=False):
@@ -46,7 +46,8 @@ def plot_correctness_curve(reader, show_ylabel=True, allow_incomplete=False):
     else:
         plt.yticks([])
     #plt.legend(loc='lower right', fontsize=fontsize)
-    reader_name = reader[0].upper() + reader[1:]
+    reader_name = reader_name_map[reader]
+
     print("Setting title", reader_name)
     plt.title(reader_name, fontsize=fontsize)
     plt.subplots_adjust(left=0.3, right=0.94, bottom=0.23, top=0.826)
