@@ -18,6 +18,15 @@ basen = config['basename']
 based = config['basedir']
 
 
+reader_name_map = {
+        'reach': 'Reach',
+        'sparser': 'Sparser',
+        'trips': 'TRIPS',
+        'rlimsp': 'RLIMS-P',
+        'medscan': 'MedScan',
+}
+
+
 fontsize=7
 red = '#e41a1c'
 blue = '#377eb8'
