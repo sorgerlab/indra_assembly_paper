@@ -18,7 +18,7 @@ basen = config['basename']
 based = config['basedir']
 
 
-fontsize=6
+fontsize=7
 red = '#e41a1c'
 blue = '#377eb8'
 green = '#4daf4a'
