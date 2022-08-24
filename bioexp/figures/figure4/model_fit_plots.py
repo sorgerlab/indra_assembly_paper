@@ -39,3 +39,9 @@ if __name__ == '__main__':
     bel_res[1].plot_ev_fit(bel_res[2],
                            f'{reader.upper()} statements, Belief model')
     plt.savefig(join(output_dir, f'fig4_{reader}_ev_fit_belief.pdf'))
+
+    # Plot evidence distribution fits
+    bin_res[1].plot_ev_fit(bin_res[2],
+                           f'{reader.upper()} statements, Binomial model')
+    plt.savefig(join(output_dir, f'fig4_{reader}_ev_fit_bin.pdf'))
+

@@ -26,7 +26,9 @@ sample_info_file = join(basedir, 'sample_info.csv')
 rnai_file = join(basedir, 'D2_combined_gene_dep_scores.csv')
 
 # Download from https://ndownloader.figshare.com/files/27902046
-crispr_file = join(basedir, 'Achilles_gene_effect.csv')
+#crispr_file = join(basedir, 'Achilles_gene_effect.csv')
+crispr_file = join(basedir, 'CRISPR_gene_effect.csv')
+
 ####
 
 
