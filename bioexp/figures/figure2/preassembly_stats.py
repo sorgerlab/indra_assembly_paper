@@ -53,7 +53,7 @@ if __name__ == '__main__':
     data_dir = join(dirname(__file__), '..', '..', '..', 'data')
     build_dir = based
 
-    stmts_file = join(data_dir, 'bioexp_preassembled.pkl')
+    stmts_file = join(data_dir, 'bioexp_asmb_preassembled.pkl')
 
     # Load the pickle
     print("Loading statements from %s" % stmts_file)
@@ -65,13 +65,13 @@ if __name__ == '__main__':
 
     # Get/plot evidence distribution
     ev_counts = [len(s.evidence) for s in stmts]
-    plot_frequencies(ev_counts, 'Mentions',
+    plot_frequencies(ev_counts, 'Number of evidences',
                      'Number of statements', 'fig2_evidence_distribution.pdf',
                      plot_type='dot', log_x=True, log_y=True)
 
     # Supported-by distribution
     supp_by_counts = [len(s.supported_by) for s in stmts]
-    plot_frequencies(supp_by_counts, 'Supporting statements',
+    plot_frequencies(supp_by_counts, 'Statements refined',
                      'Number of statements',
                      'fig2_supported_by_distribution.pdf',
                      plot_type='bar', log_y=True)
@@ -81,7 +81,8 @@ if __name__ == '__main__':
     supp_depths_stmts = sorted(supp_depths_stmts, key=lambda x: x[1],
                                reverse=True)
     supp_depths = [t[1] for t in supp_depths_stmts]
-    plot_frequencies(supp_depths, 'Depth of support', 'Number of statements',
+    plot_frequencies(supp_depths, 'Depth of statements refined',
+                     'Number of statements',
                      'fig2_depths_of_support.pdf',
                      plot_type='bar', log_y=True)
     num_graphs = 30

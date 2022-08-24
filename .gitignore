@@ -1,3 +1,6 @@
+.idea
+.ipynb_checkpoints
+trips_output.xml
 build
 run_assembly/output
 networks

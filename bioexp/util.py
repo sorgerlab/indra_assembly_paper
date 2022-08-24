@@ -18,11 +18,24 @@ basen = config['basename']
 based = config['basedir']
 
 
-fontsize=6
+reader_name_map = {
+        'reach': 'Reach',
+        'sparser': 'Sparser',
+        'trips': 'TRIPS',
+        'rlimsp': 'RLIMS-P',
+        'medscan': 'MedScan',
+}
+
+
+fontsize=7
 red = '#e41a1c'
 blue = '#377eb8'
 green = '#4daf4a'
 purple = '#984ea3'
+black = '#000000'
+yellow = '#ffff00'
+orange = '#ffa500'
+gray = '#989898'
 
 
 # This makes it easier to make standardized pickle file paths
