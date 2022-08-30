@@ -1,7 +1,7 @@
 OUTPUT := output
 DATA := data
 
-all: assembly explanation
+all: assembly
 
 assembly: \
     $(OUTPUT)/bioexp_asmb_preassembled.pkl \
@@ -16,14 +16,8 @@ reading_only_assembly: \
     $(OUTPUT)/bioexp_sparser_only_preassembled.pkl \
     $(OUTPUT)/bioexp_trips_only_preassembled.pkl
 
-explanation: \
-    $(OUTPUT)/bioexp_reduce_mods.pkl \
-    $(OUTPUT)/bioexp_db_only_reduce_mods.pkl \
-    $(OUTPUT)/bioexp_reading_only_reduce_mods.pkl
-
 db_only: \
-    $(OUTPUT)/bioexp_db_only_asmb_preassembled.pkl \
-    $(OUTPUT)/bioexp_db_only_reduce_mods.pkl
+    $(OUTPUT)/bioexp_db_only_asmb_preassembled.pkl
 
 stats: $(OUTPUT)/fig2_stmt_counts.txt
 
@@ -121,65 +115,6 @@ $(OUTPUT)/bioexp_asmb_preassembled.pkl: \
 	python -u assemble_sources.py preassembled \
         asmb_map_sequence asmb_preassembled
 
-# ---------------------------
-# Branch -> Explanation/modeling (expand families)
-# Expand families
-$(OUTPUT)/bioexp_expand_families.pkl: $(OUTPUT)/bioexp_filter_human_only.pkl
-	python -u assemble_sources.py expand_families \
-        filter_human_only expand_families
-
-# Filter to gene list
-$(OUTPUT)/bioexp_filter_gene_list.pkl: \
-        $(OUTPUT)/bioexp_expand_families.pkl \
-        ../build/prior_genes.txt
-	python -u assemble_sources.py filter_gene_list \
-        expand_families filter_gene_list
-
-# Map sequences
-$(OUTPUT)/bioexp_map_sequence.pkl: $(OUTPUT)/bioexp_filter_gene_list.pkl
-	python -u assemble_sources.py map_sequence filter_gene_list map_sequence
-
-# Run preassembly
-$(OUTPUT)/bioexp_preassembled.pkl: $(OUTPUT)/bioexp_map_sequence.pkl
-	python -u assemble_sources.py preassembled map_sequence preassembled
-
-# Filter out high belief statements
-$(OUTPUT)/bioexp_filter_belief.pkl: $(OUTPUT)/bioexp_preassembled.pkl
-	python -u assemble_sources.py filter_belief preassembled filter_belief
-
-# Filter out all stmts except top-level
-$(OUTPUT)/bioexp_filter_top_level.pkl: $(OUTPUT)/bioexp_filter_belief.pkl
-	python -u assemble_sources.py filter_top_level \
-        filter_belief filter_top_level
-
-# Filter phosphorylations to stmts with known kinases as enzymes
-$(OUTPUT)/bioexp_filter_enzyme_kinase.pkl: $(OUTPUT)/bioexp_filter_top_level.pkl
-	python -u assemble_sources.py filter_enzyme_kinase \
-        filter_top_level filter_enzyme_kinase
-
-# Filter out non-phos mods with kinases as enzymes
-$(OUTPUT)/bioexp_filter_mod_nokinase.pkl: \
-        $(OUTPUT)/bioexp_filter_enzyme_kinase.pkl
-	python -u assemble_sources.py filter_mod_nokinase \
-        filter_enzyme_kinase filter_mod_nokinase
-
-# Filter out non-transcription factors transcribing proteins
-$(OUTPUT)/bioexp_filter_transcription_factor.pkl: \
-        $(OUTPUT)/bioexp_filter_mod_nokinase.pkl
-	python -u assemble_sources.py filter_transcription_factor \
-        filter_mod_nokinase filter_transcription_factor
-
-# Infer out redundant activities
-$(OUTPUT)/bioexp_reduce_activities.pkl: \
-        $(OUTPUT)/bioexp_filter_transcription_factor.pkl
-	python -u assemble_sources.py reduce_activities \
-        filter_transcription_factor reduce_activities
-
-# Infer out redundant mods
-$(OUTPUT)/bioexp_reduce_mods.pkl: $(OUTPUT)/bioexp_reduce_activities.pkl
-	python -u assemble_sources.py reduce_mods \
-        reduce_activities reduce_mods
-
 
 # READING-ONLY ASSEMBLY PIPELINE (for evaluation) ----------------------------
 
@@ -242,67 +177,6 @@ $(OUTPUT)/bioexp_reading_only_asmb_preassembled.pkl: \
 	python -u assemble_sources.py preassembled \
         reading_only_asmb_map_sequence reading_only_asmb_preassembled
 
-# ---------------------------
-# Branch -> Explanation/modeling (expand families)
-# Expand families
-$(OUTPUT)/bioexp_reading_only_expand_families.pkl: \
-        $(OUTPUT)/bioexp_reading_only_filter_human_only.pkl
-	python -u assemble_sources.py expand_families \
-        reading_only_filter_human_only reading_only_expand_families
-
-# Map sequences
-$(OUTPUT)/bioexp_reading_only_map_sequence.pkl: \
-        $(OUTPUT)/bioexp_reading_only_expand_families.pkl
-	python -u assemble_sources.py map_sequence \
-        reading_only_expand_families reading_only_map_sequence
-
-# Run preassembly
-$(OUTPUT)/bioexp_reading_only_preassembled.pkl: \
-        $(OUTPUT)/bioexp_reading_only_map_sequence.pkl
-	python -u assemble_sources.py preassembled \
-        reading_only_map_sequence reading_only_preassembled
-
-# Filter out high belief statements
-$(OUTPUT)/bioexp_reading_only_filter_belief.pkl: \
-        $(OUTPUT)/bioexp_reading_only_preassembled.pkl
-	python -u assemble_sources.py filter_belief \
-        reading_only_preassembled reading_only_filter_belief
-
-# Filter out all stmts except top-level
-$(OUTPUT)/bioexp_reading_only_filter_top_level.pkl: \
-        $(OUTPUT)/bioexp_reading_only_filter_belief.pkl
-	python -u assemble_sources.py filter_top_level \
-        reading_only_filter_belief reading_only_filter_top_level
-
-# Filter phosphorylations to stmts with known kinases as enzymes
-$(OUTPUT)/bioexp_reading_only_filter_enzyme_kinase.pkl: \
-        $(OUTPUT)/bioexp_reading_only_filter_top_level.pkl
-	python -u assemble_sources.py filter_enzyme_kinase \
-        reading_only_filter_top_level reading_only_filter_enzyme_kinase
-
-# Filter out non-phos mods with kinases as enzymes
-$(OUTPUT)/bioexp_reading_only_filter_mod_nokinase.pkl: \
-        $(OUTPUT)/bioexp_reading_only_filter_enzyme_kinase.pkl
-	python -u assemble_sources.py filter_mod_nokinase \
-        reading_only_filter_enzyme_kinase reading_only_filter_mod_nokinase
-
-# Filter out non-transcription factors transcribing proteins
-$(OUTPUT)/bioexp_reading_only_filter_transcription_factor.pkl: \
-        $(OUTPUT)/bioexp_reading_only_filter_mod_nokinase.pkl
-	python -u assemble_sources.py filter_transcription_factor \
-       reading_only_filter_mod_nokinase reading_only_filter_transcription_factor
-
-# Infer out redundant activities
-$(OUTPUT)/bioexp_reading_only_reduce_activities.pkl: \
-        $(OUTPUT)/bioexp_reading_only_filter_transcription_factor.pkl
-	python -u assemble_sources.py reduce_activities \
-        reading_only_filter_transcription_factor reading_only_reduce_activities
-
-# Infer out redundant mods
-$(OUTPUT)/bioexp_reading_only_reduce_mods.pkl: \
-        $(OUTPUT)/bioexp_reading_only_reduce_activities.pkl
-	python -u assemble_sources.py reduce_mods \
-        reading_only_reduce_activities reading_only_reduce_mods
 
 # SOURCE SPECIFIC ASSEMBLY PIPELINES (for comparison to all reading) ----------
 
@@ -414,68 +288,6 @@ $(OUTPUT)/bioexp_db_only_asmb_preassembled.pkl: \
 	python -u assemble_sources.py preassembled \
         db_only_asmb_map_sequence db_only_asmb_preassembled
 
-# ---------------------------
-# Branch -> Explanation/modeling (expand families)
-# Expand families
-$(OUTPUT)/bioexp_db_only_expand_families.pkl: \
-        $(OUTPUT)/bioexp_db_only_filter_human_only.pkl
-	python -u assemble_sources.py expand_families \
-        db_only_filter_human_only db_only_expand_families
-
-# Map sequences
-$(OUTPUT)/bioexp_db_only_map_sequence.pkl: \
-        $(OUTPUT)/bioexp_db_only_expand_families.pkl
-	python -u assemble_sources.py map_sequence \
-        db_only_expand_families db_only_map_sequence
-
-# Run preassembly
-$(OUTPUT)/bioexp_db_only_preassembled.pkl: \
-        $(OUTPUT)/bioexp_db_only_map_sequence.pkl
-	python -u assemble_sources.py preassembled \
-        db_only_map_sequence db_only_preassembled
-
-# Filter out high belief statements
-$(OUTPUT)/bioexp_db_only_filter_belief.pkl: \
-        $(OUTPUT)/bioexp_db_only_preassembled.pkl
-	python -u assemble_sources.py filter_belief \
-        db_only_preassembled db_only_filter_belief
-
-# Filter out all stmts except top-level
-$(OUTPUT)/bioexp_db_only_filter_top_level.pkl: \
-        $(OUTPUT)/bioexp_db_only_filter_belief.pkl
-	python -u assemble_sources.py filter_top_level \
-        db_only_filter_belief db_only_filter_top_level
-
-# Filter phosphorylations to stmts with known kinases as enzymes
-$(OUTPUT)/bioexp_db_only_filter_enzyme_kinase.pkl: \
-        $(OUTPUT)/bioexp_db_only_filter_top_level.pkl
-	python -u assemble_sources.py filter_enzyme_kinase \
-        db_only_filter_top_level db_only_filter_enzyme_kinase
-
-# Filter out non-phos mods with kinases as enzymes
-$(OUTPUT)/bioexp_db_only_filter_mod_nokinase.pkl: \
-        $(OUTPUT)/bioexp_db_only_filter_enzyme_kinase.pkl
-	python -u assemble_sources.py filter_mod_nokinase \
-        db_only_filter_enzyme_kinase db_only_filter_mod_nokinase
-
-# Filter out non-transcription factors transcribing proteins
-$(OUTPUT)/bioexp_db_only_filter_transcription_factor.pkl: \
-        $(OUTPUT)/bioexp_db_only_filter_mod_nokinase.pkl
-	python -u assemble_sources.py filter_transcription_factor \
-        db_only_filter_mod_nokinase db_only_filter_transcription_factor
-
-# Infer out redundant activities
-$(OUTPUT)/bioexp_db_only_reduce_activities.pkl: \
-        $(OUTPUT)/bioexp_db_only_filter_transcription_factor.pkl
-	python -u assemble_sources.py reduce_activities \
-        db_only_filter_transcription_factor db_only_reduce_activities
-
-# Infer out redundant mods
-$(OUTPUT)/bioexp_db_only_reduce_mods.pkl: \
-        $(OUTPUT)/bioexp_db_only_reduce_activities.pkl
-	python -u assemble_sources.py reduce_mods \
-        db_only_reduce_activities db_only_reduce_mods
-
 
 # -- ANALYSIS/STATISTICS -----------------------------------------------------
 
@@ -499,17 +311,8 @@ $(OUTPUT)/fig2_stmt_counts.txt: \
         $(OUTPUT)/bioexp_filter_grounded_only.pkl \
         $(OUTPUT)/bioexp_filter_genes_only.pkl \
         $(OUTPUT)/bioexp_filter_human_only.pkl \
-        $(OUTPUT)/bioexp_expand_families.pkl \
-        $(OUTPUT)/bioexp_filter_gene_list.pkl \
         $(OUTPUT)/bioexp_map_sequence.pkl \
-        $(OUTPUT)/bioexp_preassembled.pkl \
-        $(OUTPUT)/bioexp_filter_belief.pkl \
-        $(OUTPUT)/bioexp_filter_top_level.pkl \
-        $(OUTPUT)/bioexp_filter_enzyme_kinase.pkl \
-        $(OUTPUT)/bioexp_filter_mod_nokinase.pkl \
-        $(OUTPUT)/bioexp_filter_transcription_factor.pkl \
-        $(OUTPUT)/bioexp_reduce_activities.pkl \
-        $(OUTPUT)/bioexp_reduce_mods.pkl
+        $(OUTPUT)/bioexp_preassembled.pkl
 	python -u stmt_counts.py
 
 $(OUTPUT)/stmt_overlap_reading.pdf: \

@@ -36,8 +36,6 @@ fig4: \
 
 fig5: $(OUTPUT)/reach_complexes_raw.tsv
 
-korkut_pysb: $(OUTPUT)/bioexp_db_only_paths.pkl
-
 belief_fitting: $(OUTPUT)/bioexp_multi_src_results.pkl
 
 # Change this later to point to the right stmt pickles
@@ -88,13 +86,6 @@ $(OUTPUT)/bioexp_reach_sample_uncurated.pkl: $(DATA)/bioexp_asmb_preassembled.pk
 	python -m bioexp.curation.sample $< 200 1 10 $(OUTPUT) \
                              reach sparser rlimsp isi medscan trips
 
-# FIGURE 1 -------------------------------------------------------------------
-
-# Example pathfinding output over Pathway Commons
-$(OUTPUT)/fig1_pc_egfr_mapk1_paths.txt: $(OUTPUT)/pc_multidigraph.pkl \
-                                       $(FIG1)/find_paths.py
-	python $(FIG1)/find_paths.py find_paths 
-
 # FIGURE 2 -------------------------------------------------------------------
 
 $(OUTPUT)/fig2_evidence_distribution.pdf: \
@@ -136,10 +127,6 @@ $(OUTPUT)/fig4_%_model_fits.pdf: \
         $(OUTPUT)/fig4_model_fit_results_%.pkl
 	python -m bioexp.figures.figure4.model_fit_plots $< $* $(OUTPUT)
 
-# Belief surface
-$(OUTPUT)/fig4_belief_surface.pdf: $(FIG4)/belief_surface.py
-	python -m bioexp.figures.figure4.belief_surface
-
 # Compiled curation dataset for training sklearn models
 $(OUTPUT)/curation_dataset.pkl: $(DATA)/bioexp_asmb_preassembled.pkl
 	python -m bioexp.curation.group_curations $(OUTPUT)
@@ -162,54 +149,6 @@ $(OUTPUT)/reach_complexes_raw.tsv: $(DATA)/bioexp_reach.pkl
                              $(DATA)/bioexp_reach.pkl \
                              $(OUTPUT)/reach_complexes_raw.tsv
 
-# KORKUT STMTS TO CHECK ------------------------------------------------------
-$(OUTPUT)/bioexp_data_stmts.pkl: $(DATA)/Korkut\ et\ al.\ Data\ 05122017.xlsx
-	python -u -m bioexp.explanation.make_stmts_for_checking $@
-
-# KORKUT_PYSB ----------------------------------------------------------------
-# Building the Pysb Model
-$(OUTPUT)/bioexp_db_only_before_pysb.pkl: \
-        $(OUTPUT)/bioexp_db_only_reduce_mods.pkl \
-        $(OUTPUT)/prior_genes.txt \
-        $(DATA)/antibody_site_map.csv
-	python -u -m bioexp.explanation.assemble_pysb preprocess_stmts \
-        db_only_reduce_mods \
-        db_only_before_pysb \
-        $(OUTPUT)/prior_genes.txt \
-        $(DATA)/antibody_site_map.csv
-
-$(OUTPUT)/bioexp_db_only_pysb_model.pkl: \
-        $(OUTPUT)/bioexp_db_only_before_pysb.pkl \
-        $(DATA)/Korkut\ et\ al.\ Data\ 05122017.xlsx \
-        $(DATA)/antibody_site_map.csv
-	python -u -m bioexp.explanation.assemble_pysb assemble_pysb \
-        db_only_before_pysb \
-        db_only_pysb_model \
-        $(DATA)/Korkut\ et\ al.\ Data\ 05122017.xlsx \
-        $(DATA)/antibody_site_map.csv
-
-# Results
-$(OUTPUT)/bioexp_db_only_paths.pkl: \
-        $(OUTPUT)/bioexp_db_only_pysb_model.pkl \
-        $(OUTPUT)/bioexp_data_stmts.pkl \
-        $(DATA)/Korkut\ et\ al.\ Data\ 05122017.xlsx \
-        $(DATA)/antibody_site_map.csv
-	python -u -m bioexp.explanation.check_pysb_model \
-        db_only_pysb_model \
-        data_stmts \
-        db_only_paths \
-        $(DATA)/Korkut\ et\ al.\ Data\ 05122017.xlsx \
-        $(DATA)/antibody_site_map.csv
-
-#reading_only: \
-#    $(OUTPUT)/bioexp_reading_only_preassembled.pkl \
-#	$(OUTPUT)/bioexp_reading_only_pysb_model.pkl \
-#    $(OUTPUT)/bioexp_reading_only_paths.pkl
-
-#db_only: \
-#    $(OUTPUT)/bioexp_db_only_preassembled.pkl \
-#    $(OUTPUT)/bioexp_db_only_pysb_model.pkl \
-#    $(OUTPUT)/bioexp_db_only_paths.pkl
 
 # DEPMAP ----------------------------------------------------------------------
 $(OUTPUT)/bioexp_signor_indranet.pkl: $(OUTPUT)/bioexp_signor.pkl

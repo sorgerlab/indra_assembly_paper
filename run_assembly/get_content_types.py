@@ -1,3 +1,5 @@
+"""This script counts the different content types that were read for the
+Benchmark Corpus within a non-public S3-based repository."""
 import json
 import tqdm
 import boto3
