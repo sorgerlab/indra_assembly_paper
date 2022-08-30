@@ -2,12 +2,11 @@
 OUTPUT := output
 DATA := data
 NET := networks
-FIG1 := bioexp/figures/figure1
 FIG2 := bioexp/figures/figure2
 FIG4 := bioexp/figures/figure4
 DEPLOY := ~/Dropbox/DARPA\ projects/papers/INDRA\ paper\ 2/figures/figure_panels
 
-all: fig2 fig4 fig5 korkut_pysb
+all: fig2 fig4
 
 depmap: $(OUTPUT)/bioexp_signor_indranet_explainer.pkl
 
@@ -20,21 +19,17 @@ deploy:
 clean:
 	cd $(OUTPUT); rm -rf *
 
-#fig1: $(OUTPUT)/fig1_pc_egfr_mapk1_paths.txt
-
 fig2: $(OUTPUT)/fig2_evidence_distribution.pdf \
       $(OUTPUT)/fig2_stmt_counts_before_pa.pdf
 
 fig4: \
     $(OUTPUT)/fig4_reach_curve.pdf \
-    $(OUTPUT)/fig4_belief_surface.pdf \
     $(OUTPUT)/fig4_reach_model_fits.pdf \
     $(OUTPUT)/fig4_sparser_model_fits.pdf \
     $(OUTPUT)/fig4_medscan_model_fits.pdf \
     $(OUTPUT)/curation_dataset.pkl \
     $(OUTPUT)/fig4_ipynb_overlap_upset_linear
 
-fig5: $(OUTPUT)/reach_complexes_raw.tsv
 
 belief_fitting: $(OUTPUT)/bioexp_multi_src_results.pkl
 
@@ -55,31 +50,6 @@ makegraph.dot: Makefile
 
 $(DATA)/%:
 	python -m bioexp.transfer_s3 get "$@" $(DATA)
-
-$(DATA)/PathwayCommons9.All.hgnc.txt:
-	wget -P $(DATA) http://www.pathwaycommons.org/archives/PC2/v9/PathwayCommons9.All.hgnc.txt.gz
-	gunzip $@
-
-# PREPROCESSING --------------------------------------------------------------
-#
-# The list of prior genes from the data and related sources
-$(OUTPUT)/prior_genes.txt: $(DATA)/Korkut\ et\ al.\ Data\ 05122017.xlsx \
-                          $(DATA)/ras_pathway_proteins.csv \
-                          $(DATA)/drug_grounding.csv
-	python -m bioexp.explanation.process_data \
-        $(DATA)/Korkut\ et\ al.\ Data\ 05122017.xlsx \
-        $(DATA)/ras_pathway_proteins.csv \
-        $(DATA)/drug_grounding.csv \
-        $@
-
-# Pathway Commons network parsed from the extended SIF and pickled as # an instance of a networkx MultiDiGraph
-$(OUTPUT)/pc_multidigraph.pkl: $(DATA)/PathwayCommons9.All.hgnc.txt \
-                              $(FIG1)/find_paths.py \
-                              $(OUTPUT)/prior_genes.txt
-	python -m bioexp.figures.figure1.find_paths parse_pc \
-        $(DATA)/PathwayCommons9.All.hgnc.txt \
-        $(OUTPUT)/prior_genes.txt \
-        $@
 
 # STMT SAMPLE FOR CURATION --------------------------------------------------
 $(OUTPUT)/bioexp_reach_sample_uncurated.pkl: $(DATA)/bioexp_asmb_preassembled.pkl
@@ -140,14 +110,6 @@ $(OUTPUT)/fig4_ipynb_overlap_upset_linear: \
         $(OUTPUT)/curation_dataset.pkl $(DATA)/bioexp_asmb_preassembled.pkl
 	jupyter nbconvert --to notebook --ExecutePreprocessor.timeout=180 \
         --execute notebooks/Reader_overlap_and_error_analysis.ipynb
-
-
-# FIGURE 5 -------------------------------------------------------------------
-
-$(OUTPUT)/reach_complexes_raw.tsv: $(DATA)/bioexp_reach.pkl
-	python -m bioexp.figures.figure5.validate_complex \
-                             $(DATA)/bioexp_reach.pkl \
-                             $(OUTPUT)/reach_complexes_raw.tsv
 
 
 # DEPMAP ----------------------------------------------------------------------
