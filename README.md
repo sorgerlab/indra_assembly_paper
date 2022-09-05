@@ -45,3 +45,4 @@ metrics and figures used in the manuscript:
 ## Data files
 
 * The Benchmark Corpus is available as a Python pickle of INDRA Statement objects at https://bioexp-paper.s3.amazonaws.com/bioexp_asmb_preassembled.pkl.
+* Aggregated curations on the Benchmark Corpus are available as a Python pickle file at https://bioexp-paper.s3.amazonaws.com/curation_dataset_with_bg_psp.pkl. The content is a list, where each element of the list is a dictionary prociding a `stmt_hash` corresponding to the hash of a Statement in the Benchmark Corpus, and giving a `correct` flag (0 for overall incorrect, 1 for overall correct) to represent the overall result of curation, along with some other metadata.
