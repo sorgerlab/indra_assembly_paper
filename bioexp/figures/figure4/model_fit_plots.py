@@ -23,7 +23,7 @@ if __name__ == '__main__':
     ax = betabin_res[1].plot_stmt_fit(betabin_res[2], 'Beta-binomial',
                                       color='g', ax=ax)
     # Plot belief
-    ax = bel_res[1].plot_stmt_fit(bel_res[2], 'Belief', color='b', ax=ax)
+    ax = bel_res[1].plot_stmt_fit(bel_res[2], 'INDRA Belief', color='b', ax=ax)
     plt.legend(frameon=False, loc='lower right', fontsize=fontsize)
 
     format_axis(ax)
