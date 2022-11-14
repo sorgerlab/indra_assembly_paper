@@ -98,7 +98,7 @@ $(OUTPUT)/fig4_%_model_fits.pdf: \
 	python -m bioexp.figures.figure4.model_fit_plots $< $* $(OUTPUT)
 
 # Compiled curation dataset for training sklearn models
-$(OUTPUT)/curation_dataset.pkl: $(DATA)/bioexp_asmb_preassembled.pkl
+$(OUTPUT)/curation_dataset_inc.pkl: $(DATA)/bioexp_asmb_preassembled.pkl
 	python -m bioexp.curation.group_curations $(OUTPUT)
 
 # Various other downstreams in the notebook

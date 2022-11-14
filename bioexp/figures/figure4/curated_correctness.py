@@ -79,7 +79,7 @@ def dataset_table():
                 num_correct = len([n for n in counts if n > 0])
                 row.append(f'{num_correct} ({total_curated})')
         table_rows.append(row)
-    with open(join(output_dir, 'table1_curation_dataset.csv'), 'w') as f:
+    with open(join(output_dir, 'table2_curation_dataset.csv'), 'w') as f:
         csvwriter = csv.writer(f, delimiter=',')
         csvwriter.writerows(table_rows)
 
