@@ -275,9 +275,11 @@ if __name__ == '__main__':
     output_dir = sys.argv[2]
 
     ev_correct_by_num_ev = get_curations_for_reader(
-                                    reader, aggregation='evidence')
+                                    reader, aggregation='evidence',
+                                    allow_incomplete=False)
     ev_correct_by_num_pmid = get_curations_for_reader(
-                                    reader, aggregation='pmid')
+                                    reader, aggregation='pmid',
+                                    allow_incomplete=False)
 
     # -- Everything below is for model fitting! --
     # Load evidence frequency data
