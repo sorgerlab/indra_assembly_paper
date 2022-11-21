@@ -56,19 +56,22 @@ def plot_correctness_curve(reader, show_ylabel=True, allow_incomplete=False):
     plt.savefig(join(output_dir, f'fig4_{reader}_curve.pdf'))
 
 
-def dataset_table():
+def dataset_table(
+    suffix,
+    allow_incomplete=False,
+):
     # Load curations for all readers
     curations = {}
     stmts_by_reader = {}
-    header = ['', list(range(1, 11))]
+    header = [''] + list(range(1, 11))
     table_rows = [header]
     for reader, rd_dict in reader_input.items():
         reader_stmts = load_curated_pkl_files(rd_dict['pkl_list'])
         #reader_stmts_dict = {stmt.get_hash(): stmt for stmt in reader_stmts}
         curations[reader] = \
             get_correctness_data(rd_dict['source_list'],
-                                 reader_stmts, aggregation='evidence',
-                                 allow_incomplete=True)
+                             reader_stmts, aggregation='evidence',
+                             allow_incomplete=allow_incomplete)
         row = [reader]
         for i in range(1, 11):
             counts = curations[reader].get(i, {})
@@ -79,7 +82,8 @@ def dataset_table():
                 num_correct = len([n for n in counts if n > 0])
                 row.append(f'{num_correct} ({total_curated})')
         table_rows.append(row)
-    with open(join(output_dir, 'table2_curation_dataset.csv'), 'w') as f:
+    with open(join(output_dir,
+                    f'table2_curation_dataset_{suffix}.csv'), 'w') as f:
         csvwriter = csv.writer(f, delimiter=',')
         csvwriter.writerows(table_rows)
 
@@ -91,4 +95,5 @@ if __name__ == '__main__':
     plot_correctness_curve('sparser', show_ylabel=False, allow_incomplete=True)
     plot_correctness_curve('medscan', show_ylabel=False, allow_incomplete=True)
     # Make the dataset table 
-    dataset_table()
+    dataset_table('complete', allow_incomplete=False)
+    dataset_table('incomplete', allow_incomplete=True)
