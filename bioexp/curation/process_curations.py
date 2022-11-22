@@ -6,22 +6,17 @@ import itertools
 from multiprocessing import Pool
 from os import pardir
 from os.path import dirname, abspath, join
-import scipy.optimize
 from texttable import Texttable
 import matplotlib.pyplot as plt
 from collections import defaultdict, Counter
-from indra_db import get_db
-from indra_db.client.principal.curation import get_curations
 from bioexp.util import prefixed_file, pkldump
 from bioexp.curation.belief_models import *
 from bioexp.curation.model_fit import ModelFit, ens_sample
+from indra.sources.indra_db_rest import get_curations
 
 logger = logging.getLogger('process_curations')
 here = dirname(abspath(__file__))
 curation_data = join(here, pardir, pardir, 'data', 'curation')
-
-
-db = get_db('primary')
 
 
 def dist_path(reader, dist_type):
@@ -220,10 +215,12 @@ def get_raw_curations(sources, stmts_dict):
     # Curations are in a dict keyed by pa_hash and then by evidence source hash
     curations = defaultdict(lambda: defaultdict(list))
     # Iterate over all the curation sources
+    all_curations = get_curations()
     for source in sources:
         # Get curations from DB from given curation source
-        db_curations = get_curations(db, source=source)
         # We populate the curations dict with entries from the DB
+        db_curations = [cur for cur in all_curations if
+                        cur['source'] == 'source']
         for cur in db_curations:
             if cur['pa_hash'] not in stmts_dict:
                 print('Curation pa_hash is missing from list of Statements '
