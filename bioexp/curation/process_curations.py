@@ -12,7 +12,6 @@ from collections import defaultdict, Counter
 from bioexp.util import prefixed_file, pkldump
 from bioexp.curation.belief_models import *
 from bioexp.curation.model_fit import ModelFit, ens_sample
-from indra.sources.indra_db_rest import get_curations
 
 logger = logging.getLogger('process_curations')
 here = dirname(abspath(__file__))
@@ -21,6 +20,15 @@ curation_data = join(here, pardir, pardir, 'data', 'curation')
 
 def dist_path(reader, dist_type):
     return prefixed_file(f'{reader}_stmt_{dist_type}_distribution', 'json')
+
+
+def read_curations():
+    cur_fname = join(curation_data, 'indra_assembly_curations.json')
+    with open(cur_fname, 'r') as fh:
+        return json.load(fh)
+
+
+CURATIONS = read_curations()
 
 
 reader_input = {
@@ -215,11 +223,10 @@ def get_raw_curations(sources, stmts_dict):
     # Curations are in a dict keyed by pa_hash and then by evidence source hash
     curations = defaultdict(lambda: defaultdict(list))
     # Iterate over all the curation sources
-    all_curations = get_curations()
     for source in sources:
         # Get curations from DB from given curation source
         # We populate the curations dict with entries from the DB
-        db_curations = [cur for cur in all_curations if
+        db_curations = [cur for cur in CURATIONS if
                         cur['source'] == 'source']
         for cur in db_curations:
             if cur['pa_hash'] not in stmts_dict:
