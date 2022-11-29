@@ -140,6 +140,8 @@ def get_full_curations(sources, stmts_dict, aggregation='evidence',
     for pa_hash, stmt_curs in curations.items():
         if filter_hashes and pa_hash not in filter_hashes:
             continue
+        if pa_hash not in stmts_dict:
+            continue
         cur_stmt = stmts_dict[pa_hash]
         # We need to make sure that all the evidence hashes were covered by the
         # curations in the DB. Note that we cannot go by number of curations
@@ -152,6 +154,8 @@ def get_full_curations(sources, stmts_dict, aggregation='evidence',
         pmid_curations = defaultdict(list)
         for source_hash, ev_curs in stmt_curs.items():
             ev = _find_evidence_by_hash(cur_stmt, source_hash)
+            if not ev:
+                continue
             corrects = [1 if cur['tag'] in
                                     ('correct', 'hypothesis', 'act_vs_amt')
                         else 0 for cur in ev_curs]
@@ -227,7 +231,7 @@ def get_raw_curations(sources, stmts_dict):
         # Get curations from DB from given curation source
         # We populate the curations dict with entries from the DB
         db_curations = [cur for cur in CURATIONS if
-                        cur['source'] == 'source']
+                        cur['source'] == source]
         for cur in db_curations:
             if cur['pa_hash'] not in stmts_dict:
                 print('Curation pa_hash is missing from list of Statements '

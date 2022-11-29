@@ -1,16 +1,11 @@
 import sys
 import pickle
-import itertools
-from matplotlib import pyplot as plt
 from os.path import abspath, dirname, join
 from collections import Counter, defaultdict
-import numpy as np
 from indra.tools import assemble_corpus as ac
-from indra.belief import load_default_probs, SimpleScorer, BeliefEngine
-from bioexp.util import pkldump, pklload
 from bioexp.curation.process_curations import \
             get_correctness_data, load_curated_pkl_files, get_full_curations, \
-            reader_input, get_raw_curations
+            reader_input, get_raw_curations, CURATIONS
 
 
 def get_multi_reader_curations(reader_curations, reader_input,
@@ -208,6 +203,18 @@ def get_combined_curations(source_list, stmts_by_hash, filename,
         pickle.dump(cur_data, f)
 
     return cur_data
+
+
+def print_curation_stats(fname):
+    with open(fname, 'rb') as fh:
+        curs = pickle.load(fh)
+    stmt_hashes = {c['stmt_hash'] for c in curs}
+    mention_hashes = {c['source_hash'] for c in CURATIONS
+                      if c['pa_hash'] in stmt_hashes}
+    print('For %s, the number of unique Statements is %d and the number '
+          'of corresponding mentions with curations is %d.' %
+          (fname, len(stmt_hashes), len(mention_hashes)))
+
 
 if __name__ == '__main__':
     # Prevent issues in pickling the results
