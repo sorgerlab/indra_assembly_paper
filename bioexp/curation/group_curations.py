@@ -131,7 +131,8 @@ def dump_dataset(stmts_by_hash, corr_hashes, incorr_hashes, filename):
 
 
 def get_combined_curations(source_list, stmts_by_hash, filename,
-                           add_supports=False, allow_incomplete=False):
+                           add_supports=False, allow_incomplete=False,
+                           allow_incomplete_correct=True):
     # Note that this will ignore statements that are
     # incompletely curated for which all current curations are 0
 
@@ -140,7 +141,7 @@ def get_combined_curations(source_list, stmts_by_hash, filename,
     # Get curations for all sources
     full_curations = get_full_curations(source_list, stmts_by_hash,
                                         allow_incomplete=allow_incomplete,
-                                        allow_incomplete_correct=True)
+                                        allow_incomplete_correct=allow_incomplete_correct)
     # Build up a dictionary of hashes associated with each curation tag
     stmt_tags_by_hash = defaultdict(list)
     for source_tag in source_list:
@@ -234,6 +235,10 @@ if __name__ == '__main__':
                                   for source in rdr_dict['source_list']]
     all_sources.append('bioexp_paper_multi')
 
+    curation_dataset_complete = get_combined_curations(
+        all_sources, all_stmts_by_hash,
+        join(output_dir, 'curation_dataset_complete.pkl'),
+        allow_incomplete=False, allow_incomplete_correct=False)
     curation_dataset = get_combined_curations(
           all_sources, all_stmts_by_hash,
           join(output_dir, 'curation_dataset.pkl'))
