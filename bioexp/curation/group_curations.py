@@ -133,9 +133,12 @@ def dump_dataset(stmts_by_hash, corr_hashes, incorr_hashes, filename):
 def get_combined_curations(source_list, stmts_by_hash, filename,
                            add_supports=False, allow_incomplete=False,
                            allow_incomplete_correct=True):
-    # Note that this will ignore statements that are
-    # incompletely curated for which all current curations are 0
-
+    """This function creates a custom curation data structure to
+     facilitate downstream analysis of the curation data. The returned
+     data structure is a list with dict entries. Each dict corresponds
+     to a curated statement and carries necessary metadata about the
+     statement itself, sources supporting the statement, as well as the
+     overall correcness of the statement per all aggragated curations."""
     # Prepare dataset for statistical modeling
     cur_data = []
     # Get curations for all sources
@@ -163,7 +166,7 @@ def get_combined_curations(source_list, stmts_by_hash, filename,
         source_entry = dict(Counter(sources))
         # Get the overall correctness status
         num_correct = sum(corrects)
-        corr = 1 if sum(corrects) > 0 else 0
+        corr = 1 if num_correct > 0 else 0
         source_entry['correct'] = corr
         # Add in source evidence counts from supports
         if add_supports:
@@ -229,10 +232,8 @@ if __name__ == '__main__':
     all_stmts = ac.load_statements(asmb_pkl)
     all_stmts_by_hash = {stmt.get_hash(): stmt for stmt in all_stmts}
 
-    # The new approach works to get all the curation data and is
-    # much faster than the old approach below.
     all_sources = [source for rdr, rdr_dict in reader_input.items()
-                                  for source in rdr_dict['source_list']]
+                   for source in rdr_dict['source_list']]
     all_sources.append('bioexp_paper_multi')
 
     curation_dataset_complete = get_combined_curations(

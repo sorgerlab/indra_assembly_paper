@@ -96,9 +96,6 @@ def get_curations_for_reader(reader, aggregation, **kwargs):
         ri = reader_input[reader]
         pkl_list = ri['pkl_list']
         source_list = ri['source_list']
-        ev_dist_path = ri['ev_dist_path']
-        pmid_dist_path = ri['pmid_dist_path']
-        belief_model = ri['belief_model']
     else:
         raise ValueError("Reader %s not supported." % reader)
 
@@ -107,10 +104,16 @@ def get_curations_for_reader(reader, aggregation, **kwargs):
                                        aggregation=aggregation, **kwargs)
     return ev_corrects
 
+# For debugging purposes, note module level global variables
+ALL_HASHES = set()
+ALL_MENTIONS = 0
+
 
 def get_correctness_data(sources, stmts, aggregation='evidence',
                          allow_incomplete=False,
                          allow_incomplete_correct=False):
+    global ALL_HASHES
+    global ALL_MENTIONS
     stmts_dict = {stmt.get_hash(): stmt for stmt in stmts}
     stmt_counts = Counter(stmt.get_hash() for stmt in stmts)
     full_curations = get_full_curations(sources, stmts_dict,
@@ -118,14 +121,19 @@ def get_correctness_data(sources, stmts, aggregation='evidence',
                             allow_incomplete=allow_incomplete,
                             allow_incomplete_correct=allow_incomplete_correct)
     correct_by_num_ev = {}
+    ALL_HASHES |= set(full_curations)
     for pa_hash, corrects in full_curations.items():
         stmt = stmts_dict[pa_hash]
+        ALL_MENTIONS += len(stmt.evidence)
         num_correct = sum(corrects)
         num_correct_by_num_sampled = [num_correct] * stmt_counts[pa_hash]
         if len(stmt.evidence) not in correct_by_num_ev:
             correct_by_num_ev[len(stmt.evidence)] = num_correct_by_num_sampled
         else:
             correct_by_num_ev[len(stmt.evidence)] += num_correct_by_num_sampled
+    # Print ALL_HASHES and ALL_MENTIONS here to get the total numbers
+    logger.info("Total hashes up to this point: %d" % len(ALL_HASHES))
+    logger.info("Total mentions up to this point: %d" % ALL_MENTIONS)
     return correct_by_num_ev
 
 
@@ -133,6 +141,12 @@ def get_full_curations(sources, stmts_dict, aggregation='evidence',
                        filter_hashes=None,
                        allow_incomplete=False,
                        allow_incomplete_correct=False):
+    """This function converts raw curations organized by statement/evidence
+    and applies a set of policies to determine correctness for each evidence.
+    It then returns a dictionary mapping statement hashes to lists of
+    correctness values (0 for incorrect, 1 for correct) for each evidence in
+    the statement."""
+
     curations = get_raw_curations(sources, stmts_dict)
     # Next we construct a dict of all curations that are "full" in that all
     # evidences of a given statement were curated, keyed by pa_hash
@@ -144,7 +158,7 @@ def get_full_curations(sources, stmts_dict, aggregation='evidence',
             continue
         cur_stmt = stmts_dict[pa_hash]
         # We need to make sure that all the evidence hashes were covered by the
-        # curations in the DB. Note that we cannot go by number of curations
+        # curations. Note that we cannot go by number of curations
         # since two subtly different evidences can have the same hash, and
         # multiple curations sometimes exist for the same evidence.
         ev_hashes = [e.get_source_hash() for e in cur_stmt.evidence]
@@ -206,7 +220,10 @@ def get_full_curations(sources, stmts_dict, aggregation='evidence',
 
 
 def get_raw_curations(sources, stmts_dict):
-    """Get curations from INDRA DB associated with the given source tags.
+    """Get curations associated with the given source tags.
+
+    For each statement hash and evidence hash, this returns the list of
+    corresponding curation dicts as is without any aggregation.
 
     Parameters
     ----------
@@ -215,7 +232,7 @@ def get_raw_curations(sources, stmts_dict):
         query the DB curations table with.
     stmts_dict : list of INDRA Statements
         Statements corresponding to a superset of the curated statements with
-        the given tag.
+        the given tags.
 
     Returns
     -------

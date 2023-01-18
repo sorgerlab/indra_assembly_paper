@@ -1,2 +1,5 @@
 indra
 xlrd
+texttable
+emcee
+corner
