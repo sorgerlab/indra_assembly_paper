@@ -1,19 +1,19 @@
 import sys
 import csv
-from os.path import join
-import texttable
+from os.path import join, dirname, abspath
 import numpy as np
 from matplotlib import pyplot as plt
-from bioexp.curation.group_curations import reader_input
+from indra.tools import assemble_corpus as ac
 from bioexp.curation.process_curations import get_curations_for_reader, \
                                     reader_input, load_curated_pkl_files, \
                                     get_correctness_data
 from bioexp.util import set_fig_params, format_axis, fontsize, reader_name_map
 
 
-def plot_correctness_curve(reader, show_ylabel=True, allow_incomplete=False):
-    ev_correct_by_num_ev = get_curations_for_reader(reader, 'evidence',
-                                            allow_incomplete=allow_incomplete)
+def plot_correctness_curve(reader, all_stmts, show_ylabel=True, allow_incomplete=False):
+    ev_correct_by_num_ev = get_curations_for_reader(reader, all_stmts,
+                                                    'evidence',
+                                                    allow_incomplete=allow_incomplete)
     data = ev_correct_by_num_ev
     data_stmt = {}
     # Convert at the evidence level to data at the stmt level and store
@@ -98,11 +98,15 @@ def dataset_table(
 
 
 if __name__ == '__main__':
+    # Load the pickle file with all assembled statements
+    asmb_pkl = join(dirname(abspath(__file__)), '..', '..', '..', 'data',
+                    'bioexp_asmb_preassembled.pkl')
+    all_stmts = ac.load_statements(asmb_pkl)
     # Get output directory
     output_dir = sys.argv[1]
-    plot_correctness_curve('reach', show_ylabel=True, allow_incomplete=True)
-    plot_correctness_curve('sparser', show_ylabel=False, allow_incomplete=True)
-    plot_correctness_curve('medscan', show_ylabel=False, allow_incomplete=True)
+    plot_correctness_curve('reach', all_stmts, show_ylabel=True, allow_incomplete=True)
+    plot_correctness_curve('sparser', all_stmts, show_ylabel=False, allow_incomplete=True)
+    plot_correctness_curve('medscan', all_stmts, show_ylabel=False, allow_incomplete=True)
     # Make the dataset table 
     dataset_table('complete', allow_incomplete=False)
     dataset_table('incomplete', allow_incomplete=True)

@@ -1,3 +1,4 @@
+import copy
 import sys
 import json
 import pickle
@@ -9,6 +10,7 @@ from os.path import dirname, abspath, join
 from texttable import Texttable
 import matplotlib.pyplot as plt
 from collections import defaultdict, Counter
+from indra.tools import assemble_corpus as ac
 from bioexp.util import prefixed_file, pkldump
 from bioexp.curation.belief_models import *
 from bioexp.curation.model_fit import ModelFit, ens_sample
@@ -73,13 +75,15 @@ reader_input = {
 }
 
 
-def get_curations_for_reader(reader, aggregation, **kwargs):
+def get_curations_for_reader(reader, all_stmts, aggregation, **kwargs):
     """Get correctness data for a given reader based on reader_input info.
 
     Parameters
     ----------
     reader : str
         Name of the reader, e.g. "reach".
+    all_stmts : list[indra.statements.Statement]
+        A list of all statements in the assembled corpus.
     aggregation: str
         'evidence' to aggregate by distinct evidences, 'pmid' to
         aggregate by distinct PMIDs.
@@ -99,7 +103,7 @@ def get_curations_for_reader(reader, aggregation, **kwargs):
     else:
         raise ValueError("Reader %s not supported." % reader)
 
-    stmts = load_curated_pkl_files(pkl_list)
+    stmts = load_curated_pkl_files(pkl_list, all_stmts, reader)
     ev_corrects = get_correctness_data(source_list, stmts,
                                        aggregation=aggregation, **kwargs)
     return ev_corrects
@@ -267,20 +271,40 @@ def _find_evidence_by_hash(stmt, source_hash):
             return ev
 
 
-def load_curated_pkl_files(pkl_list):
+def load_curated_pkl_files(pkl_list, all_stmts, reader, use_jsons=True):
+    """Load statements sampled for curation from a list of pickle files.
+
+    Note that since the sampled pickles are large and not in version control,
+    instead we load the statement hashes from the JSONs that are in version
+    control and filter the preassembled statements for the hashes to create
+    the same set of statements as the ones in the pickle files, unless
+    use_jsons is set to False.
+    """
+    all_stmts_by_hash = {stmt.get_hash(): stmt for stmt in all_stmts}
     logger.info('Loading curation statement pickles')
     stmts = []
     for pkl_file in pkl_list:
         pkl_path = join(curation_data, pkl_file)
-        logger.info('Loading %s' % pkl_path)
-        with open(pkl_path, 'rb') as fh:
-            pkl_stmts = pickle.load(fh)
-            # Special handling for the pickle file for the TSV
-            if pkl_file == 'bioexp_reach_sample_tsv.pkl':
-                for stmt in pkl_stmts:
-                    stmt.evidence = [e for e in stmt.evidence
-                                     if e.source_api == 'reach']
-            stmts.extend(pkl_stmts)
+        if not use_jsons:
+            logger.info('Loading %s' % pkl_path)
+            with open(pkl_path, 'rb') as fh:
+                pkl_stmts = pickle.load(fh)
+                # Special handling for the pickle file for the TSV
+                if pkl_file == 'bioexp_reach_sample_tsv.pkl':
+                    for stmt in pkl_stmts:
+                        stmt.evidence = [e for e in stmt.evidence
+                                         if e.source_api == 'reach']
+        else:
+            json_path = pkl_path.replace('.pkl', '_hashes.json')
+            logger.info('Loading %s' % json_path)
+            with open(json_path, 'r') as fh:
+                hashes = json.load(fh)
+            pkl_stmts = copy.deepcopy([all_stmts_by_hash[hash]
+                                       for hash in hashes])
+            for stmt in pkl_stmts:
+                stmt.evidence = [e for e in stmt.evidence
+                                 if e.source_api == reader]
+        stmts.extend(pkl_stmts)
     return stmts
 
 
@@ -302,11 +326,16 @@ if __name__ == '__main__':
     reader = sys.argv[1]
     output_dir = sys.argv[2]
 
+    # Load the pickle file with all assembled statements
+    asmb_pkl = join(dirname(abspath(__file__)), '..', '..', 'data',
+                    'bioexp_asmb_preassembled.pkl')
+    all_stmts = ac.load_statements(asmb_pkl)
+
     ev_correct_by_num_ev = get_curations_for_reader(
-                                    reader, aggregation='evidence',
+                                    reader, all_stmts, aggregation='evidence',
                                     allow_incomplete=False)
     ev_correct_by_num_pmid = get_curations_for_reader(
-                                    reader, aggregation='pmid',
+                                    reader, all_stmts, aggregation='pmid',
                                     allow_incomplete=False)
 
     # -- Everything below is for model fitting! --
