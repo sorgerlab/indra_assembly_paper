@@ -66,6 +66,13 @@ def dataset_table(
     header = [''] + list(range(1, 11))
     table_rows = [header]
     for reader, rd_dict in reader_input.items():
+        # Note: if the filter below is not needed, the calls
+        # to load_curated_pkl_files and get_correctness_data can
+        # be replaced with a call to get_curations_for_reader
+        #curations[reader] = get_curations_for_reader(reader, all_stmts,
+        #                                             'evidence',
+        #                                             allow_incomplete=allow_incomplete)
+
         reader_stmts = load_curated_pkl_files(rd_dict['pkl_list'], all_stmts, reader)
 
         # Note: get_combined_curations uses a filter like the one below, if

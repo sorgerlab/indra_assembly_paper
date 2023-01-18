@@ -334,9 +334,9 @@ if __name__ == '__main__':
     ev_correct_by_num_ev = get_curations_for_reader(
                                     reader, all_stmts, aggregation='evidence',
                                     allow_incomplete=False)
-    ev_correct_by_num_pmid = get_curations_for_reader(
-                                    reader, all_stmts, aggregation='pmid',
-                                    allow_incomplete=False)
+    #ev_correct_by_num_pmid = get_curations_for_reader(
+    #                                reader, all_stmts, aggregation='pmid',
+    #                                allow_incomplete=False)
 
     # -- Everything below is for model fitting! --
     # Load evidence frequency data
