@@ -67,19 +67,23 @@ def dataset_table(
     table_rows = [header]
     for reader, rd_dict in reader_input.items():
         reader_stmts = load_curated_pkl_files(rd_dict['pkl_list'], all_stmts, reader)
-        filtered_stmts = []
-        for stmt in reader_stmts:
-            agent_names = [ag.name for ag in stmt.agent_list() if
-                           ag is not None]
-            # Complex > 3, translocations, autophosphorylations will be skipped
-            if len(agent_names) != 2:
-                continue
-            filtered_stmts.append(stmt)
+
+        # Note: get_combined_curations uses a filter like the one below, if
+        # counts from Table 2
+        #filtered_stmts = []
+        #for stmt in reader_stmts:
+        #    agent_names = [ag.name for ag in stmt.agent_list() if
+        #                   ag is not None]
+        #    # Complex > 3, translocations, autophosphorylations will be skipped
+        #    if len(agent_names) != 2:
+        #        continue
+        #    filtered_stmts.append(stmt)
+        #reader_stmts = filtered_stmts
 
         #reader_stmts_dict = {stmt.get_hash(): stmt for stmt in reader_stmts}
         curations[reader] = \
             get_correctness_data(rd_dict['source_list'],
-                             filtered_stmts, aggregation='evidence',
+                             reader_stmts, aggregation='evidence',
                              allow_incomplete=allow_incomplete)
         row = [reader]
         for i in range(1, 11):
