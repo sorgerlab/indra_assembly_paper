@@ -66,7 +66,7 @@ def dataset_table(
     header = [''] + list(range(1, 11))
     table_rows = [header]
     for reader, rd_dict in reader_input.items():
-        reader_stmts = load_curated_pkl_files(rd_dict['pkl_list'])
+        reader_stmts = load_curated_pkl_files(rd_dict['pkl_list'], all_stmts, reader)
         filtered_stmts = []
         for stmt in reader_stmts:
             agent_names = [ag.name for ag in stmt.agent_list() if
