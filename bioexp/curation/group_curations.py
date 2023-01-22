@@ -157,9 +157,9 @@ def get_combined_curations(source_list, stmts_by_hash, filename,
     for ix, (stmt_hash, corrects) in enumerate(full_curations.items()):
         # Get the statement
         stmt = stmts_by_hash[stmt_hash]
-        agent_names = [ag.name for ag in stmt.agent_list() if ag is not None]
         # Complex > 3, translocations, autophosphorylations will be skipped
-        if len(agent_names) != 2:
+        agents = stmt.real_agent_list()
+        if len(agents) != 2:
             continue
         # Get the number of evidences for each source
         sources = [ev.source_api for ev in stmt.evidence]
@@ -181,16 +181,18 @@ def get_combined_curations(source_list, stmts_by_hash, filename,
                     source_entry[source_api] += source_ct
         # Add basic statement data (useful for linking to knowledge graph
         # embedding-based link predict)
-        agA_ns, agA_id = stmt.agent_list()[0].get_grounding()
+        agA_ns, agA_id = agents[0].get_grounding()
+        agA_name = agents[0].name
         agB_ns, agB_id = stmt.agent_list()[1].get_grounding()
+        agB_name = agents[1].name
 
         cur_entry = {'stmt_num': ix,
                      'stmt_hash': stmt.get_hash(),
-                     'agA_name': agent_names[0],
+                     'agA_name': agA_name,
                      'agA_ns': agA_ns,
                      'agA_id': agA_id,
                      'stmt_type': stmt.__class__.__name__,
-                     'agB_name': agent_names[1],
+                     'agB_name': agB_name,
                      'agB_ns': agB_ns,
                      'agB_id': agB_id,
                      'correct': corr}
@@ -236,25 +238,14 @@ if __name__ == '__main__':
                    for source in rdr_dict['source_list']]
     all_sources.append('bioexp_paper_multi')
 
-    curation_dataset_complete = get_combined_curations(
-        all_sources, all_stmts_by_hash,
-        join(output_dir, 'curation_dataset_complete.pkl'),
-        allow_incomplete=False, allow_incomplete_correct=False)
-    curation_dataset = get_combined_curations(
+    multireader_curation_dataset = get_combined_curations(
           all_sources, all_stmts_by_hash,
-          join(output_dir, 'curation_dataset.pkl'))
-    curation_dataset_inc = get_combined_curations(
-          all_sources, all_stmts_by_hash,
-          join(output_dir, 'curation_dataset_inc.pkl'),
+          join(output_dir, 'multireader_curation_dataset.pkl'),
           allow_incomplete=True)
-    curation_dataset_with_supp = get_combined_curations(
-          all_sources, all_stmts_by_hash,
-          join(output_dir, 'curation_dataset_with_supp.pkl'),
-          add_supports=True)
-    curation_dataset_bg_psp = get_combined_curations(
+    extended_curation_dataset = get_combined_curations(
           all_sources + ['bioexp_biogrid', 'bioexp_psp'],
           all_stmts_by_hash,
-          join(output_dir, 'curation_dataset_with_bg_psp.pkl'),
+          join(output_dir, 'extended_curation_dataset.pkl'),
           allow_incomplete=True)
     refinement_dataset = get_combined_curations(
           ['bioexp_refinements'], all_stmts_by_hash,
