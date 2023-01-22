@@ -27,7 +27,7 @@ fig4: \
     $(OUTPUT)/fig4_reach_model_fits.pdf \
     $(OUTPUT)/fig4_sparser_model_fits.pdf \
     $(OUTPUT)/fig4_medscan_model_fits.pdf \
-    $(DATA)/curation/multireader_curation_dataset.pkl \
+    $(DATA)/curation/extended_curation_dataset.pkl \
 
 belief_fitting: $(OUTPUT)/bioexp_multi_src_results.pkl
 
@@ -92,7 +92,7 @@ $(OUTPUT)/fig4_%_model_fits.pdf: \
 	python -m bioexp.figures.figure4.model_fit_plots $< $* $(OUTPUT)
 
 # Compiled curation dataset for training sklearn models
-$(DATA)/curation/multireader_curation_dataset.pkl: $(DATA)/bioexp_asmb_preassembled.pkl
+$(DATA)/curation/extended_curation_dataset.pkl: $(DATA)/bioexp_asmb_preassembled.pkl
 	python -m bioexp.curation.group_curations $(DATA)/curation
 
 # DEPMAP ----------------------------------------------------------------------
