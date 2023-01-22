@@ -247,7 +247,3 @@ if __name__ == '__main__':
           all_stmts_by_hash,
           join(output_dir, 'extended_curation_dataset.pkl'),
           allow_incomplete=True)
-    refinement_dataset = get_combined_curations(
-          ['bioexp_refinements'], all_stmts_by_hash,
-          join(output_dir, 'refinement_dataset.pkl'))
-
