@@ -58,10 +58,9 @@ metrics and figures used in the manuscript:
 
 ## Data files
 
-The Benchmark Corpus and the curation data set are available on Zenodo
-at https://zenodo.org/record/7559353. The Benchmark Corpus on Zenodo is called `indra_benchmark_corpus.pkl`. For reproducing results, put this file in the `data`
-folder and name it `bioexp_asmb_preassembled.pkl`.
+The Benchmark Corpus is available on Zenodo at https://zenodo.org/record/7559353.
+* The Benchmark Corpus on Zenodo is called `indra_benchmark_corpus.pkl`. For reproducing results, put `indra_benchmark_corpus.pkl` in the `data`
+folder and rename it to `bioexp_asmb_preassembled.pkl`.
 * Curations on the Benchmark Corpus are available as JSON file on Zenodo
-and in this repository (https://github.com/sorgerlab/indra_assembly_paper/blob/master/data/curation/indra_assembly_curations.json). These raw curations
-are processed and aggregated to create two pickle files that are used in
-the various notebooks (https://github.com/sorgerlab/indra_assembly_paper/blob/master/data/curation/multireader_curation_dataset.pkl and https://github.com/sorgerlab/indra_assembly_paper/blob/master/data/curation/extended_curation_dataset.pkl). These files are in version control in this repository.
+and in this repository: [indra_assembly_curations.json](https://github.com/sorgerlab/indra_assembly_paper/blob/master/data/curation/indra_assembly_curations.json). These raw curations are processed and aggregated to create two pickle files that are used in
+the various notebooks. These files are in version control in this repository as well: [multireader_curation_dataset.pkl](https://github.com/sorgerlab/indra_assembly_paper/blob/master/data/curation/multireader_curation_dataset.pkl) and [extended_curation_dataset.pkl](https://github.com/sorgerlab/indra_assembly_paper/blob/master/data/curation/extended_curation_dataset.pkl). 
