@@ -58,5 +58,10 @@ metrics and figures used in the manuscript:
 
 ## Data files
 
-* The Benchmark Corpus is available as a Python pickle of INDRA Statement objects at https://bioexp-paper.s3.amazonaws.com/bioexp_asmb_preassembled.pkl.
-* Aggregated curations on the Benchmark Corpus are available as a Python pickle file at https://bioexp-paper.s3.amazonaws.com/curation_dataset_with_bg_psp.pkl. The content is a list, where each element of the list is a dictionary providing a `stmt_hash` corresponding to the hash of a Statement in the Benchmark Corpus, and giving a `correct` flag (0 for overall incorrect, 1 for overall correct) to represent the overall result of curation, along with some other metadata.
+The Benchmark Corpus and the curation data set are available on Zenodo
+at https://zenodo.org/record/7559353. The Benchmark Corpus on Zenodo is called `indra_benchmark_corpus.pkl`. For reproducing results, put this file in the `data`
+folder and name it `bioexp_asmb_preassembled.pkl`.
+* Curations on the Benchmark Corpus are available as JSON file on Zenodo
+and in this repository (https://github.com/sorgerlab/indra_assembly_paper/blob/master/data/curation/indra_assembly_curations.json). These raw curations
+are processed and aggregated to create two pickle files that are used in
+the various notebooks (https://github.com/sorgerlab/indra_assembly_paper/blob/master/data/curation/multireader_curation_dataset.pkl and https://github.com/sorgerlab/indra_assembly_paper/blob/master/data/curation/extended_curation_dataset.pkl). These files are in version control in this repository.
