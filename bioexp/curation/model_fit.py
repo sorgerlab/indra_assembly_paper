@@ -39,17 +39,6 @@ class ModelFit(object):
                                               dtype=int))
                 self.data_stmt[num_ev] = stmt_corrects
 
-    def data_table(self):
-        # Print table of results before plotting
-        table = Texttable()
-        table_data = [['Num Evs', 'Count', 'Num Correct', 'Pct', 'Std']]
-        for i, num_ev in enumerate(num_evs):
-            table_row = [num_ev, len(self.data_stmt[num_ev]),
-                         sum(self.data_stmt[num_ev]), means[i], std[i]]
-            table_data.append(table_row)
-        table.add_rows(table_data)
-        print(table.draw())
-
     def stmt_err(self, sampler, weights=None):
         map_ix = np.argmax(sampler.flatlnprobability)
         map_p = sampler.flatchain[map_ix]

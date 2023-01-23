@@ -1,16 +1,11 @@
 import sys
 import pickle
-import itertools
-from matplotlib import pyplot as plt
 from os.path import abspath, dirname, join
 from collections import Counter, defaultdict
-import numpy as np
 from indra.tools import assemble_corpus as ac
-from indra.belief import load_default_probs, SimpleScorer, BeliefEngine
-from bioexp.util import pkldump, pklload
 from bioexp.curation.process_curations import \
             get_correctness_data, load_curated_pkl_files, get_full_curations, \
-            reader_input, get_raw_curations
+            reader_input, get_raw_curations, CURATIONS
 
 
 def get_multi_reader_curations(reader_curations, reader_input,
@@ -136,16 +131,20 @@ def dump_dataset(stmts_by_hash, corr_hashes, incorr_hashes, filename):
 
 
 def get_combined_curations(source_list, stmts_by_hash, filename,
-                           add_supports=False, allow_incomplete=False):
-    # Note that this will ignore statements that are
-    # incompletely curated for which all current curations are 0
-
+                           add_supports=False, allow_incomplete=False,
+                           allow_incomplete_correct=True):
+    """This function creates a custom curation data structure to
+     facilitate downstream analysis of the curation data. The returned
+     data structure is a list with dict entries. Each dict corresponds
+     to a curated statement and carries necessary metadata about the
+     statement itself, sources supporting the statement, as well as the
+     overall correcness of the statement per all aggragated curations."""
     # Prepare dataset for statistical modeling
     cur_data = []
     # Get curations for all sources
     full_curations = get_full_curations(source_list, stmts_by_hash,
                                         allow_incomplete=allow_incomplete,
-                                        allow_incomplete_correct=True)
+                                        allow_incomplete_correct=allow_incomplete_correct)
     # Build up a dictionary of hashes associated with each curation tag
     stmt_tags_by_hash = defaultdict(list)
     for source_tag in source_list:
@@ -158,16 +157,16 @@ def get_combined_curations(source_list, stmts_by_hash, filename,
     for ix, (stmt_hash, corrects) in enumerate(full_curations.items()):
         # Get the statement
         stmt = stmts_by_hash[stmt_hash]
-        agent_names = [ag.name for ag in stmt.agent_list() if ag is not None]
         # Complex > 3, translocations, autophosphorylations will be skipped
-        if len(agent_names) != 2:
+        agents = stmt.real_agent_list()
+        if len(agents) != 2:
             continue
         # Get the number of evidences for each source
         sources = [ev.source_api for ev in stmt.evidence]
         source_entry = dict(Counter(sources))
         # Get the overall correctness status
         num_correct = sum(corrects)
-        corr = 1 if sum(corrects) > 0 else 0
+        corr = 1 if num_correct > 0 else 0
         source_entry['correct'] = corr
         # Add in source evidence counts from supports
         if add_supports:
@@ -182,16 +181,18 @@ def get_combined_curations(source_list, stmts_by_hash, filename,
                     source_entry[source_api] += source_ct
         # Add basic statement data (useful for linking to knowledge graph
         # embedding-based link predict)
-        agA_ns, agA_id = stmt.agent_list()[0].get_grounding()
+        agA_ns, agA_id = agents[0].get_grounding()
+        agA_name = agents[0].name
         agB_ns, agB_id = stmt.agent_list()[1].get_grounding()
+        agB_name = agents[1].name
 
         cur_entry = {'stmt_num': ix,
                      'stmt_hash': stmt.get_hash(),
-                     'agA_name': agent_names[0],
+                     'agA_name': agA_name,
                      'agA_ns': agA_ns,
                      'agA_id': agA_id,
                      'stmt_type': stmt.__class__.__name__,
-                     'agB_name': agent_names[1],
+                     'agB_name': agB_name,
                      'agB_ns': agB_ns,
                      'agB_id': agB_id,
                      'correct': corr}
@@ -209,6 +210,18 @@ def get_combined_curations(source_list, stmts_by_hash, filename,
 
     return cur_data
 
+
+def print_curation_stats(fname):
+    with open(fname, 'rb') as fh:
+        curs = pickle.load(fh)
+    stmt_hashes = {c['stmt_hash'] for c in curs}
+    mention_hashes = {c['source_hash'] for c in CURATIONS
+                      if c['pa_hash'] in stmt_hashes}
+    print('For %s, the number of unique Statements is %d and the number '
+          'of corresponding mentions with curations is %d.' %
+          (fname, len(stmt_hashes), len(mention_hashes)))
+
+
 if __name__ == '__main__':
     # Prevent issues in pickling the results
     sys.setrecursionlimit(50000)
@@ -221,83 +234,16 @@ if __name__ == '__main__':
     all_stmts = ac.load_statements(asmb_pkl)
     all_stmts_by_hash = {stmt.get_hash(): stmt for stmt in all_stmts}
 
-    # The new approach works to get all the curation data and is
-    # much faster than the old approach below.
     all_sources = [source for rdr, rdr_dict in reader_input.items()
-                                  for source in rdr_dict['source_list']]
+                   for source in rdr_dict['source_list']]
     all_sources.append('bioexp_paper_multi')
 
-    curation_dataset = get_combined_curations(
+    multireader_curation_dataset = get_combined_curations(
           all_sources, all_stmts_by_hash,
-          join(output_dir, 'curation_dataset.pkl'))
-    curation_dataset_inc = get_combined_curations(
-          all_sources, all_stmts_by_hash,
-          join(output_dir, 'curation_dataset_inc.pkl'),
+          join(output_dir, 'multireader_curation_dataset.pkl'),
           allow_incomplete=True)
-    curation_dataset_with_supp = get_combined_curations(
-          all_sources, all_stmts_by_hash,
-          join(output_dir, 'curation_dataset_with_supp.pkl'),
-          add_supports=True)
-    curation_dataset_bg_psp = get_combined_curations(
+    extended_curation_dataset = get_combined_curations(
           all_sources + ['bioexp_biogrid', 'bioexp_psp'],
           all_stmts_by_hash,
-          join(output_dir, 'curation_dataset_with_bg_psp.pkl'),
+          join(output_dir, 'extended_curation_dataset.pkl'),
           allow_incomplete=True)
-    refinement_dataset = get_combined_curations(
-          ['bioexp_refinements'], all_stmts_by_hash,
-          join(output_dir, 'refinement_dataset.pkl'))
-
-    # Old approach: so this approach can be used to not only get the
-    # curation dataset but also to identify the statements that still
-    # need to be curated. The new approach can't yet do that because it
-    # only gets incomplete curations that have at least one correct curations.
-    """
-    curations = load_reader_curations(reader_input)
-
-    multi_results = get_multi_reader_curations(curations, reader_input,
-                                               all_stmts_by_hash)
-
-    curated_hashes = (multi_results['correct_hashes'] |
-                      multi_results['incorrect_hashes'])
-    curated_stmts = [all_stmts_by_hash[h] for h in curated_hashes]
-
-    data_old = dump_dataset(all_stmts_by_hash,
-                            multi_results['correct_hashes'],
-                            multi_results['incorrect_hashes'],
-                            'kge_dataset.pkl')
-    """
-
-
-    # Load curations for the incorr_multi_src statements to determine if they
-    # have been fully curated
-    # - load curations from all sources, but filter to those in the specific
-    #   set
-
-    # Load all curations across all pickles
-    # Don't even have to stratify by source?
-
-    # Need to allow partially curated statements during load as long
-    # as one of them is correct
-
-
-    # In future, will also need to get curations for the multi-src pickle
-    # and use those to file into the correct or incorrect bins
-    # So, correct:
-    # - those statements from single readers that have been marked correct
-    # - those statements from multi-src pickle marked correct
-    # Incorrect:
-    # - curated stmts from a single reader with no other sources and no correct evs
-    # - curated stmts from multi-src pickle with no correct evs
-    #ac.dump_statements(incorr_stmts_multi_src, 'bioexp_incorr_multi_src.pkl')
-
-
-    #curated_stmts_by_hash = {stmt.get_hash(): stmt
-    #                         for stmt in curated_stmts}
-    #all_stmts_by_uuid = {stmt.uuid: stmt for stmt in all_stmts}
-
-    #print("Num curated stmts (hash):", len(all_hashes))
-    #print("Num curated correct:", len(corr_hashes))
-    #print("Num 1-src incorrect:", len(incorr_hashes_1_src))
-    #print("Num multi-src incorrect (req curation):", len(incorr_stmts_multi_src))
-
-

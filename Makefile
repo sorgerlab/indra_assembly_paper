@@ -27,9 +27,7 @@ fig4: \
     $(OUTPUT)/fig4_reach_model_fits.pdf \
     $(OUTPUT)/fig4_sparser_model_fits.pdf \
     $(OUTPUT)/fig4_medscan_model_fits.pdf \
-    $(OUTPUT)/curation_dataset.pkl \
-    $(OUTPUT)/fig4_ipynb_overlap_upset_linear
-
+    $(DATA)/curation/extended_curation_dataset.pkl \
 
 belief_fitting: $(OUTPUT)/bioexp_multi_src_results.pkl
 
@@ -46,10 +44,6 @@ makegraph.dot: Makefile
 	make -Bnd | make2graph > makegraph.dot
 
 
-# DATA -----------------------------------------------------------------------
-
-$(DATA)/%:
-	python -m bioexp.transfer_s3 get "$@" $(DATA)
 
 # STMT SAMPLE FOR CURATION --------------------------------------------------
 $(OUTPUT)/bioexp_reach_sample_uncurated.pkl: $(DATA)/bioexp_asmb_preassembled.pkl
@@ -98,19 +92,8 @@ $(OUTPUT)/fig4_%_model_fits.pdf: \
 	python -m bioexp.figures.figure4.model_fit_plots $< $* $(OUTPUT)
 
 # Compiled curation dataset for training sklearn models
-$(OUTPUT)/curation_dataset.pkl: $(DATA)/bioexp_asmb_preassembled.pkl
-	python -m bioexp.curation.group_curations $(OUTPUT)
-
-# Various other downstreams in the notebook
-# $(OUTPUT)/curation_dataset.pkl \
-# $(DATA)/bioexp_asmb_preassembled.pkl
-# (Check other dependencies in the notebook)
-
-$(OUTPUT)/fig4_ipynb_overlap_upset_linear: \
-        $(OUTPUT)/curation_dataset.pkl $(DATA)/bioexp_asmb_preassembled.pkl
-	jupyter nbconvert --to notebook --ExecutePreprocessor.timeout=180 \
-        --execute notebooks/Reader_overlap_and_error_analysis.ipynb
-
+$(DATA)/curation/extended_curation_dataset.pkl: $(DATA)/bioexp_asmb_preassembled.pkl
+	python -m bioexp.curation.group_curations $(DATA)/curation
 
 # DEPMAP ----------------------------------------------------------------------
 $(OUTPUT)/bioexp_signor_indranet.pkl: $(OUTPUT)/bioexp_signor.pkl

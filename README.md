@@ -35,12 +35,26 @@ corpus and train various belief models on the curation data.
 The `bioexp/figures` module contains scripts to generate figure panels for
 Figures 2, 3, and 4.
 
+* Fig 4B and Table 2: run `make output/fig4_reach_curve.pdf` (which runs
+  `bioexp/figures/figure4/curated_correctness.py`)
+* Figure 4D and Table 3: run `make output/fig4_{reader}_model_fits.pdf` for each
+  reader.
+  * The makefile first runs `bioexp/curation/process_curations.py` for the
+    reader to generate fits, then dumps the maximum likelihood results table
+    (Table 3).
+  * Then the Makefile runs `bioexp/figures/figure4/model_fit_plots.py` to
+    generate the plots in Fig 4D.
+  * Figures EV3A, EV3B, and EV3C (binomial, betabinomial and belief evidence
+    fits): `bioexp/curation/process_curations.py`
+
 Multiple notebooks perform analysis on the Benchmark Corpus to produce
 metrics and figures used in the manuscript:
 * `notebooks/Statement distribution.ipynb`: analysis on the distribution of mentions per Statement for Figure 2.
 * `notebooks/Reader_overlap_and_error_analysis.ipynb`: analysis based on curation of multi-reader overlap and empirical correctness for Figure 5.
+* `notebooks
 * `notebooks/Biogrid benchmark.ipynb`: analysis for the "Validation of assembled mechanisms and comparison against curated resources" section and Figure 6.
 * `notebooks/Depmap Benchmark.ipynb`: analysis for the "Detecting and explaining gene dependency correlations with an assembled causal network" section and Figure 7. The notebook also makes use of code in the `bioexp/depmap` module to preprocess the DepMap data.
+
 
 ## Data files
 

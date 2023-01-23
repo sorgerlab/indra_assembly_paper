@@ -1,3 +1,4 @@
+import copy
 import sys
 import json
 import pickle
@@ -6,12 +7,10 @@ import itertools
 from multiprocessing import Pool
 from os import pardir
 from os.path import dirname, abspath, join
-import scipy.optimize
 from texttable import Texttable
 import matplotlib.pyplot as plt
 from collections import defaultdict, Counter
-from indra_db import get_db
-from indra_db.client.principal.curation import get_curations
+from indra.tools import assemble_corpus as ac
 from bioexp.util import prefixed_file, pkldump
 from bioexp.curation.belief_models import *
 from bioexp.curation.model_fit import ModelFit, ens_sample
@@ -21,11 +20,17 @@ here = dirname(abspath(__file__))
 curation_data = join(here, pardir, pardir, 'data', 'curation')
 
 
-db = get_db('primary')
-
-
 def dist_path(reader, dist_type):
     return prefixed_file(f'{reader}_stmt_{dist_type}_distribution', 'json')
+
+
+def read_curations():
+    cur_fname = join(curation_data, 'indra_assembly_curations.json')
+    with open(cur_fname, 'r') as fh:
+        return json.load(fh)
+
+
+CURATIONS = read_curations()
 
 
 reader_input = {
@@ -70,13 +75,15 @@ reader_input = {
 }
 
 
-def get_curations_for_reader(reader, aggregation, **kwargs):
+def get_curations_for_reader(reader, all_stmts, aggregation, **kwargs):
     """Get correctness data for a given reader based on reader_input info.
 
     Parameters
     ----------
     reader : str
         Name of the reader, e.g. "reach".
+    all_stmts : list[indra.statements.Statement]
+        A list of all statements in the assembled corpus.
     aggregation: str
         'evidence' to aggregate by distinct evidences, 'pmid' to
         aggregate by distinct PMIDs.
@@ -93,21 +100,24 @@ def get_curations_for_reader(reader, aggregation, **kwargs):
         ri = reader_input[reader]
         pkl_list = ri['pkl_list']
         source_list = ri['source_list']
-        ev_dist_path = ri['ev_dist_path']
-        pmid_dist_path = ri['pmid_dist_path']
-        belief_model = ri['belief_model']
     else:
         raise ValueError("Reader %s not supported." % reader)
 
-    stmts = load_curated_pkl_files(pkl_list)
+    stmts = load_curated_pkl_files(pkl_list, all_stmts, reader)
     ev_corrects = get_correctness_data(source_list, stmts,
                                        aggregation=aggregation, **kwargs)
     return ev_corrects
+
+# For debugging purposes, note module level global variables
+ALL_HASHES = set()
+ALL_MENTIONS = 0
 
 
 def get_correctness_data(sources, stmts, aggregation='evidence',
                          allow_incomplete=False,
                          allow_incomplete_correct=False):
+    global ALL_HASHES
+    global ALL_MENTIONS
     stmts_dict = {stmt.get_hash(): stmt for stmt in stmts}
     stmt_counts = Counter(stmt.get_hash() for stmt in stmts)
     full_curations = get_full_curations(sources, stmts_dict,
@@ -115,14 +125,19 @@ def get_correctness_data(sources, stmts, aggregation='evidence',
                             allow_incomplete=allow_incomplete,
                             allow_incomplete_correct=allow_incomplete_correct)
     correct_by_num_ev = {}
+    ALL_HASHES |= set(full_curations)
     for pa_hash, corrects in full_curations.items():
         stmt = stmts_dict[pa_hash]
+        ALL_MENTIONS += len(stmt.evidence)
         num_correct = sum(corrects)
         num_correct_by_num_sampled = [num_correct] * stmt_counts[pa_hash]
         if len(stmt.evidence) not in correct_by_num_ev:
             correct_by_num_ev[len(stmt.evidence)] = num_correct_by_num_sampled
         else:
             correct_by_num_ev[len(stmt.evidence)] += num_correct_by_num_sampled
+    # Print ALL_HASHES and ALL_MENTIONS here to get the total numbers
+    logger.info("Total hashes up to this point: %d" % len(ALL_HASHES))
+    logger.info("Total mentions up to this point: %d" % ALL_MENTIONS)
     return correct_by_num_ev
 
 
@@ -130,6 +145,12 @@ def get_full_curations(sources, stmts_dict, aggregation='evidence',
                        filter_hashes=None,
                        allow_incomplete=False,
                        allow_incomplete_correct=False):
+    """This function converts raw curations organized by statement/evidence
+    and applies a set of policies to determine correctness for each evidence.
+    It then returns a dictionary mapping statement hashes to lists of
+    correctness values (0 for incorrect, 1 for correct) for each evidence in
+    the statement."""
+
     curations = get_raw_curations(sources, stmts_dict)
     # Next we construct a dict of all curations that are "full" in that all
     # evidences of a given statement were curated, keyed by pa_hash
@@ -137,9 +158,11 @@ def get_full_curations(sources, stmts_dict, aggregation='evidence',
     for pa_hash, stmt_curs in curations.items():
         if filter_hashes and pa_hash not in filter_hashes:
             continue
+        if pa_hash not in stmts_dict:
+            continue
         cur_stmt = stmts_dict[pa_hash]
         # We need to make sure that all the evidence hashes were covered by the
-        # curations in the DB. Note that we cannot go by number of curations
+        # curations. Note that we cannot go by number of curations
         # since two subtly different evidences can have the same hash, and
         # multiple curations sometimes exist for the same evidence.
         ev_hashes = [e.get_source_hash() for e in cur_stmt.evidence]
@@ -149,6 +172,8 @@ def get_full_curations(sources, stmts_dict, aggregation='evidence',
         pmid_curations = defaultdict(list)
         for source_hash, ev_curs in stmt_curs.items():
             ev = _find_evidence_by_hash(cur_stmt, source_hash)
+            if not ev:
+                continue
             corrects = [1 if cur['tag'] in
                                     ('correct', 'hypothesis', 'act_vs_amt')
                         else 0 for cur in ev_curs]
@@ -199,7 +224,10 @@ def get_full_curations(sources, stmts_dict, aggregation='evidence',
 
 
 def get_raw_curations(sources, stmts_dict):
-    """Get curations from INDRA DB associated with the given source tags.
+    """Get curations associated with the given source tags.
+
+    For each statement hash and evidence hash, this returns the list of
+    corresponding curation dicts as is without any aggregation.
 
     Parameters
     ----------
@@ -208,7 +236,7 @@ def get_raw_curations(sources, stmts_dict):
         query the DB curations table with.
     stmts_dict : list of INDRA Statements
         Statements corresponding to a superset of the curated statements with
-        the given tag.
+        the given tags.
 
     Returns
     -------
@@ -222,8 +250,9 @@ def get_raw_curations(sources, stmts_dict):
     # Iterate over all the curation sources
     for source in sources:
         # Get curations from DB from given curation source
-        db_curations = get_curations(db, source=source)
         # We populate the curations dict with entries from the DB
+        db_curations = [cur for cur in CURATIONS if
+                        cur['source'] == source]
         for cur in db_curations:
             if cur['pa_hash'] not in stmts_dict:
                 print('Curation pa_hash is missing from list of Statements '
@@ -242,20 +271,40 @@ def _find_evidence_by_hash(stmt, source_hash):
             return ev
 
 
-def load_curated_pkl_files(pkl_list):
+def load_curated_pkl_files(pkl_list, all_stmts, reader, use_jsons=True):
+    """Load statements sampled for curation from a list of pickle files.
+
+    Note that since the sampled pickles are large and not in version control,
+    instead we load the statement hashes from the JSONs that are in version
+    control and filter the preassembled statements for the hashes to create
+    the same set of statements as the ones in the pickle files, unless
+    use_jsons is set to False.
+    """
+    all_stmts_by_hash = {stmt.get_hash(): stmt for stmt in all_stmts}
     logger.info('Loading curation statement pickles')
     stmts = []
     for pkl_file in pkl_list:
         pkl_path = join(curation_data, pkl_file)
-        logger.info('Loading %s' % pkl_path)
-        with open(pkl_path, 'rb') as fh:
-            pkl_stmts = pickle.load(fh)
-            # Special handling for the pickle file for the TSV
-            if pkl_file == 'bioexp_reach_sample_tsv.pkl':
-                for stmt in pkl_stmts:
-                    stmt.evidence = [e for e in stmt.evidence
-                                     if e.source_api == 'reach']
-            stmts.extend(pkl_stmts)
+        if not use_jsons:
+            logger.info('Loading %s' % pkl_path)
+            with open(pkl_path, 'rb') as fh:
+                pkl_stmts = pickle.load(fh)
+                # Special handling for the pickle file for the TSV
+                if pkl_file == 'bioexp_reach_sample_tsv.pkl':
+                    for stmt in pkl_stmts:
+                        stmt.evidence = [e for e in stmt.evidence
+                                         if e.source_api == 'reach']
+        else:
+            json_path = pkl_path.replace('.pkl', '_hashes.json')
+            logger.info('Loading %s' % json_path)
+            with open(json_path, 'r') as fh:
+                hashes = json.load(fh)
+            pkl_stmts = copy.deepcopy([all_stmts_by_hash[hash]
+                                       for hash in hashes])
+            for stmt in pkl_stmts:
+                stmt.evidence = [e for e in stmt.evidence
+                                 if e.source_api == reader]
+        stmts.extend(pkl_stmts)
     return stmts
 
 
@@ -277,10 +326,17 @@ if __name__ == '__main__':
     reader = sys.argv[1]
     output_dir = sys.argv[2]
 
+    # Load the pickle file with all assembled statements
+    asmb_pkl = join(dirname(abspath(__file__)), '..', '..', 'data',
+                    'bioexp_asmb_preassembled.pkl')
+    all_stmts = ac.load_statements(asmb_pkl)
+
     ev_correct_by_num_ev = get_curations_for_reader(
-                                    reader, aggregation='evidence')
-    ev_correct_by_num_pmid = get_curations_for_reader(
-                                    reader, aggregation='pmid')
+                                    reader, all_stmts, aggregation='evidence',
+                                    allow_incomplete=False)
+    #ev_correct_by_num_pmid = get_curations_for_reader(
+    #                                reader, all_stmts, aggregation='pmid',
+    #                                allow_incomplete=False)
 
     # -- Everything below is for model fitting! --
     # Load evidence frequency data
